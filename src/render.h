@@ -11,8 +11,12 @@ enum
     AA_TEST_OFF = 0,    /* never draw, always pass through */
     AA_TEST_BOX,        /* solid box in FgPen colour (RectFill) */
     AA_TEST_ALPHA,      /* gradient box via cybergraphics BltTemplateAlpha() */
-    AA_TEST_RPA         /* gradient box via Read/WritePixelArray + own blending */
+    AA_TEST_RPA,        /* gradient box via Read/WritePixelArray + own blending */
+    AA_TEST_WPAA        /* gradient box via cybergraphics WritePixelArrayAlpha() */
 };
+
+/* TRUE if cybergraphics.library provides WritePixelArrayAlpha(). */
+BOOL aa_HasWritePixelArrayAlpha(void);
 
 extern struct Library *CyberGfxBase;
 extern UBYTE aa_TestMode;

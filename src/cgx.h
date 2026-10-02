@@ -51,6 +51,12 @@ ULONG cgx_WritePixelArray(struct Library *base, APTR src, ULONG srcx, ULONG srcy
                           ULONG srcmod, struct RastPort *rp, ULONG dstx,
                           ULONG dsty, ULONG width, ULONG height, ULONG srcfmt);
 
+/* src is ARGB32; globalalpha 0xFFFFFFFF = use source alpha unchanged */
+ULONG cgx_WritePixelArrayAlpha(struct Library *base, APTR src, ULONG srcx,
+                               ULONG srcy, ULONG srcmod, struct RastPort *rp,
+                               ULONG dstx, ULONG dsty, ULONG width,
+                               ULONG height, ULONG globalalpha);
+
 void cgx_BltTemplateAlpha(struct Library *base, APTR src, LONG srcx,
                           LONG srcmod, struct RastPort *rp, LONG dstx,
                           LONG dsty, LONG width, LONG height);

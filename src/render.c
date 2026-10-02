@@ -56,6 +56,44 @@ BOOL aa_HasBltTemplateAlpha(void)
     return CyberGfxBase && CGX_HAS_LVO(CyberGfxBase, LVO_BltTemplateAlpha);
 }
 
+BOOL aa_HasWritePixelArrayAlpha(void)
+{
+    return CyberGfxBase && CGX_HAS_LVO(CyberGfxBase, LVO_WritePixelArrayAlpha);
+}
+
+#ifdef DEBUG
+/* Log the first few rastports we could not map to a screen. */
+static void LogNoViewPort(struct RastPort *rp)
+{
+    static ULONG logged;
+    struct Task *me = FindTask(NULL);
+    struct Layer *layer = rp->Layer;
+    struct Screen *scr;
+
+    if (logged >= 3)
+        return;
+    logged++;
+
+    kprintf("AAText: no viewport: task=\"%s\" rp=%lx bm=%lx layer=%lx "
+            "window=%lx\n",
+            (ULONG)(me->tc_Node.ln_Name ? me->tc_Node.ln_Name : "?"),
+            (ULONG)rp, (ULONG)rp->BitMap, (ULONG)layer,
+            (ULONG)(layer ? layer->Window : NULL));
+    if (layer)
+        kprintf("AAText:   layer flags=%lx bounds=%ld,%ld-%ld,%ld "
+                "layerinfo=%lx\n",
+                (ULONG)layer->Flags, (LONG)layer->bounds.MinX,
+                (LONG)layer->bounds.MinY, (LONG)layer->bounds.MaxX,
+                (LONG)layer->bounds.MaxY, (ULONG)layer->LayerInfo);
+    for (scr = IntuitionBase->FirstScreen; scr; scr = scr->NextScreen)
+        kprintf("AAText:   screen \"%s\" bm=%lx rp.bm=%lx layerinfo=%lx "
+                "barlayer=%lx\n",
+                (ULONG)(scr->Title ? (char *)scr->Title : "?"),
+                (ULONG)scr->RastPort.BitMap, (ULONG)&scr->BitMap,
+                (ULONG)&scr->LayerInfo, (ULONG)scr->BarLayer);
+}
+#endif
+
 /*
  * Find the ViewPort (for pen -> RGB) of the screen the rastport draws on.
  * Window rastports know their window; others (e.g. the screen title bar)
@@ -197,6 +235,36 @@ static BOOL DrawReadModifyWrite(struct RastPort *rp, struct ViewPort *vp,
     return TRUE;
 }
 
+static BOOL DrawWritePixelArrayAlpha(struct RastPort *rp, struct ViewPort *vp,
+                                     LONG x, LONG y, LONG w, LONG h)
+{
+    ULONG rgb[3];
+    ULONG color;
+    ULONG *buf;
+    LONG i;
+
+    if (w * h * 4 > AA_MAX_BUFFER)
+        return FALSE;
+    buf = AllocVec(w * h * 4, MEMF_ANY);
+    if (!buf)
+        return FALSE;
+
+    GetRGB32(vp->ColorMap, GetAPen(rp), 1, rgb);
+    color = ((rgb[0] >> 8) & 0xFF0000) | ((rgb[1] >> 16) & 0xFF00) |
+            (rgb[2] >> 24);
+
+    for (i = 0; i < w; i++)
+        buf[i] = (GradientAlpha(i, w) << 24) | color;
+    for (i = 1; i < h; i++)
+        CopyMem(buf, buf + i * w, w * 4);
+
+    cgx_WritePixelArrayAlpha(CyberGfxBase, buf, 0, 0, w * 4, rp, x, y, w, h,
+                             0xFFFFFFFF);
+
+    FreeVec(buf);
+    return TRUE;
+}
+
 BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count)
 {
     struct TextFont *tf = rp->Font;
@@ -220,7 +288,12 @@ BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count)
         FAIL(R_LUT8);
     vp = FindViewPort(rp);
     if (!vp || !vp->ColorMap)
+    {
+#ifdef DEBUG
+        LogNoViewPort(rp);
+#endif
         FAIL(R_NOVIEWPORT);
+    }
 
     /* Same cell the original Text() covers; cp_x advance == TextLength(). */
     w = TextLength(rp, string, count);
@@ -254,6 +327,15 @@ BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count)
             if (rp->DrawMode & JAM2)
                 FillRect(rp, (UBYTE)rp->BgPen, x, y, w, h);
             if (!DrawReadModifyWrite(rp, vp, x, y, w, h))
+                FAIL(R_NOMEM);
+            break;
+
+        case AA_TEST_WPAA:
+            if (w * h * 4 > AA_MAX_BUFFER)
+                FAIL(R_COORDS);
+            if (rp->DrawMode & JAM2)
+                FillRect(rp, (UBYTE)rp->BgPen, x, y, w, h);
+            if (!DrawWritePixelArrayAlpha(rp, vp, x, y, w, h))
                 FAIL(R_NOMEM);
             break;
     }

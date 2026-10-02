@@ -6,7 +6,7 @@
  * Starting AAText while it is already running also removes it,
  * which makes it usable as a toggle from Workbench / WBStartup.
  *
- * Stage 2 test option:  TEST=BOX|ALPHA|RPA|OFF  (default BOX)
+ * Stage 2 test option:  TEST=BOX|ALPHA|RPA|WPAA|OFF  (default BOX)
  */
 
 #include <exec/types.h>
@@ -27,7 +27,7 @@
 #define AA_PORTNAME "AAText"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AAText 0.2 (2.10.2026)";
+    "$VER: AAText 0.3 (2.10.2026)";
 
 struct GfxBase *GfxBase;
 struct IntuitionBase *IntuitionBase;
@@ -87,6 +87,7 @@ static const char *ModeName(UBYTE mode)
         case AA_TEST_BOX:   return "BOX";
         case AA_TEST_ALPHA: return "ALPHA";
         case AA_TEST_RPA:   return "RPA";
+        case AA_TEST_WPAA:  return "WPAA";
         default:            return "OFF";
     }
 }
@@ -135,11 +136,13 @@ int main(int argc, char **argv)
                 mode = AA_TEST_ALPHA;
             else if (ArgIs(t, "RPA"))
                 mode = AA_TEST_RPA;
+            else if (ArgIs(t, "WPAA"))
+                mode = AA_TEST_WPAA;
             else if (ArgIs(t, "OFF"))
                 mode = AA_TEST_OFF;
             else
             {
-                Msg("AAText: TEST must be BOX, ALPHA, RPA or OFF.\n");
+                Msg("AAText: TEST must be BOX, ALPHA, RPA, WPAA or OFF.\n");
                 FreeArgs(rda);
                 return RETURN_ERROR;
             }
@@ -176,8 +179,7 @@ int main(int argc, char **argv)
         info[0] = CyberGfxBase->lib_Version;
         info[1] = CyberGfxBase->lib_Revision;
         info[2] = (LONG)(aa_HasBltTemplateAlpha() ? "yes" : "no");
-        info[3] = (LONG)(CGX_HAS_LVO(CyberGfxBase, LVO_WritePixelArrayAlpha)
-                         ? "yes" : "no");
+        info[3] = (LONG)(aa_HasWritePixelArrayAlpha() ? "yes" : "no");
         MsgFmt("AAText: cybergraphics.library %ld.%ld, "
                "BltTemplateAlpha: %s, WritePixelArrayAlpha: %s\n", info);
         D(("AAText: cybergraphics.library %ld.%ld NegSize=%ld\n",
@@ -193,6 +195,11 @@ int main(int argc, char **argv)
     if (mode == AA_TEST_ALPHA && !aa_HasBltTemplateAlpha())
     {
         Msg("AAText: BltTemplateAlpha() not available, using TEST=BOX.\n");
+        mode = AA_TEST_BOX;
+    }
+    if (mode == AA_TEST_WPAA && !aa_HasWritePixelArrayAlpha())
+    {
+        Msg("AAText: WritePixelArrayAlpha() not available, using TEST=BOX.\n");
         mode = AA_TEST_BOX;
     }
     aa_TestMode = mode;
