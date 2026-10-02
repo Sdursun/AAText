@@ -30,7 +30,107 @@ static volatile BOOL aa_Passthrough;
 static struct Task *aa_BusyTasks[AA_MAX_TASKS];
 
 #ifdef DEBUG
+/*
+ * Per-task statistics: which tasks call Text(), whether they are DOS
+ * processes and how much stack they have left. Printed on removal.
+ */
+#define AA_MAX_STATS 64
+
+struct TaskStat
+{
+    struct Task *task;
+    char         name[24];
+    UBYTE        type;          /* NT_TASK or NT_PROCESS */
+    ULONG        calls;
+    ULONG        stacksize;
+    LONG         minfree;       /* lowest free stack seen, -1 = unknown */
+};
+
+static struct TaskStat aa_Stats[AA_MAX_STATS];
 static ULONG aa_CallCount;
+static ULONG aa_StatsOverflow;
+
+static void CopyName(char *dst, const char *src, int size)
+{
+    int i;
+
+    if (!src)
+        src = "?";
+    for (i = 0; i < size - 1 && src[i]; i++)
+        dst[i] = src[i];
+    dst[i] = 0;
+}
+
+static void RecordCall(struct Task *me)
+{
+    struct TaskStat *st = NULL;
+    UBYTE *sp = (UBYTE *)&st;   /* approximate current stack pointer */
+    LONG spfree;
+    int i;
+
+    if (sp >= (UBYTE *)me->tc_SPLower && sp <= (UBYTE *)me->tc_SPUpper)
+        spfree = sp - (UBYTE *)me->tc_SPLower;
+    else
+        spfree = -1;
+
+    aa_CallCount++;
+
+    Forbid();
+    for (i = 0; i < AA_MAX_STATS; i++)
+    {
+        if (aa_Stats[i].task == me)
+        {
+            st = &aa_Stats[i];
+            break;
+        }
+        if (!aa_Stats[i].task)
+        {
+            st = &aa_Stats[i];
+            st->task = me;
+            CopyName(st->name, me->tc_Node.ln_Name, sizeof(st->name));
+            st->type = me->tc_Node.ln_Type;
+            st->stacksize = (UBYTE *)me->tc_SPUpper - (UBYTE *)me->tc_SPLower;
+            st->minfree = spfree;
+            Permit();
+            kprintf("AAText: new caller \"%s\" %s stack=%ld free=%ld\n",
+                    st->name, st->type == NT_PROCESS ? "process" : "TASK",
+                    st->stacksize, spfree);
+            Forbid();
+            break;
+        }
+    }
+    if (st)
+    {
+        st->calls++;
+        if (spfree >= 0 && (st->minfree < 0 || spfree < st->minfree))
+            st->minfree = spfree;
+    }
+    else
+        aa_StatsOverflow++;
+    Permit();
+}
+
+static void PrintStats(void)
+{
+    int i;
+
+    kprintf("AAText: --- Text() callers: %ld calls total ---\n", aa_CallCount);
+    kprintf("AAText: %-24s %-7s %8s %8s %8s\n",
+            (ULONG)"task", (ULONG)"type", (ULONG)"calls",
+            (ULONG)"stack", (ULONG)"minfree");
+    for (i = 0; i < AA_MAX_STATS && aa_Stats[i].task; i++)
+    {
+        struct TaskStat *st = &aa_Stats[i];
+
+        kprintf("AAText: %-24s %-7s %8ld %8ld %8ld\n",
+                (ULONG)st->name,
+                (ULONG)(st->type == NT_PROCESS ? "process" : "TASK"),
+                st->calls, st->stacksize, st->minfree);
+    }
+    if (aa_StatsOverflow)
+        kprintf("AAText: (%ld calls from tasks not in table)\n",
+                aa_StatsOverflow);
+}
 #endif
 
 /*
@@ -114,13 +214,7 @@ void aa_TextHook(struct RastPort *rp, CONST_STRPTR string, LONG count,
     }
 
 #ifdef DEBUG
-    /* Text() is called very often; only log a sample. */
-    if ((aa_CallCount++ & 0x1FF) == 0)
-    {
-        kprintf("AAText: Text() call #%ld task=\"%s\" rp=%lx count=%ld\n",
-                aa_CallCount, me->tc_Node.ln_Name ? me->tc_Node.ln_Name : "?",
-                (ULONG)rp, (LONG)(WORD)count);
-    }
+    RecordCall(me);
 #endif
 
     /* Stage 1: everything goes to the original function. */
@@ -169,6 +263,9 @@ BOOL aa_Remove(void)
     /* A caller may still be between "subq" and "rts" in the stub. */
     Delay(10);
 
+#ifdef DEBUG
+    PrintStats();
+#endif
     D(("AAText: removed\n"));
     return TRUE;
 }
