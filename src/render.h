@@ -5,24 +5,19 @@
 #include <exec/libraries.h>
 #include <graphics/rastport.h>
 
-/* Stage 2 test modes */
 enum
 {
-    AA_TEST_OFF = 0,    /* never draw, always pass through */
-    AA_TEST_BOX,        /* solid box in FgPen colour (RectFill) */
-    AA_TEST_ALPHA,      /* gradient box via cybergraphics BltTemplateAlpha() */
-    AA_TEST_RPA,        /* gradient box via Read/WritePixelArray + own blending */
-    AA_TEST_WPAA        /* gradient box via cybergraphics WritePixelArrayAlpha() */
+    AA_MODE_OFF = 0,    /* never draw, always pass through */
+    AA_MODE_TEXT,       /* antialiased TrueType text (default) */
+    AA_MODE_BOX,        /* debug: solid box in FgPen colour */
+    AA_MODE_RPA         /* debug: gradient box via Read/WritePixelArray */
 };
 
-/* TRUE if cybergraphics.library provides WritePixelArrayAlpha(). */
-BOOL aa_HasWritePixelArrayAlpha(void);
-
 extern struct Library *CyberGfxBase;
-extern UBYTE aa_TestMode;
+extern UBYTE aa_Mode;
 
-/* TRUE if cybergraphics.library provides BltTemplateAlpha(). */
-BOOL aa_HasBltTemplateAlpha(void);
+BOOL aa_RenderInit(void);
+void aa_RenderCleanup(void);
 
 /*
  * Try to draw the string ourselves. Returns FALSE if the rastport is not

@@ -6,7 +6,9 @@
  * Starting AAText while it is already running also removes it,
  * which makes it usable as a toggle from Workbench / WBStartup.
  *
- * Stage 2 test option:  TEST=BOX|ALPHA|RPA|WPAA|OFF  (default BOX)
+ * Options:  PREFS=<file>               default ENV:AAText.prefs,
+ *                                      then ENVARC:AAText.prefs
+ *           TEST=TEXT|BOX|RPA|OFF      debug drawing modes (default TEXT)
  */
 
 #include <exec/types.h>
@@ -21,17 +23,19 @@
 
 #include "patch.h"
 #include "render.h"
-#include "cgx.h"
+#include "prefs.h"
+#include "glyphs.h"
 #include "debug.h"
 
 #define AA_PORTNAME "AAText"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AAText 0.3 (2.10.2026)";
+    "$VER: AAText 0.4 (2.10.2026)";
 
 struct GfxBase *GfxBase;
 struct IntuitionBase *IntuitionBase;
 
+static struct AAPrefs prefs;
 static BOOL from_shell;
 
 /* Print to the Shell; silently does nothing when started from Workbench. */
@@ -80,20 +84,10 @@ static BOOL ArgIs(const char *arg, const char *name)
     return *arg == 0 && *name == 0;
 }
 
-static const char *ModeName(UBYTE mode)
+static void Cleanup(void)
 {
-    switch (mode)
-    {
-        case AA_TEST_BOX:   return "BOX";
-        case AA_TEST_ALPHA: return "ALPHA";
-        case AA_TEST_RPA:   return "RPA";
-        case AA_TEST_WPAA:  return "WPAA";
-        default:            return "OFF";
-    }
-}
-
-static void CloseLibs(void)
-{
+    aa_GlyphsCleanup();
+    aa_RenderCleanup();
     if (CyberGfxBase)
         CloseLibrary(CyberGfxBase);
     if (IntuitionBase)
@@ -106,7 +100,10 @@ int main(int argc, char **argv)
 {
     struct MsgPort *port;
     LONG quit = FALSE;
-    UBYTE mode = AA_TEST_BOX;
+    char prefspath[AA_PATH_LEN];
+    BOOL have_prefspath = FALSE;
+    UBYTE mode = AA_MODE_TEXT;
+    LONG numfonts;
 
     from_shell = (argc != 0);
 
@@ -118,8 +115,9 @@ int main(int argc, char **argv)
 
     if (from_shell)
     {
-        LONG args[2] = { 0, 0 };
-        struct RDArgs *rda = ReadArgs((CONST_STRPTR)"TEST/K,QUIT/S", args, NULL);
+        LONG args[3] = { 0, 0, 0 };
+        struct RDArgs *rda = ReadArgs((CONST_STRPTR)"PREFS/K,TEST/K,QUIT/S",
+                                      args, NULL);
 
         if (!rda)
         {
@@ -128,26 +126,34 @@ int main(int argc, char **argv)
         }
         if (args[0])
         {
-            const char *t = (const char *)args[0];
+            const char *p = (const char *)args[0];
+            int i;
 
-            if (ArgIs(t, "BOX"))
-                mode = AA_TEST_BOX;
-            else if (ArgIs(t, "ALPHA"))
-                mode = AA_TEST_ALPHA;
+            for (i = 0; i < AA_PATH_LEN - 1 && p[i]; i++)
+                prefspath[i] = p[i];
+            prefspath[i] = 0;
+            have_prefspath = TRUE;
+        }
+        if (args[1])
+        {
+            const char *t = (const char *)args[1];
+
+            if (ArgIs(t, "TEXT"))
+                mode = AA_MODE_TEXT;
+            else if (ArgIs(t, "BOX"))
+                mode = AA_MODE_BOX;
             else if (ArgIs(t, "RPA"))
-                mode = AA_TEST_RPA;
-            else if (ArgIs(t, "WPAA"))
-                mode = AA_TEST_WPAA;
+                mode = AA_MODE_RPA;
             else if (ArgIs(t, "OFF"))
-                mode = AA_TEST_OFF;
+                mode = AA_MODE_OFF;
             else
             {
-                Msg("AAText: TEST must be BOX, ALPHA, RPA, WPAA or OFF.\n");
+                Msg("AAText: TEST must be TEXT, BOX, RPA or OFF.\n");
                 FreeArgs(rda);
                 return RETURN_ERROR;
             }
         }
-        quit = args[1];
+        quit = args[2];
         FreeArgs(rda);
     }
 
@@ -167,47 +173,49 @@ int main(int argc, char **argv)
     if (!GfxBase || !IntuitionBase)
     {
         Msg("AAText requires AmigaOS 3.0 (V39) or better.\n");
-        CloseLibs();
+        Cleanup();
         return RETURN_FAIL;
     }
 
     CyberGfxBase = OpenLibrary((CONST_STRPTR)"cybergraphics.library", 40);
-    if (CyberGfxBase)
+    if (!CyberGfxBase)
     {
-        LONG info[4];
-
-        info[0] = CyberGfxBase->lib_Version;
-        info[1] = CyberGfxBase->lib_Revision;
-        info[2] = (LONG)(aa_HasBltTemplateAlpha() ? "yes" : "no");
-        info[3] = (LONG)(aa_HasWritePixelArrayAlpha() ? "yes" : "no");
-        MsgFmt("AAText: cybergraphics.library %ld.%ld, "
-               "BltTemplateAlpha: %s, WritePixelArrayAlpha: %s\n", info);
-        D(("AAText: cybergraphics.library %ld.%ld NegSize=%ld\n",
-           (LONG)CyberGfxBase->lib_Version, (LONG)CyberGfxBase->lib_Revision,
-           (LONG)CyberGfxBase->lib_NegSize));
+        Msg("AAText: cybergraphics.library not found (P96 or CGX needed).\n");
+        Cleanup();
+        return RETURN_FAIL;
     }
-    else
+    D(("AAText: cybergraphics.library %ld.%ld\n",
+       (LONG)CyberGfxBase->lib_Version, (LONG)CyberGfxBase->lib_Revision));
+
+    if (!aa_ReadPrefs(&prefs, have_prefspath ? prefspath : NULL, from_shell) &&
+        mode == AA_MODE_TEXT)
     {
-        Msg("AAText: cybergraphics.library not found, pass-through only.\n");
-        mode = AA_TEST_OFF;
+        Msg("AAText: no preferences file (ENV:AAText.prefs or "
+            "ENVARC:AAText.prefs).\n");
+        Cleanup();
+        return RETURN_FAIL;
     }
 
-    if (mode == AA_TEST_ALPHA && !aa_HasBltTemplateAlpha())
+    if (!aa_RenderInit())
     {
-        Msg("AAText: BltTemplateAlpha() not available, using TEST=BOX.\n");
-        mode = AA_TEST_BOX;
+        Msg("AAText: out of memory.\n");
+        Cleanup();
+        return RETURN_FAIL;
     }
-    if (mode == AA_TEST_WPAA && !aa_HasWritePixelArrayAlpha())
+
+    numfonts = aa_GlyphsInit(&prefs, from_shell);
+    if (numfonts == 0 && mode == AA_MODE_TEXT)
     {
-        Msg("AAText: WritePixelArrayAlpha() not available, using TEST=BOX.\n");
-        mode = AA_TEST_BOX;
+        Msg("AAText: no usable font mappings, nothing to do.\n");
+        Cleanup();
+        return RETURN_FAIL;
     }
-    aa_TestMode = mode;
+    aa_Mode = mode;
 
     port = CreateMsgPort();
     if (!port)
     {
-        CloseLibs();
+        Cleanup();
         return RETURN_FAIL;
     }
     port->mp_Node.ln_Name = (char *)AA_PORTNAME;
@@ -219,16 +227,18 @@ int main(int argc, char **argv)
         Msg("AAText: could not install the patch.\n");
         RemPort(port);
         DeleteMsgPort(port);
-        CloseLibs();
+        Cleanup();
         return RETURN_FAIL;
     }
 
     {
-        LONG info[1];
+        LONG info[3];
 
-        info[0] = (LONG)ModeName(mode);
-        MsgFmt("AAText installed (TEST=%s). "
-               "Press Ctrl-C or run \"AAText QUIT\" to remove.\n", info);
+        info[0] = numfonts;
+        info[1] = prefs.gamma100 / 100;
+        info[2] = prefs.gamma100 % 100;
+        MsgFmt("AAText installed: %ld font mapping(s), gamma %ld.%02ld. "
+               "Ctrl-C or \"AAText QUIT\" removes it.\n", info);
     }
 
     for (;;)
@@ -243,7 +253,7 @@ int main(int argc, char **argv)
 
     RemPort(port);
     DeleteMsgPort(port);
-    CloseLibs();
+    Cleanup();
 
     Msg("AAText removed.\n");
     return RETURN_OK;

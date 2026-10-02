@@ -35,11 +35,6 @@
 #define LVO_GetCyberMapAttr       (-96)
 #define LVO_ReadPixelArray        (-120)
 #define LVO_WritePixelArray       (-126)
-#define LVO_WritePixelArrayAlpha  (-216)
-#define LVO_BltTemplateAlpha      (-222)
-
-/* TRUE if the library's jump table contains the given vector. */
-#define CGX_HAS_LVO(base, lvo) ((base)->lib_NegSize >= (UWORD)(-(lvo) + 6))
 
 ULONG cgx_GetCyberMapAttr(struct Library *base, struct BitMap *bm, ULONG attr);
 
@@ -51,14 +46,5 @@ ULONG cgx_WritePixelArray(struct Library *base, APTR src, ULONG srcx, ULONG srcy
                           ULONG srcmod, struct RastPort *rp, ULONG dstx,
                           ULONG dsty, ULONG width, ULONG height, ULONG srcfmt);
 
-/* src is ARGB32; globalalpha 0xFFFFFFFF = use source alpha unchanged */
-ULONG cgx_WritePixelArrayAlpha(struct Library *base, APTR src, ULONG srcx,
-                               ULONG srcy, ULONG srcmod, struct RastPort *rp,
-                               ULONG dstx, ULONG dsty, ULONG width,
-                               ULONG height, ULONG globalalpha);
-
-void cgx_BltTemplateAlpha(struct Library *base, APTR src, LONG srcx,
-                          LONG srcmod, struct RastPort *rp, LONG dstx,
-                          LONG dsty, LONG width, LONG height);
 
 #endif
