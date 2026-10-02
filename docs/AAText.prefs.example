@@ -1,0 +1,20 @@
+# AAText preferences - copy to ENVARC:AAText.prefs (and ENV:AAText.prefs)
+#
+# bitmapfont  size  ->  ttf file                         [pixelsize]
+#
+# - "bitmapfont" is the font name as shown in Font prefs (without .font);
+#   use double quotes if it contains spaces.
+# - "size" must match the font size exactly.
+# - pixelsize is optional; without it AAText picks the size whose
+#   character widths best match the bitmap font.
+# - Fonts without a mapping are drawn by the system as before.
+
+Arial                  22  ->  FONTS:_TrueType/arial.ttf
+"BitStream Vera Sans"  16  ->  FONTS:_TrueType/Vera.ttf
+
+# Gamma for the antialiasing edge (0.5 - 4.0, default 1.8).
+# Higher values make text look bolder.
+gamma 1.8
+
+# Character set of your bitmap fonts: latin1 (default) or latin5 (Turkish)
+charset latin1
