@@ -30,3 +30,27 @@ _aa_RawPutChProc:
         jsr     -516(%a6)
         movem.l (%sp)+,%d0-%d1/%a0-%a1/%a6
         rts
+
+| LONG aa_CallOnStack(struct StackSwapStruct *sss, LONG (*func)(APTR), APTR arg)
+| Switches to the stack described by sss (exec/StackSwap, LVO -732),
+| calls func(arg) there and switches back. Returns func's result.
+
+        .globl  _aa_CallOnStack
+_aa_CallOnStack:
+        movem.l %d2/%a2-%a3/%a6,-(%sp)  | 16 bytes, args start at 20(sp)
+        move.l  20(%sp),%a2             | sss
+        move.l  24(%sp),%a3             | func
+        move.l  28(%sp),%d2             | arg
+        move.l  4,%a6
+        move.l  %a2,%a0
+        jsr     -732(%a6)               | StackSwap: now on the new stack
+        move.l  %d2,-(%sp)
+        jsr     (%a3)
+        addq.l  #4,%sp
+        move.l  %d0,%d2
+        move.l  4,%a6
+        move.l  %a2,%a0
+        jsr     -732(%a6)               | StackSwap: back on the old stack
+        move.l  %d2,%d0
+        movem.l (%sp)+,%d2/%a2-%a3/%a6
+        rts
