@@ -2,6 +2,7 @@
 #define AATEXT_GLYPHS_H
 
 #include <exec/types.h>
+#include <exec/lists.h>
 #include <graphics/text.h>
 
 #include "prefs.h"
@@ -9,6 +10,7 @@
 /* A rendered glyph: 8 bit coverage (gamma corrected), pitch == width. */
 struct AAGlyph
 {
+    struct MinNode  lru;        /* must be first: LRU list node */
     struct AAGlyph *next;       /* hash chain */
     struct AAFont  *font;
     UWORD  code;                /* Amiga character code */
@@ -57,6 +59,9 @@ void aa_LockGlyphs(void);
 void aa_UnlockGlyphs(void);
 BOOL aa_PrepareFont(struct AAFont *font, struct TextFont *tf);
 struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code);
+
+/* Current cache size, for tests and statistics (lock held). */
+void aa_GetCacheStats(ULONG *bytes, ULONG *count);
 
 #ifdef DEBUG
 void aa_PrintGlyphStats(void);

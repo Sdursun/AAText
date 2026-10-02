@@ -26,6 +26,7 @@ int main(int argc, char **argv)
     struct AAFont *font;
     const char *s;
     LONG n;
+    int i;
 
     if (argc < 3)
     {
@@ -38,7 +39,11 @@ int main(int argc, char **argv)
         return 10;
     }
     n = aa_GlyphsInit(&prefs, TRUE);
-    printf("%ld font mapping(s), gamma %ld\n", (long)n, (long)prefs.gamma100);
+    printf("%ld font mapping(s), gamma %ld, cache %ld KB, offscreen %d\n",
+           (long)n, (long)prefs.gamma100, (long)prefs.cachekb,
+           (int)prefs.offscreen);
+    for (i = 0; i < prefs.numblack; i++)
+        printf("blacklist: \"%s\"\n", prefs.blacklist[i]);
     if (n == 0)
         return 10;
 
@@ -65,6 +70,36 @@ int main(int argc, char **argv)
         aa_UnlockGlyphs();
         return 10;
     }
+    /* "stress": fill the cache past its limit several times (LRU test) */
+    if (strcmp(argv[2], "stress") == 0)
+    {
+        ULONG limit = prefs.cachekb * 1024, bytes, count, maxbytes = 0;
+        int round, c, fails = 0;
+
+        for (round = 0; round < 3; round++)
+        {
+            for (c = 32; c < 256; c++)
+            {
+                if (!aa_GetGlyph(font, (UBYTE)c))
+                    fails++;
+                aa_GetCacheStats(&bytes, &count);
+                if (bytes > maxbytes)
+                    maxbytes = bytes;
+            }
+        }
+        /* recently used glyphs must survive: 'A' twice in a row */
+        aa_GetGlyph(font, 'A');
+        aa_GetCacheStats(&bytes, &count);
+        printf("stress: %d failures, %lu glyphs, %lu bytes now, "
+               "%lu max, limit %lu -> %s\n", fails, (unsigned long)count,
+               (unsigned long)bytes, (unsigned long)maxbytes,
+               (unsigned long)limit,
+               (!fails && maxbytes <= limit + 4096) ? "OK" : "FAIL");
+        aa_UnlockGlyphs();
+        aa_GlyphsCleanup();
+        return fails ? 10 : 0;
+    }
+
     /* "@fdde" = hex character codes */
     if (argv[2][0] == '@')
     {

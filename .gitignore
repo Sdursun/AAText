@@ -3,3 +3,4 @@ build/
 *.map
 *.lnk
 third_party/
+fonts/

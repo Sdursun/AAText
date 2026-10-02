@@ -218,7 +218,7 @@ void aa_TextHook(struct RastPort *rp, CONST_STRPTR string, LONG count,
     RecordCall(me);
 #endif
 
-    if (!aa_RenderText(rp, string, (WORD)count))
+    if (!aa_RenderText(rp, string, (WORD)count, me))
         CallOrigText(rp, string, count, gfx);
 
     LeaveTask(me);

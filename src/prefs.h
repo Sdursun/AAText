@@ -4,8 +4,11 @@
 #include <exec/types.h>
 
 #define AA_MAX_MAPPINGS   16
+#define AA_MAX_BLACKLIST  32
 #define AA_NAME_LEN       32
 #define AA_PATH_LEN       256
+
+#define AA_DEFAULT_CACHE_KB  256
 
 enum
 {
@@ -28,6 +31,11 @@ struct AAPrefs
     UWORD nummaps;
     UWORD gamma100;                 /* gamma * 100, e.g. 180 */
     UBYTE charset;
+    BOOL  offscreen;                /* use Workbench colours for bitmaps
+                                       that belong to no screen */
+    ULONG cachekb;                  /* glyph cache size in KB */
+    char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];
+    UWORD numblack;
 };
 
 /*

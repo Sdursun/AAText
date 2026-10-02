@@ -4,6 +4,9 @@
 #include <exec/types.h>
 #include <exec/libraries.h>
 #include <graphics/rastport.h>
+#include <exec/tasks.h>
+
+struct AAPrefs;
 
 enum
 {
@@ -16,7 +19,7 @@ enum
 extern struct Library *CyberGfxBase;
 extern UBYTE aa_Mode;
 
-BOOL aa_RenderInit(void);
+BOOL aa_RenderInit(const struct AAPrefs *prefs);
 void aa_RenderCleanup(void);
 
 /*
@@ -24,7 +27,8 @@ void aa_RenderCleanup(void);
  * one we handle; the caller must then call the original Text().
  * On success rp->cp_x has been advanced exactly like Text() would.
  */
-BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count);
+BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count,
+                   struct Task *me);
 
 #ifdef DEBUG
 void aa_PrintRenderStats(void);

@@ -18,3 +18,16 @@ gamma 1.8
 
 # Character set of your bitmap fonts: latin1 (default) or latin5 (Turkish)
 charset latin1
+
+# Glyph cache size in KB (32 - 16384, default 256). Least recently used
+# glyphs are dropped when it is full.
+cache 256
+
+# Programs AAText must not touch (Workbench program name or Shell command
+# name, case does not matter). Several lines are allowed.
+#blacklist FinalWriter TypeSmith
+
+# Some programs draw text into hidden bitmaps first (e.g. docks, gauges).
+# "on" draws those with the Workbench screen colours; colours may be wrong
+# if the program is not on the Workbench screen. Default off.
+#offscreen on

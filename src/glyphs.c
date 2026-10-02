@@ -34,7 +34,6 @@ void FT_Done_Memory(FT_Memory memory);
 
 #define AA_STACK_SIZE   (32 * 1024)
 #define AA_HASH_SIZE    256
-#define AA_CACHE_LIMIT  (1024 * 1024)       /* bytes of glyph data */
 #define AA_MAX_FONTFILE (8 * 1024 * 1024)
 
 struct AAFace
@@ -63,10 +62,13 @@ static LONG aa_NumFonts;
 static UBYTE aa_Charset;
 
 static struct AAGlyph *aa_Hash[AA_HASH_SIZE];
+static struct MinList aa_LRU;           /* most recently used first */
 static ULONG aa_CacheBytes;
+static ULONG aa_CacheCount;
+static ULONG aa_CacheLimit = AA_DEFAULT_CACHE_KB * 1024;
 
 #ifdef DEBUG
-static ULONG stat_hits, stat_misses, stat_flushes, stat_missing;
+static ULONG stat_hits, stat_misses, stat_evictions, stat_missing;
 #endif
 
 /* ISO-8859-9 differs from ISO-8859-1 in six positions. */
@@ -260,6 +262,10 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     LONG i;
 
     InitSemaphore(&aa_GlyphSem);
+    aa_LRU.mlh_Head = (struct MinNode *)&aa_LRU.mlh_Tail;
+    aa_LRU.mlh_Tail = NULL;
+    aa_LRU.mlh_TailPred = (struct MinNode *)&aa_LRU.mlh_Head;
+    aa_CacheLimit = prefs->cachekb * 1024;
     aa_Charset = prefs->charset;
 
     for (i = 0; i < 256; i++)
@@ -306,20 +312,19 @@ static void FlushCache(void)
 {
     LONG i;
 
-    for (i = 0; i < AA_HASH_SIZE; i++)
+    if (!aa_LRU.mlh_Head)       /* aa_GlyphsInit() never ran */
+        return;
+    while (aa_LRU.mlh_TailPred != (struct MinNode *)&aa_LRU)
     {
-        struct AAGlyph *g = aa_Hash[i];
+        struct AAGlyph *g = (struct AAGlyph *)aa_LRU.mlh_Head;
 
-        while (g)
-        {
-            struct AAGlyph *next = g->next;
-
-            FreeMem(g, g->allocsize);
-            g = next;
-        }
-        aa_Hash[i] = NULL;
+        Remove((struct Node *)&g->lru);
+        FreeMem(g, g->allocsize);
     }
+    for (i = 0; i < AA_HASH_SIZE; i++)
+        aa_Hash[i] = NULL;
     aa_CacheBytes = 0;
+    aa_CacheCount = 0;
 }
 
 void aa_GlyphsCleanup(void)
@@ -548,9 +553,41 @@ static LONG RenderOnStack(APTR arg)
     return TRUE;
 }
 
+/* Hash bucket of a glyph. */
+static inline ULONG HashOf(struct AAFont *font, UBYTE code)
+{
+    return (code ^ ((ULONG)font >> 4)) & (AA_HASH_SIZE - 1);
+}
+
+/* Remove the least recently used glyph from cache, hash and memory. */
+static void EvictOldest(void)
+{
+    struct AAGlyph *g = (struct AAGlyph *)aa_LRU.mlh_TailPred;
+    struct AAGlyph **pp;
+
+    if (!g->lru.mln_Pred)       /* list empty */
+        return;
+
+    for (pp = &aa_Hash[HashOf(g->font, g->code)]; *pp; pp = &(*pp)->next)
+    {
+        if (*pp == g)
+        {
+            *pp = g->next;
+            break;
+        }
+    }
+    Remove((struct Node *)&g->lru);
+    aa_CacheBytes -= g->allocsize;
+    aa_CacheCount--;
+    FreeMem(g, g->allocsize);
+#ifdef DEBUG
+    stat_evictions++;
+#endif
+}
+
 struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code)
 {
-    ULONG h = (code ^ ((ULONG)font >> 4)) & (AA_HASH_SIZE - 1);
+    ULONG h = HashOf(font, code);
     struct AAGlyph *g;
     struct GlyphReq r;
 
@@ -561,6 +598,12 @@ struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code)
 #ifdef DEBUG
             stat_hits++;
 #endif
+            /* most recently used goes to the front */
+            if ((struct MinNode *)g != aa_LRU.mlh_Head)
+            {
+                Remove((struct Node *)&g->lru);
+                AddHead((struct List *)&aa_LRU, (struct Node *)&g->lru);
+            }
             return g;
         }
     }
@@ -568,16 +611,6 @@ struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code)
 #ifdef DEBUG
     stat_misses++;
 #endif
-    if (aa_CacheBytes > AA_CACHE_LIMIT)
-    {
-        /* Safe: every user of glyph pointers holds aa_GlyphSem. */
-        FlushCache();
-#ifdef DEBUG
-        stat_flushes++;
-#endif
-        h = (code ^ ((ULONG)font >> 4)) & (AA_HASH_SIZE - 1);
-    }
-
     r.font = font;
     r.code = code;
     r.glyph = NULL;
@@ -587,15 +620,34 @@ struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code)
     g = r.glyph;
     g->next = aa_Hash[h];
     aa_Hash[h] = g;
+    AddHead((struct List *)&aa_LRU, (struct Node *)&g->lru);
     aa_CacheBytes += g->allocsize;
+    aa_CacheCount++;
+
+    /*
+     * Evict from the tail, never the glyph just added. Safe: every user
+     * of glyph pointers holds aa_GlyphSem, and callers use each glyph
+     * before asking for the next one.
+     */
+    while (aa_CacheBytes > aa_CacheLimit &&
+           aa_LRU.mlh_TailPred != (struct MinNode *)g)
+        EvictOldest();
+
     return g;
+}
+
+void aa_GetCacheStats(ULONG *bytes, ULONG *count)
+{
+    *bytes = aa_CacheBytes;
+    *count = aa_CacheCount;
 }
 
 #ifdef DEBUG
 void aa_PrintGlyphStats(void)
 {
-    kprintf("AAText: glyph cache: %ld hits, %ld misses, %ld flushes, "
-            "%ld bytes, %ld chars without glyph\n",
-            stat_hits, stat_misses, stat_flushes, aa_CacheBytes, stat_missing);
+    kprintf("AAText: glyph cache: %ld hits, %ld misses, %ld evictions, "
+            "%ld glyphs, %ld of %ld bytes, %ld chars without glyph\n",
+            stat_hits, stat_misses, stat_evictions, aa_CacheCount,
+            aa_CacheBytes, aa_CacheLimit, stat_missing);
 }
 #endif

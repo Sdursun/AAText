@@ -30,7 +30,7 @@
 #define AA_PORTNAME "AAText"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AAText 0.4 (2.10.2026)";
+    "$VER: AAText 0.5 (3.10.2026)";
 
 struct GfxBase *GfxBase;
 struct IntuitionBase *IntuitionBase;
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
         return RETURN_FAIL;
     }
 
-    if (!aa_RenderInit())
+    if (!aa_RenderInit(&prefs))
     {
         Msg("AAText: out of memory.\n");
         Cleanup();
@@ -232,13 +232,16 @@ int main(int argc, char **argv)
     }
 
     {
-        LONG info[3];
+        LONG info[5];
 
         info[0] = numfonts;
         info[1] = prefs.gamma100 / 100;
         info[2] = prefs.gamma100 % 100;
-        MsgFmt("AAText installed: %ld font mapping(s), gamma %ld.%02ld. "
-               "Ctrl-C or \"AAText QUIT\" removes it.\n", info);
+        info[3] = prefs.cachekb;
+        info[4] = prefs.numblack;
+        MsgFmt("AAText installed: %ld font mapping(s), gamma %ld.%02ld, "
+               "cache %ld KB, %ld blacklisted.\n"
+               "AAText: Ctrl-C or \"AAText QUIT\" removes it.\n", info);
     }
 
     for (;;)

@@ -6,8 +6,9 @@
  *   "Some Font"    16  ->  "FONTS:My Fonts/x.ttf"
  *   gamma   1.8
  *   charset latin1 | latin5
- *
- * Keywords reserved for later stages (cache, blacklist) are ignored.
+ *   cache 256                (glyph cache size in KB)
+ *   blacklist FinalWriter TypeSmith
+ *   offscreen on | off
  */
 
 #include <exec/types.h>
@@ -178,8 +179,43 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
             PrefsError(lineno, "charset must be latin1 or latin5");
         return;
     }
-    if (StrIEq(tok[0], "cache") || StrIEq(tok[0], "blacklist"))
-        return;     /* stage 4 */
+    if (StrIEq(tok[0], "cache"))
+    {
+        LONG kb = n == 2 ? ParseUInt(tok[1]) : -1;
+
+        if (kb < 32 || kb > 16384)
+            PrefsError(lineno, "cache must be between 32 and 16384 (KB)");
+        else
+            prefs->cachekb = kb;
+        return;
+    }
+    if (StrIEq(tok[0], "offscreen"))
+    {
+        if (n == 2 && StrIEq(tok[1], "on"))
+            prefs->offscreen = TRUE;
+        else if (n == 2 && StrIEq(tok[1], "off"))
+            prefs->offscreen = FALSE;
+        else
+            PrefsError(lineno, "offscreen must be on or off");
+        return;
+    }
+    if (StrIEq(tok[0], "blacklist"))
+    {
+        int i;
+
+        if (n < 2)
+            PrefsError(lineno, "blacklist needs at least one program name");
+        for (i = 1; i < n; i++)
+        {
+            if (prefs->numblack == AA_MAX_BLACKLIST)
+            {
+                PrefsError(lineno, "too many blacklist entries");
+                break;
+            }
+            StrCopy(prefs->blacklist[prefs->numblack++], tok[i], AA_NAME_LEN);
+        }
+        return;
+    }
 
     /* font mapping: name size -> path [pixelsize] */
     if ((n == 4 || n == 5) && tok[2][0] == '-' && tok[2][1] == '>' && !tok[2][2])
@@ -243,6 +279,9 @@ BOOL aa_ReadPrefs(struct AAPrefs *prefs, const char *path, BOOL report)
     prefs->nummaps = 0;
     prefs->gamma100 = 180;
     prefs->charset = AA_CHARSET_LATIN1;
+    prefs->offscreen = FALSE;
+    prefs->cachekb = AA_DEFAULT_CACHE_KB;
+    prefs->numblack = 0;
 
     fh = OpenPrefsFile(path);
     if (!fh)

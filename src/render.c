@@ -20,10 +20,16 @@
 #include <intuition/intuition.h>
 #include <intuition/screens.h>
 #include <intuition/intuitionbase.h>
+#include <dos/dosextens.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
+#ifdef DEBUG
+#include <devices/timer.h>
+#include <proto/timer.h>
+#endif
 
 #include "render.h"
+#include "prefs.h"
 #include "glyphs.h"
 #include "cgx.h"
 #include "debug.h"
@@ -43,30 +49,64 @@ UBYTE aa_Mode = AA_MODE_TEXT;
 static UBYTE *aa_Buffers[AA_NUM_BUFFERS];
 static volatile BOOL aa_BufferBusy[AA_NUM_BUFFERS];
 
+/* Copied from the prefs at init; read-only afterwards. */
+static char aa_Blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];
+static LONG aa_NumBlack;
+static BOOL aa_Offscreen;
+
 #ifdef DEBUG
 enum
 {
-    R_DRAWN, R_DRAWMODE, R_STYLE, R_NOBITMAP, R_DEPTH, R_NOTCGX, R_LUT8,
-    R_NOMAPPING, R_NOVIEWPORT, R_COORDS, R_NOMEM, R_FONTFAIL, R_COUNT
+    R_DRAWN, R_BLACKLIST, R_DRAWMODE, R_STYLE, R_NOBITMAP, R_DEPTH,
+    R_NOTCGX, R_LUT8, R_NOMAPPING, R_NOVIEWPORT, R_COORDS, R_NOMEM,
+    R_FONTFAIL, R_COUNT
 };
 static const char *const reason_names[R_COUNT] =
 {
-    "drawn by AAText", "COMPLEMENT/INVERSVID", "bold/italic/underl.",
-    "no bitmap/font", "depth < 15", "not a CGX bitmap", "LUT8 bitmap",
-    "font not mapped", "no viewport", "coords/size", "out of memory",
-    "font setup failed"
+    "drawn by AAText", "blacklisted task", "COMPLEMENT/INVERSVID",
+    "bold/italic/underl.", "no bitmap/font", "depth < 15",
+    "not a CGX bitmap", "LUT8 bitmap", "font not mapped", "no viewport",
+    "coords/size", "out of memory", "font setup failed"
 };
 static ULONG reason_counts[R_COUNT];
 #define FAIL(r) do { reason_counts[r]++; return FALSE; } while (0)
 #define COUNT(r) (reason_counts[r]++)
+
+/* Timing of drawn strings, measured with the E-clock. */
+struct Device *TimerBase;
+static struct timerequest aa_TimerReq;
+static BOOL aa_TimerOpen;
+static ULONG aa_EFreq;
+static ULONG stat_ticks, stat_maxticks, stat_chars, stat_offscreen;
+static ULONG stat_widthmismatch;
 #else
 #define FAIL(r) return FALSE
 #define COUNT(r) ((void)0)
 #endif
 
-BOOL aa_RenderInit(void)
+BOOL aa_RenderInit(const struct AAPrefs *prefs)
 {
     LONG i;
+
+    for (i = 0; i < prefs->numblack; i++)
+    {
+        CopyMem((APTR)prefs->blacklist[i], aa_Blacklist[i], AA_NAME_LEN);
+        D(("AAText: blacklisted \"%s\"\n", (ULONG)aa_Blacklist[i]));
+    }
+    aa_NumBlack = prefs->numblack;
+    aa_Offscreen = prefs->offscreen;
+
+#ifdef DEBUG
+    if (!OpenDevice((CONST_STRPTR)TIMERNAME, UNIT_ECLOCK,
+                    (struct IORequest *)&aa_TimerReq, 0))
+    {
+        struct EClockVal ev;
+
+        aa_TimerOpen = TRUE;
+        TimerBase = aa_TimerReq.tr_node.io_Device;
+        aa_EFreq = ReadEClock(&ev);
+    }
+#endif
 
     for (i = 0; i < AA_NUM_BUFFERS; i++)
     {
@@ -87,6 +127,81 @@ void aa_RenderCleanup(void)
             FreeVec(aa_Buffers[i]);
         aa_Buffers[i] = NULL;
     }
+#ifdef DEBUG
+    if (aa_TimerOpen)
+        CloseDevice((struct IORequest *)&aa_TimerReq);
+    aa_TimerOpen = FALSE;
+#endif
+}
+
+static int ToLower(int c)
+{
+    return (c >= 'A' && c <= 'Z') ? c + ('a' - 'A') : c;
+}
+
+/* Is the name (len chars, not necessarily terminated) in the blacklist? */
+static BOOL InBlacklist(const char *name, LONG len)
+{
+    LONG i, j;
+
+    for (i = 0; i < aa_NumBlack; i++)
+    {
+        const char *b = aa_Blacklist[i];
+
+        for (j = 0; j < len && b[j] && ToLower(b[j]) == ToLower(name[j]); j++)
+            ;
+        if (j == len && !b[j])
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/*
+ * Programs started from Workbench run as a process named after the
+ * program. Shell commands run in the Shell's process ("Background CLI",
+ * "Shell Process"), so the running command name is checked as well.
+ * Only memory is read here, no DOS calls.
+ */
+static BOOL IsBlacklisted(struct Task *me)
+{
+    const char *name = me->tc_Node.ln_Name;
+
+    if (name)
+    {
+        LONG len = 0;
+
+        while (name[len])
+            len++;
+        if (InBlacklist(name, len))
+            return TRUE;
+    }
+
+    if (me->tc_Node.ln_Type == NT_PROCESS)
+    {
+        struct CommandLineInterface *cli =
+            BADDR(((struct Process *)me)->pr_CLI);
+
+        if (cli && cli->cli_Module && cli->cli_CommandName)
+        {
+            const UBYTE *bstr = BADDR(cli->cli_CommandName);
+            const char *cmd = (const char *)bstr + 1;
+            LONG len = bstr[0], i;
+
+            /* FilePart(): skip "dir/" and "volume:" */
+            for (i = len - 1; i >= 0; i--)
+            {
+                if (cmd[i] == '/' || cmd[i] == ':')
+                {
+                    cmd += i + 1;
+                    len -= i + 1;
+                    break;
+                }
+            }
+            if (len > 0 && InBlacklist(cmd, len))
+                return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 /*
@@ -186,7 +301,7 @@ static struct ViewPort *FindViewPort(struct RastPort *rp)
 {
     struct Layer *layer = rp->Layer;
     struct Screen *scr;
-    struct ViewPort *vp = NULL;
+    struct ViewPort *vp = NULL, *wbvp = NULL;
 
     if (layer && layer->Window)
         return &((struct Window *)layer->Window)->WScreen->ViewPort;
@@ -199,9 +314,19 @@ static struct ViewPort *FindViewPort(struct RastPort *rp)
             vp = &scr->ViewPort;
             break;
         }
+        if ((scr->Flags & SCREENTYPE) == WBENCHSCREEN)
+            wbvp = &scr->ViewPort;
     }
     Permit();
 
+    /* "offscreen on": bitmaps of no screen use the Workbench colours */
+    if (!vp && aa_Offscreen && wbvp)
+    {
+#ifdef DEBUG
+        stat_offscreen++;
+#endif
+        vp = wbvp;
+    }
     return vp;
 }
 
@@ -369,7 +494,55 @@ static void DrawGradient(UBYTE *buf, LONG w, LONG h, const UBYTE *fg)
     }
 }
 
-BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count)
+/*
+ * Width of the string as Text() advances cp_x, i.e. TextLength(), using
+ * the same per-character cells as DrawString().
+ */
+static LONG CalcWidth(struct RastPort *rp, CONST_STRPTR s, LONG count)
+{
+    struct TextFont *tf = rp->Font;
+    WORD *kern = (WORD *)tf->tf_CharKern;
+    WORD *space = (WORD *)tf->tf_CharSpace;
+    LONG defidx = tf->tf_HiChar - tf->tf_LoChar + 1;
+    LONG w = 0;
+
+    if (!kern && !space)
+        return count * (tf->tf_XSize + rp->TxSpacing);
+
+    while (count--)
+    {
+        UBYTE c = *s++;
+        LONG idx = (c < tf->tf_LoChar || c > tf->tf_HiChar) ?
+                   defidx : c - tf->tf_LoChar;
+
+        w += (kern ? kern[idx] : 0) + (space ? space[idx] : tf->tf_XSize) +
+             rp->TxSpacing;
+    }
+    return w;
+}
+
+#ifdef DEBUG
+/*
+ * Verify CalcWidth() against the system's TextLength(). On mismatch the
+ * system value is used (so the layout stays right) and logged.
+ */
+static void CheckWidth(struct RastPort *rp, CONST_STRPTR s, LONG count,
+                       LONG *w)
+{
+    LONG tl = TextLength(rp, s, count);
+
+    if (tl == *w)
+        return;
+    if (stat_widthmismatch++ < 5)
+        kprintf("AAText: width mismatch font \"%s\" %ld: ours=%ld "
+                "TextLength=%ld count=%ld\n",
+                (ULONG)rp->Font->tf_Message.mn_Node.ln_Name,
+                (LONG)rp->Font->tf_YSize, *w, tl, count);
+    *w = tl;
+}
+#endif
+
+static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
 {
     struct TextFont *tf = rp->Font;
     struct BitMap *bm = rp->BitMap;
@@ -379,9 +552,6 @@ BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count)
     UBYTE fg[3], bg[3];
     UBYTE *buf;
     LONG x, y, w, h;
-
-    if (mode == AA_MODE_OFF || count <= 0 || !CyberGfxBase)
-        return FALSE;
 
     if (rp->DrawMode & (COMPLEMENT | INVERSVID))
         FAIL(R_DRAWMODE);
@@ -412,7 +582,10 @@ BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count)
     }
 
     /* Same cell the original Text() covers; cp_x advance == TextLength(). */
-    w = TextLength(rp, string, count);
+    w = CalcWidth(rp, string, count);
+#ifdef DEBUG
+    CheckWidth(rp, string, count, &w);
+#endif
     h = tf->tf_YSize;
     x = rp->cp_x;
     y = rp->cp_y - tf->tf_Baseline;
@@ -476,15 +649,67 @@ BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count)
     return TRUE;
 }
 
+BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count,
+                   struct Task *me)
+{
+    BOOL done;
 #ifdef DEBUG
+    struct EClockVal t0, t1;
+#endif
+
+    if (aa_Mode == AA_MODE_OFF || count <= 0 || !CyberGfxBase)
+        return FALSE;
+    if (aa_NumBlack && IsBlacklisted(me))
+        FAIL(R_BLACKLIST);
+
+#ifdef DEBUG
+    if (aa_TimerOpen)
+        ReadEClock(&t0);
+#endif
+    done = RenderString(rp, string, count);
+#ifdef DEBUG
+    if (done && aa_TimerOpen)
+    {
+        ULONG d;
+
+        ReadEClock(&t1);
+        d = t1.ev_lo - t0.ev_lo;    /* calls are far shorter than a wrap */
+        stat_ticks += d;
+        if (d > stat_maxticks)
+            stat_maxticks = d;
+        stat_chars += count;
+    }
+#endif
+    return done;
+}
+
+#ifdef DEBUG
+static ULONG TicksToMicros(unsigned long long ticks)
+{
+    return aa_EFreq ? (ULONG)(ticks * 1000000ULL / aa_EFreq) : 0;
+}
+
 void aa_PrintRenderStats(void)
 {
+    ULONG drawn = reason_counts[R_DRAWN];
     int i;
 
     kprintf("AAText: --- Text() decisions ---\n");
     for (i = 0; i < R_COUNT; i++)
         kprintf("AAText: %-22s %8ld\n", (ULONG)reason_names[i],
                 reason_counts[i]);
+    if (stat_offscreen)
+        kprintf("AAText: offscreen bitmaps drawn with Workbench colours: %ld\n",
+                stat_offscreen);
+    if (stat_widthmismatch)
+        kprintf("AAText: width mismatches vs TextLength(): %ld\n",
+                stat_widthmismatch);
+    if (drawn && stat_chars && aa_EFreq)
+        kprintf("AAText: timing: %ld us per Text() call, %ld us per char, "
+                "max %ld us (%ld calls, %ld chars, E-clock %ld Hz)\n",
+                TicksToMicros(stat_ticks) / drawn,
+                TicksToMicros(stat_ticks) / stat_chars,
+                TicksToMicros(stat_maxticks), drawn, stat_chars, aa_EFreq);
     aa_PrintGlyphStats();
 }
 #endif
