@@ -20,6 +20,8 @@
 #include <intuition/intuitionbase.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
+#include <proto/graphics.h>
+#include <proto/diskfont.h>
 
 #include "patch.h"
 #include "render.h"
@@ -30,7 +32,7 @@
 #define AA_PORTNAME "AAText"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AAText 0.5 (3.10.2026)";
+    "$VER: AAText 0.6 (3.10.2026)";
 
 struct GfxBase *GfxBase;
 struct IntuitionBase *IntuitionBase;
@@ -84,6 +86,68 @@ static BOOL ArgIs(const char *arg, const char *name)
     return *arg == 0 && *name == 0;
 }
 
+/*
+ * Open each mapped bitmap font once and prepare its TrueType size now,
+ * in our own process, so the first Text() call (possibly from
+ * input.device) does not pay for it - real metrics fonts measure all
+ * 256 characters. Fonts that cannot be opened are prepared on first use.
+ * Returns TRUE if any mapping uses real metrics.
+ */
+static BOOL PrepareFonts(void)
+{
+    struct Library *DiskfontBase;
+    BOOL anyreal = FALSE;
+    LONG i;
+
+    for (i = 0; i < aa_FontCount(); i++)
+        if (aa_FontAt(i)->real)
+            anyreal = TRUE;
+
+    DiskfontBase = OpenLibrary((CONST_STRPTR)"diskfont.library", 36);
+    if (!DiskfontBase)
+        return anyreal;
+
+    for (i = 0; i < aa_FontCount(); i++)
+    {
+        struct AAFont *font = aa_FontAt(i);
+        char name[AA_NAME_LEN + 6];
+        struct TextAttr ta;
+        struct TextFont *tf;
+        int n;
+
+        for (n = 0; font->name[n]; n++)
+            name[n] = font->name[n];
+        CopyMem(".font", name + n, 6);
+
+        ta.ta_Name = (STRPTR)name;
+        ta.ta_YSize = font->ysize;
+        ta.ta_Style = 0;
+        ta.ta_Flags = 0;
+        tf = OpenDiskFont(&ta);
+        if (tf)
+        {
+            if (aa_FindFont(tf) == font)
+            {
+                aa_LockGlyphs();
+                aa_PrepareFont(font, tf);
+                aa_UnlockGlyphs();
+            }
+            CloseFont(tf);
+        }
+        else
+        {
+            LONG args[2];
+
+            args[0] = (LONG)name;
+            args[1] = font->ysize;
+            MsgFmt("AAText: note: %s %ld not found now, "
+                   "will be set up on first use.\n", args);
+        }
+    }
+    CloseLibrary(DiskfontBase);
+    return anyreal;
+}
+
 static void Cleanup(void)
 {
     aa_GlyphsCleanup();
@@ -104,6 +168,7 @@ int main(int argc, char **argv)
     BOOL have_prefspath = FALSE;
     UBYTE mode = AA_MODE_TEXT;
     LONG numfonts;
+    BOOL anyreal;
 
     from_shell = (argc != 0);
 
@@ -211,6 +276,7 @@ int main(int argc, char **argv)
         return RETURN_FAIL;
     }
     aa_Mode = mode;
+    anyreal = PrepareFonts() && mode == AA_MODE_TEXT;
 
     port = CreateMsgPort();
     if (!port)
@@ -222,7 +288,7 @@ int main(int argc, char **argv)
     port->mp_Node.ln_Pri = 0;
     AddPort(port);
 
-    if (!aa_Install(GfxBase))
+    if (!aa_Install(GfxBase, anyreal))
     {
         Msg("AAText: could not install the patch.\n");
         RemPort(port);

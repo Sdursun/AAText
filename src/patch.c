@@ -1,5 +1,5 @@
 /*
- * AAText - Text() patch installation, removal and the C side of the hook.
+ * AAText - patch installation, removal and the C side of the hook.
  */
 
 #include <exec/types.h>
@@ -7,24 +7,36 @@
 #include <exec/tasks.h>
 #include <graphics/rastport.h>
 #include <graphics/gfxbase.h>
+#include <graphics/text.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 
 #include "patch.h"
 #include "render.h"
+#include "metrics.h"
 #include "debug.h"
-
-#define LVO_Text    (-60)
 
 #define AA_MAX_TASKS 32
 
 /* stub.s */
 extern void aa_TextStub(void);
+extern void aa_TextLengthStub(void);
+extern void aa_TextExtentStub(void);
+extern void aa_TextFitStub(void);
+extern LONG aa_CallTextLength(APTR fn, struct RastPort *rp, CONST_STRPTR s,
+                              LONG count, struct GfxBase *gfx);
+extern LONG aa_CallTextExtent(APTR fn, struct RastPort *rp, CONST_STRPTR s,
+                              LONG count, struct TextExtent *te,
+                              struct GfxBase *gfx);
+extern ULONG aa_CallTextFit(APTR fn, struct RastPort *rp, CONST_STRPTR s,
+                            LONG len, struct TextExtent *te,
+                            const struct TextExtent *cte, LONG dir,
+                            LONG bitwidth, LONG bitheight,
+                            struct GfxBase *gfx);
 
 volatile LONG aa_UseCount;
 
 static struct GfxBase *aa_GfxBase;
-static APTR aa_OrigText;
 static volatile BOOL aa_Passthrough;
 
 /* Tasks currently inside the hook, for reentrancy protection. */
@@ -135,6 +147,26 @@ static void PrintStats(void)
 #endif
 
 /*
+ * Patched graphics.library functions. Text() is always patched; the
+ * three measuring functions only when a font uses real metrics.
+ */
+enum { P_TEXT, P_TEXTLENGTH, P_TEXTEXTENT, P_TEXTFIT, P_COUNT };
+
+static const WORD patch_lvo[P_COUNT] = { -60, -54, -690, -696 };
+#ifdef DEBUG
+static const char *const patch_name[P_COUNT] =
+{
+    "Text", "TextLength", "TextExtent", "TextFit"
+};
+#endif
+static void (*const patch_stub[P_COUNT])(void) =
+{
+    aa_TextStub, aa_TextLengthStub, aa_TextExtentStub, aa_TextFitStub
+};
+static APTR aa_Orig[P_COUNT];
+static LONG aa_NumPatches;
+
+/*
  * Call the original Text() (or whatever was in the vector before us)
  * with its register arguments.
  */
@@ -148,7 +180,7 @@ static inline void CallOrigText(struct RastPort *rp, CONST_STRPTR string,
 
     __asm volatile ("jsr (%4)"
                     : "+r" (_d0), "+r" (_a0), "+r" (_a1)
-                    : "r" (_a6), "a" (aa_OrigText)
+                    : "r" (_a6), "a" (aa_Orig[P_TEXT])
                     : "d1", "cc", "memory");
 }
 
@@ -218,50 +250,109 @@ void aa_TextHook(struct RastPort *rp, CONST_STRPTR string, LONG count,
     RecordCall(me);
 #endif
 
-    if (!aa_RenderText(rp, string, (WORD)count, me))
+    if (!aa_RenderText(rp, string, (UWORD)count, me))
         CallOrigText(rp, string, count, gfx);
 
     LeaveTask(me);
 }
 
-BOOL aa_Install(struct GfxBase *gfx)
+/*
+ * Measuring hooks. They decide by font only (see aa_RealMetrics()), call
+ * no patched function and never wait on graphics locks, so they need no
+ * reentrancy tracking.
+ */
+LONG aa_TextLengthHook(struct RastPort *rp, CONST_STRPTR string, LONG count,
+                       struct GfxBase *gfx)
 {
+    struct AAMetricsCtx m;
+
+    if (!aa_Passthrough && aa_RealMetrics(rp, FindTask(NULL), &m))
+        return aa_MLength(&m, string, (UWORD)count);
+    return aa_CallTextLength(aa_Orig[P_TEXTLENGTH], rp, string, count, gfx);
+}
+
+LONG aa_TextExtentHook(struct RastPort *rp, CONST_STRPTR string, LONG count,
+                       struct TextExtent *te, struct GfxBase *gfx)
+{
+    struct AAMetricsCtx m;
+
+    if (!aa_Passthrough && aa_RealMetrics(rp, FindTask(NULL), &m))
+    {
+        aa_MExtent(&m, string, (UWORD)count, te);
+        return te->te_Width;
+    }
+    return aa_CallTextExtent(aa_Orig[P_TEXTEXTENT], rp, string, count, te,
+                             gfx);
+}
+
+ULONG aa_TextFitHook(struct RastPort *rp, CONST_STRPTR string, LONG len,
+                     struct TextExtent *te, const struct TextExtent *cte,
+                     LONG dir, LONG bitwidth, LONG bitheight,
+                     struct GfxBase *gfx)
+{
+    struct AAMetricsCtx m;
+
+    if (!aa_Passthrough && aa_RealMetrics(rp, FindTask(NULL), &m))
+        return aa_MFit(&m, string, (UWORD)len, te, cte, (WORD)dir,
+                       (UWORD)bitwidth, (UWORD)bitheight);
+    return aa_CallTextFit(aa_Orig[P_TEXTFIT], rp, string, len, te, cte, dir,
+                          bitwidth, bitheight, gfx);
+}
+
+BOOL aa_Install(struct GfxBase *gfx, BOOL measuring)
+{
+    LONG i;
+
     aa_GfxBase = gfx;
     aa_Passthrough = FALSE;
+    aa_NumPatches = measuring ? P_COUNT : 1;
 
+    /* All vectors at once, so no caller sees a half-installed set. */
     Forbid();
-    aa_OrigText = SetFunction((struct Library *)gfx, LVO_Text,
-                              (APTR)aa_TextStub);
+    for (i = 0; i < aa_NumPatches; i++)
+        aa_Orig[i] = SetFunction((struct Library *)gfx, patch_lvo[i],
+                                 (APTR)patch_stub[i]);
     CacheClearU();
     Permit();
 
-    D(("AAText: installed, original Text() at %lx\n", (ULONG)aa_OrigText));
-    return aa_OrigText != NULL;
+    for (i = 0; i < aa_NumPatches; i++)
+        D(("AAText: patched %s(), original at %lx\n",
+           (ULONG)patch_name[i], (ULONG)aa_Orig[i]));
+    return aa_Orig[P_TEXT] != NULL;
 }
 
 BOOL aa_Remove(void)
 {
-    APTR current;
+    LONG i;
 
     Forbid();
-    /* Jump table entry: JMP abs.l (0x4EF9) followed by the address. */
-    current = *(APTR *)((UBYTE *)aa_GfxBase + LVO_Text + 2);
-    if (current != (APTR)aa_TextStub)
+    /*
+     * Jump table entry: JMP abs.l (0x4EF9) followed by the address.
+     * Only restore if every vector still points to us; otherwise
+     * another program patched on top and we must stay (pass-through).
+     */
+    for (i = 0; i < aa_NumPatches; i++)
     {
-        aa_Passthrough = TRUE;
-        Permit();
-        D(("AAText: vector is %lx (not ours), staying in pass-through\n",
-           (ULONG)current));
-        return FALSE;
+        APTR current = *(APTR *)((UBYTE *)aa_GfxBase + patch_lvo[i] + 2);
+
+        if (current != (APTR)patch_stub[i])
+        {
+            aa_Passthrough = TRUE;
+            Permit();
+            D(("AAText: %s() vector is %lx (not ours), staying in "
+               "pass-through\n", (ULONG)patch_name[i], (ULONG)current));
+            return FALSE;
+        }
     }
-    SetFunction((struct Library *)aa_GfxBase, LVO_Text, aa_OrigText);
+    for (i = 0; i < aa_NumPatches; i++)
+        SetFunction((struct Library *)aa_GfxBase, patch_lvo[i], aa_Orig[i]);
     CacheClearU();
     Permit();
 
     /* Wait until no task is executing inside our code. */
     while (aa_UseCount)
         Delay(2);
-    /* A caller may still be between "subq" and "rts" in the stub. */
+    /* A caller may still be between "subq" and "rts" in a stub. */
     Delay(10);
 
 #ifdef DEBUG

@@ -2,7 +2,7 @@
  * AAText - preferences file parser.
  *
  *   # comment
- *   Arial          22  ->  FONTS:_TrueType/arial.ttf     [pixelsize]
+ *   Arial          22  ->  FONTS:_TrueType/arial.ttf     [pixelsize] [real]
  *   "Some Font"    16  ->  "FONTS:My Fonts/x.ttf"
  *   gamma   1.8
  *   charset latin1 | latin5
@@ -217,23 +217,33 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
         return;
     }
 
-    /* font mapping: name size -> path [pixelsize] */
-    if ((n == 4 || n == 5) && tok[2][0] == '-' && tok[2][1] == '>' && !tok[2][2])
+    /* font mapping: name size -> path [pixelsize] [real] */
+    if (n >= 4 && n <= 6 && tok[2][0] == '-' && tok[2][1] == '>' && !tok[2][2])
     {
         struct AAMapping *m;
         LONG size = ParseUInt(tok[1]);
-        LONG px = n == 5 ? ParseUInt(tok[4]) : 0;
-        int len;
+        LONG px = 0;
+        BOOL real = FALSE;
+        int len, i;
 
         if (size <= 0 || size > 255)
         {
             PrefsError(lineno, "invalid font size");
             return;
         }
-        if (px < 0 || px > 255)
+        for (i = 4; i < n; i++)
         {
-            PrefsError(lineno, "invalid pixel size");
-            return;
+            LONG v = ParseUInt(tok[i]);
+
+            if (StrIEq(tok[i], "real") && !real)
+                real = TRUE;
+            else if (!px && v > 0 && v <= 255)
+                px = v;
+            else
+            {
+                PrefsError(lineno, "expected pixel size and/or \"real\"");
+                return;
+            }
         }
         if (prefs->nummaps == AA_MAX_MAPPINGS)
         {
@@ -251,6 +261,7 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
         m->ysize = size;
         StrCopy(m->ttfpath, tok[3], AA_PATH_LEN);
         m->pixelsize = px;
+        m->real = real;
         return;
     }
 

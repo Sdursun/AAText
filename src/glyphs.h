@@ -33,6 +33,15 @@ struct AAFont
     APTR   ftsize;              /* FT_Size, created on first use */
     BOOL   prepared;
     BOOL   failed;
+    BOOL   real;                /* real TrueType metrics */
+    /*
+     * Real metrics mode, filled by aa_PrepareFont() and read-only after
+     * that (so measuring needs no lock): advance width and horizontal
+     * ink extent [inkl, inkr) relative to the pen, per character code.
+     */
+    WORD   adv[256];
+    WORD   inkl[256];
+    WORD   inkr[256];
 };
 
 /* Gamma corrected coverage values, filled by aa_GlyphsInit(). */
@@ -48,6 +57,10 @@ void aa_GlyphsCleanup(void);
 
 /* Mapping for a TextFont, or NULL. Lock-free (table is read-only). */
 struct AAFont *aa_FindFont(struct TextFont *tf);
+
+/* All usable mappings, for preparing them at startup. */
+LONG aa_FontCount(void);
+struct AAFont *aa_FontAt(LONG i);
 
 /*
  * Glyph access. All of the following must be called between

@@ -7,8 +7,11 @@
 /* Number of tasks currently executing inside our patch code. */
 extern volatile LONG aa_UseCount;
 
-/* Install the Text() patch. Returns TRUE on success. */
-BOOL aa_Install(struct GfxBase *gfx);
+/*
+ * Install the Text() patch, and with measuring also TextLength(),
+ * TextExtent() and TextFit() (real metrics mode). TRUE on success.
+ */
+BOOL aa_Install(struct GfxBase *gfx, BOOL measuring);
 
 /*
  * Try to remove the patch. Returns TRUE if the original vector was

@@ -12,10 +12,14 @@
 
 #include "prefs.h"
 #include "glyphs.h"
+#include "metrics.h"
 
 /* stub.s references these; the patch itself is not linked here. */
 volatile LONG aa_UseCount;
 void aa_TextHook(void) { }
+void aa_TextLengthHook(void) { }
+void aa_TextExtentHook(void) { }
+void aa_TextFitHook(void) { }
 
 static struct AAPrefs prefs;
 
@@ -70,6 +74,94 @@ int main(int argc, char **argv)
         aa_UnlockGlyphs();
         return 10;
     }
+    /* "metrics": real metrics consistency checks */
+    if (strcmp(argv[2], "metrics") == 0)
+    {
+        static const UBYTE text[] = "Hello, World! fij Wq";
+        LONG len = sizeof(text) - 1, sum = 0, k;
+        struct AAMetricsCtx m;
+        struct TextExtent te, fe;
+        int c, bad = 0, fails = 0;
+
+        if (!font->real)
+        {
+            printf("metrics: mapping is not \"real\"\n");
+            return 10;
+        }
+        /* drawing advance (glyph cache) == measuring advance (table) */
+        for (c = 32; c < 256; c++)
+        {
+            struct AAGlyph *g = aa_GetGlyph(font, (UBYTE)c);
+
+            if (!g || g->advance != font->adv[c])
+                bad++;
+        }
+        printf("advance table vs rendered glyphs: %d mismatches -> %s\n",
+               bad, bad ? "FAIL" : "OK");
+        fails += bad != 0;
+
+        m.font = font;
+        m.ysize = tf.tf_YSize;
+        m.baseline = tf.tf_Baseline;
+        m.boldsmear = 1;
+        m.txspacing = 0;
+        m.algostyle = 0;
+
+        for (k = 0; k < len; k++)
+            sum += font->adv[text[k]];
+        aa_MExtent(&m, text, len, &te);
+        printf("length %ld, sum %ld, extent w=%d h=%d x %d..%d y %d..%d -> %s\n",
+               (long)aa_MLength(&m, text, len), (long)sum, te.te_Width,
+               te.te_Height, te.te_Extent.MinX, te.te_Extent.MaxX,
+               te.te_Extent.MinY, te.te_Extent.MaxY,
+               (aa_MLength(&m, text, len) == sum && te.te_Width == sum &&
+                te.te_Extent.MaxX >= sum - 1) ? "OK" : "FAIL");
+        fails += !(aa_MLength(&m, text, len) == sum && te.te_Width == sum);
+
+        /* TextFit forwards: a box exactly as wide as the first k chars'
+           extent must fit k chars, and not k+1 when that is wider */
+        for (k = 1; k < len; k++)
+        {
+            struct TextExtent pe;
+            ULONG n;
+
+            aa_MExtent(&m, text, k, &pe);
+            n = aa_MFit(&m, text, len, &fe, NULL, 1,
+                        pe.te_Extent.MaxX - pe.te_Extent.MinX + 1, m.ysize);
+            if (n < (ULONG)k)
+            {
+                printf("fit: %ld chars expected >= %ld, got %lu\n",
+                       (long)k, (long)k, (unsigned long)n);
+                fails++;
+            }
+        }
+        /* backwards from the last character */
+        {
+            ULONG n = aa_MFit(&m, text + len - 1, len, &fe, NULL, -1,
+                              10000, m.ysize);
+            printf("fit backwards, unlimited: %lu of %ld -> %s\n",
+                   (unsigned long)n, (long)len, n == (ULONG)len ? "OK" : "FAIL");
+            fails += n != (ULONG)len;
+            n = aa_MFit(&m, text, len, &fe, NULL, 1, 10000, m.ysize - 1);
+            printf("fit, too low: %lu -> %s\n", (unsigned long)n,
+                   n == 0 ? "OK" : "FAIL");
+            fails += n != 0;
+        }
+
+        m.algostyle = FSF_BOLD | FSF_ITALIC;
+        aa_MExtent(&m, text, len, &fe);
+        printf("bold+italic extent x %d..%d (plain %d..%d) -> %s\n",
+               fe.te_Extent.MinX, fe.te_Extent.MaxX, te.te_Extent.MinX,
+               te.te_Extent.MaxX,
+               (fe.te_Width == te.te_Width &&
+                fe.te_Extent.MaxX > te.te_Extent.MaxX &&
+                fe.te_Extent.MinX < te.te_Extent.MinX) ? "OK" : "FAIL");
+        printf("metrics: %s\n", fails ? "FAILED" : "all OK");
+        aa_UnlockGlyphs();
+        aa_GlyphsCleanup();
+        return fails ? 10 : 0;
+    }
+
     /* "stress": fill the cache past its limit several times (LRU test) */
     if (strcmp(argv[2], "stress") == 0)
     {

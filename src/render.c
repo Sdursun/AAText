@@ -32,7 +32,10 @@
 #include "prefs.h"
 #include "glyphs.h"
 #include "cgx.h"
+#include "metrics.h"
 #include "debug.h"
+
+#include <string.h>
 
 /* Upper limit for one temporary pixel buffer (bytes). */
 #define AA_MAX_BUFFER   (512 * 1024)
@@ -40,6 +43,13 @@
 /* Preallocated buffers, so short strings need no AllocVec(). */
 #define AA_NUM_BUFFERS  4
 #define AA_BUFFER_SIZE  (32 * 1024)
+
+/* Preallocated chip RAM templates for the 1 bit real metrics path. */
+#define AA_NUM_CHIP     2
+#define AA_CHIP_SIZE    4096
+
+static UBYTE *aa_ChipBuffers[AA_NUM_CHIP];
+static volatile BOOL aa_ChipBusy[AA_NUM_CHIP];
 
 extern struct IntuitionBase *IntuitionBase;
 
@@ -57,13 +67,14 @@ static BOOL aa_Offscreen;
 #ifdef DEBUG
 enum
 {
-    R_DRAWN, R_BLACKLIST, R_DRAWMODE, R_STYLE, R_NOBITMAP, R_DEPTH,
-    R_NOTCGX, R_LUT8, R_NOMAPPING, R_NOVIEWPORT, R_COORDS, R_NOMEM,
-    R_FONTFAIL, R_COUNT
+    R_DRAWN, R_REAL_AA, R_REAL_MONO, R_BLACKLIST, R_DRAWMODE, R_STYLE,
+    R_NOBITMAP, R_DEPTH, R_NOTCGX, R_LUT8, R_NOMAPPING, R_NOVIEWPORT,
+    R_COORDS, R_NOMEM, R_FONTFAIL, R_COUNT
 };
 static const char *const reason_names[R_COUNT] =
 {
-    "drawn by AAText", "blacklisted task", "COMPLEMENT/INVERSVID",
+    "drawn by AAText", "drawn, real, AA", "drawn, real, 1 bit",
+    "blacklisted task", "COMPLEMENT/INVERSVID",
     "bold/italic/underl.", "no bitmap/font", "depth < 15",
     "not a CGX bitmap", "LUT8 bitmap", "font not mapped", "no viewport",
     "coords/size", "out of memory", "font setup failed"
@@ -114,6 +125,9 @@ BOOL aa_RenderInit(const struct AAPrefs *prefs)
         if (!aa_Buffers[i])
             return FALSE;
     }
+    /* optional: GetChipBuffer() falls back to AllocVec() */
+    for (i = 0; i < AA_NUM_CHIP; i++)
+        aa_ChipBuffers[i] = AllocVec(AA_CHIP_SIZE, MEMF_CHIP);
     return TRUE;
 }
 
@@ -126,6 +140,12 @@ void aa_RenderCleanup(void)
         if (aa_Buffers[i])
             FreeVec(aa_Buffers[i]);
         aa_Buffers[i] = NULL;
+    }
+    for (i = 0; i < AA_NUM_CHIP; i++)
+    {
+        if (aa_ChipBuffers[i])
+            FreeVec(aa_ChipBuffers[i]);
+        aa_ChipBuffers[i] = NULL;
     }
 #ifdef DEBUG
     if (aa_TimerOpen)
@@ -392,29 +412,38 @@ static void FillBuffer(UBYTE *buf, LONG pixels, const UBYTE *rgb)
 }
 
 /*
+ * Algorithmic italic as in graphics.library: rows above the baseline move
+ * right, rows below move left, one pixel per two rows.
+ */
+static inline LONG ItalicShift(LONG row, LONG italicbase)
+{
+    return italicbase < 0 ? 0 : (italicbase - row) >> 1;
+}
+
+/*
  * Blend one glyph into the RGB buffer (w x h). gx/gy is the top left of
  * the glyph bitmap relative to the buffer; pixels outside are clipped.
+ * italicbase is the baseline row for italic shearing, or -1.
  */
 static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
-                       LONG gx, LONG gy, const UBYTE *fg)
+                       LONG gx, LONG gy, const UBYTE *fg, LONG italicbase)
 {
-    LONG x0 = 0, y0 = 0, x1 = g->width, y1 = g->rows;
+    LONG y0 = 0, y1 = g->rows;
     LONG x, y;
     LONG fr = fg[0], fgc = fg[1], fb = fg[2];
 
-    if (gx < 0)
-        x0 = -gx;
     if (gy < 0)
         y0 = -gy;
-    if (gx + x1 > w)
-        x1 = w - gx;
     if (gy + y1 > h)
         y1 = h - gy;
 
     for (y = y0; y < y1; y++)
     {
+        LONG rx = gx + ItalicShift(gy + y, italicbase);
+        LONG x0 = rx < 0 ? -rx : 0;
+        LONG x1 = rx + g->width > w ? w - rx : g->width;
         const UBYTE *src = g->data + y * g->width + x0;
-        UBYTE *dst = buf + ((gy + y) * w + gx + x0) * 3;
+        UBYTE *dst = buf + ((gy + y) * w + rx + x0) * 3;
 
         for (x = x0; x < x1; x++, dst += 3)
         {
@@ -468,9 +497,132 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
             LONG gx = pen + g->left + (cell - g->advance) / 2;
             LONG gy = baseline - g->top;
 
-            BlendGlyph(buf, w, h, g, gx, gy, fg);
+            BlendGlyph(buf, w, h, g, gx, gy, fg, -1);
         }
         pen += cell + rp->TxSpacing;
+    }
+}
+
+/*
+ * 1 bit version for BltTemplate(): set template bits where the glyph
+ * coverage is at least 50%. bpr is the template's bytes per row.
+ */
+static void SetGlyphBits(UBYTE *tmpl, LONG bpr, LONG w, LONG h,
+                         const struct AAGlyph *g, LONG gx, LONG gy,
+                         LONG italicbase)
+{
+    LONG y0 = 0, y1 = g->rows;
+    LONG x, y;
+
+    if (gy < 0)
+        y0 = -gy;
+    if (gy + y1 > h)
+        y1 = h - gy;
+
+    for (y = y0; y < y1; y++)
+    {
+        LONG rx = gx + ItalicShift(gy + y, italicbase);
+        LONG x0 = rx < 0 ? -rx : 0;
+        LONG x1 = rx + g->width > w ? w - rx : g->width;
+        const UBYTE *src = g->data + y * g->width;
+        UBYTE *row = tmpl + (gy + y) * bpr;
+
+        for (x = x0; x < x1; x++)
+        {
+            if (src[x] >= 128)
+            {
+                LONG px = rx + x;
+
+                row[px >> 3] |= 0x80 >> (px & 7);
+            }
+        }
+    }
+}
+
+/* Underline (or any horizontal line) from x0 to x1-1 in buffer row y. */
+static void LineRGB(UBYTE *buf, LONG w, LONG y, LONG x0, LONG x1,
+                    const UBYTE *fg)
+{
+    UBYTE *p;
+
+    if (x0 < 0)
+        x0 = 0;
+    if (x1 > w)
+        x1 = w;
+    for (p = buf + (y * w + x0) * 3; x0 < x1; x0++, p += 3)
+    {
+        p[0] = fg[0];
+        p[1] = fg[1];
+        p[2] = fg[2];
+    }
+}
+
+static void LineBits(UBYTE *tmpl, LONG bpr, LONG w, LONG y, LONG x0, LONG x1)
+{
+    UBYTE *row = tmpl + y * bpr;
+
+    if (x0 < 0)
+        x0 = 0;
+    if (x1 > w)
+        x1 = w;
+    for (; x0 < x1; x0++)
+        row[x0 >> 3] |= 0x80 >> (x0 & 7);
+}
+
+/*
+ * Real metrics mode: draw the string with TrueType advances into either
+ * an RGB buffer (rgb != NULL) or a 1 bit template. ox is the pen origin
+ * inside the box. Algorithmic styles are applied like graphics.library
+ * does: bold smears by tf_BoldSmear, italic shears, underline one row
+ * below the baseline. Glyph lock held; no graphics calls.
+ */
+static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
+                     struct RastPort *rp, struct AAFont *font,
+                     CONST_STRPTR s, LONG count, LONG ox, const UBYTE *fg)
+{
+    struct TextFont *tf = rp->Font;
+    UBYTE style = rp->AlgoStyle;
+    LONG baseline = tf->tf_Baseline;
+    LONG italicbase = (style & FSF_ITALIC) ? baseline : -1;
+    LONG smear = (style & FSF_BOLD) ? (tf->tf_BoldSmear ? tf->tf_BoldSmear : 1)
+                                    : 0;
+    LONG pen = ox;
+
+    while (count--)
+    {
+        UBYTE c = *s++;
+        struct AAGlyph *g = aa_GetGlyph(font, c);
+
+        if (g && g->width)
+        {
+            LONG gx = pen + g->left;
+            LONG gy = baseline - g->top;
+
+            if (rgb)
+            {
+                BlendGlyph(rgb, w, h, g, gx, gy, fg, italicbase);
+                if (smear)
+                    BlendGlyph(rgb, w, h, g, gx + smear, gy, fg, italicbase);
+            }
+            else
+            {
+                SetGlyphBits(tmpl, bpr, w, h, g, gx, gy, italicbase);
+                if (smear)
+                    SetGlyphBits(tmpl, bpr, w, h, g, gx + smear, gy,
+                                 italicbase);
+            }
+        }
+        pen += font->adv[c] + rp->TxSpacing;
+    }
+
+    if (style & FSF_UNDERLINED)
+    {
+        LONG uy = baseline + 1 < h ? baseline + 1 : baseline;
+
+        if (rgb)
+            LineRGB(rgb, w, uy, ox, pen, fg);
+        else
+            LineBits(tmpl, bpr, w, uy, ox, pen);
     }
 }
 
@@ -542,6 +694,202 @@ static void CheckWidth(struct RastPort *rp, CONST_STRPTR s, LONG count,
 }
 #endif
 
+static void FillMetricsCtx(struct AAMetricsCtx *m, struct RastPort *rp,
+                           struct AAFont *font)
+{
+    struct TextFont *tf = rp->Font;
+
+    m->font = font;
+    m->ysize = tf->tf_YSize;
+    m->baseline = tf->tf_Baseline;
+    m->boldsmear = tf->tf_BoldSmear;
+    m->txspacing = rp->TxSpacing;
+    m->algostyle = rp->AlgoStyle;
+}
+
+/*
+ * Does the rastport's font use real metrics for this task? Decided by
+ * font and task only - never by the destination - because programs often
+ * measure with a different rastport than they draw with. Text() and the
+ * three measuring hooks all use this, so they always agree.
+ */
+BOOL aa_RealMetrics(struct RastPort *rp, struct Task *me,
+                    struct AAMetricsCtx *m)
+{
+    struct TextFont *tf = rp->Font;
+    struct AAFont *font;
+
+    if (aa_Mode != AA_MODE_TEXT || !tf)
+        return FALSE;
+    font = aa_FindFont(tf);
+    if (!font || !font->real)
+        return FALSE;
+    if (aa_NumBlack && IsBlacklisted(me))
+        return FALSE;
+    if (!font->prepared)
+    {
+        BOOL ok;
+
+        aa_LockGlyphs();
+        ok = aa_PrepareFont(font, tf);
+        aa_UnlockGlyphs();
+        if (!ok)
+            return FALSE;
+    }
+    FillMetricsCtx(m, rp, font);
+    return TRUE;
+}
+
+/*
+ * Chip RAM templates for BltTemplate(): on planar screens the blitter
+ * reads the template, so it must be in chip RAM (the only chip RAM
+ * AAText uses). Never waits, like GetBuffer().
+ */
+static UBYTE *GetChipBuffer(ULONG size)
+{
+    LONG i;
+
+    if (size <= AA_CHIP_SIZE)
+    {
+        Forbid();
+        for (i = 0; i < AA_NUM_CHIP; i++)
+        {
+            if (aa_ChipBuffers[i] && !aa_ChipBusy[i])
+            {
+                aa_ChipBusy[i] = TRUE;
+                Permit();
+                return aa_ChipBuffers[i];
+            }
+        }
+        Permit();
+    }
+    return AllocVec(size, MEMF_CHIP);
+}
+
+static void FreeChipBuffer(UBYTE *buf)
+{
+    LONG i;
+
+    for (i = 0; i < AA_NUM_CHIP; i++)
+    {
+        if (buf == aa_ChipBuffers[i])
+        {
+            aa_ChipBusy[i] = FALSE;
+            return;
+        }
+    }
+    FreeVec(buf);
+}
+
+/* Can this rastport take the antialiased read-modify-write path? */
+static struct ViewPort *CanBlend(struct RastPort *rp, LONG x, LONG y,
+                                 LONG w, LONG h)
+{
+    struct BitMap *bm = rp->BitMap;
+
+    if (rp->DrawMode & (COMPLEMENT | INVERSVID))
+        return NULL;
+    if (GetBitMapAttr(bm, BMA_DEPTH) < 15 ||
+        !cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_ISCYBERGFX) ||
+        cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_PIXFMT) == PIXFMT_LUT8)
+        return NULL;
+    if (w * h * 3 > AA_MAX_BUFFER || !CoordsOk(rp, bm, x, y, w, h))
+        return NULL;
+    return FindViewPort(rp);
+}
+
+/*
+ * Real metrics mode Text(). Must draw every string of a real font itself
+ * (the measuring hooks already reported TrueType widths): antialiased
+ * where possible, otherwise as a 1 bit template through BltTemplate(),
+ * which handles all draw modes and planar screens like Text() does.
+ */
+static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
+                       struct AAFont *font)
+{
+    struct TextFont *tf = rp->Font;
+    struct AAMetricsCtx m;
+    struct TextExtent te;
+    struct ViewPort *vp;
+    LONG x, y, w, h, ox;
+    BOOL ok;
+
+    if (!rp->BitMap)
+        FAIL(R_NOBITMAP);
+
+    aa_LockGlyphs();
+    ok = aa_PrepareFont(font, tf);
+    aa_UnlockGlyphs();
+    if (!ok)
+        FAIL(R_FONTFAIL);
+
+    /* Draw box = text extent, exactly what TextExtent() reports. */
+    FillMetricsCtx(&m, rp, font);
+    aa_MExtent(&m, string, count, &te);
+    ox = -te.te_Extent.MinX;
+    x = rp->cp_x + te.te_Extent.MinX;
+    y = rp->cp_y - tf->tf_Baseline;
+    w = te.te_Extent.MaxX - te.te_Extent.MinX + 1;
+    h = tf->tf_YSize;
+    if (w <= 0 || h <= 0)
+    {
+        rp->cp_x += te.te_Width;
+        COUNT(R_REAL_AA);
+        return TRUE;
+    }
+
+    vp = CanBlend(rp, x, y, w, h);
+    if (vp && vp->ColorMap)
+    {
+        UBYTE fg[3], bg[3];
+        UBYTE *buf = GetBuffer(w * h * 3);
+
+        if (buf)
+        {
+            PenToRGB(vp, GetAPen(rp), fg);
+            if (rp->DrawMode & JAM2)
+            {
+                PenToRGB(vp, GetBPen(rp), bg);
+                FillBuffer(buf, w * h, bg);
+            }
+            else
+                cgx_ReadPixelArray(CyberGfxBase, buf, 0, 0, w * 3, rp,
+                                   x, y, w, h, RECTFMT_RGB);
+
+            aa_LockGlyphs();
+            DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, fg);
+            aa_UnlockGlyphs();
+
+            cgx_WritePixelArray(CyberGfxBase, buf, 0, 0, w * 3, rp,
+                                x, y, w, h, RECTFMT_RGB);
+            FreeBuffer(buf);
+            rp->cp_x += te.te_Width;
+            COUNT(R_REAL_AA);
+            return TRUE;
+        }
+    }
+
+    /* 1 bit fallback: any screen type and draw mode. */
+    {
+        LONG bpr = ((w + 15) >> 4) << 1;
+        UBYTE *tmpl = GetChipBuffer(bpr * h);
+
+        if (!tmpl)
+            FAIL(R_NOMEM);
+        memset(tmpl, 0, bpr * h);
+
+        aa_LockGlyphs();
+        DrawReal(NULL, tmpl, bpr, w, h, rp, font, string, count, ox, NULL);
+        aa_UnlockGlyphs();
+
+        BltTemplate((PLANEPTR)tmpl, 0, bpr, rp, x, y, w, h);
+        FreeChipBuffer(tmpl);
+    }
+    rp->cp_x += te.te_Width;
+    COUNT(R_REAL_MONO);
+    return TRUE;
+}
+
 static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
 {
     struct TextFont *tf = rp->Font;
@@ -553,13 +901,22 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     UBYTE *buf;
     LONG x, y, w, h;
 
+    if (!tf)
+        FAIL(R_NOBITMAP);
+    if (mode == AA_MODE_TEXT)
+    {
+        font = aa_FindFont(tf);
+        if (font && font->real)
+            return RenderReal(rp, string, count, font);
+    }
+
     if (rp->DrawMode & (COMPLEMENT | INVERSVID))
         FAIL(R_DRAWMODE);
     if (rp->AlgoStyle & (FSF_BOLD | FSF_ITALIC | FSF_UNDERLINED))
         FAIL(R_STYLE);
-    if (!bm || !tf)
+    if (!bm)
         FAIL(R_NOBITMAP);
-    if (mode == AA_MODE_TEXT && !(font = aa_FindFont(tf)))
+    if (mode == AA_MODE_TEXT && !font)
     {
 #ifdef DEBUG
         LogUnmappedFont(tf);

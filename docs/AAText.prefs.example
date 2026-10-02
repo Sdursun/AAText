@@ -7,6 +7,12 @@
 # - "size" must match the font size exactly.
 # - pixelsize is optional; without it AAText picks the size whose
 #   character widths best match the bitmap font.
+# - "real" (optional) uses the TrueType font's own character widths
+#   instead of squeezing letters into the bitmap font's cells. Text looks
+#   more natural, but window layouts change: start AAText before other
+#   programs (WBStartup); windows that were already open keep their old
+#   layout until reopened. Try it with one font first:
+#       Arial  22  ->  FONTS:_TrueType/arial.ttf  real
 # - Fonts without a mapping are drawn by the system as before.
 
 Arial                  22  ->  FONTS:_TrueType/arial.ttf

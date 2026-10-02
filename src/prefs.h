@@ -23,6 +23,7 @@ struct AAMapping
     UWORD ysize;
     char  ttfpath[AA_PATH_LEN];
     UWORD pixelsize;                /* 0 = automatic */
+    BOOL  real;                     /* real TrueType metrics */
 };
 
 struct AAPrefs

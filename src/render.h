@@ -30,6 +30,14 @@ void aa_RenderCleanup(void);
 BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count,
                    struct Task *me);
 
+/*
+ * Real metrics decision for the measuring hooks: TRUE (and m filled) if
+ * the rastport's font is mapped with "real" for this task.
+ */
+struct AAMetricsCtx;
+BOOL aa_RealMetrics(struct RastPort *rp, struct Task *me,
+                    struct AAMetricsCtx *m);
+
 #ifdef DEBUG
 void aa_PrintRenderStats(void);
 #endif

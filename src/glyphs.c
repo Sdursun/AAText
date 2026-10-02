@@ -301,6 +301,7 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
         StrCopy(font->name, m->fontname, AA_NAME_LEN);
         font->ysize = m->ysize;
         font->pixelsize = m->pixelsize;
+        font->real = m->real;
         font->face = face;
     }
 
@@ -377,6 +378,16 @@ struct AAFont *aa_FindFont(struct TextFont *tf)
             return f;
     }
     return NULL;
+}
+
+LONG aa_FontCount(void)
+{
+    return aa_NumFonts;
+}
+
+struct AAFont *aa_FontAt(LONG i)
+{
+    return (i >= 0 && i < aa_NumFonts) ? &aa_Fonts[i] : NULL;
 }
 
 void aa_LockGlyphs(void)
@@ -464,12 +475,37 @@ static LONG PrepareOnStack(APTR arg)
     }
     font->ftsize = size;
 
+    /*
+     * Real metrics: advance and ink extent of every character code, with
+     * the same load flags as RenderOnStack() so widths and drawing agree.
+     */
+    if (font->real)
+    {
+        LONG c;
+
+        for (c = 0; c < 256; c++)
+        {
+            FT_UInt gi = FT_Get_Char_Index(face, ToUnicode(c));
+            FT_Glyph_Metrics *gm = &face->glyph->metrics;
+
+            if (FT_Load_Glyph(face, gi, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP))
+            {
+                font->adv[c] = font->inkl[c] = font->inkr[c] = 0;
+                continue;
+            }
+            font->adv[c] = (face->glyph->advance.x + 32) >> 6;
+            font->inkl[c] = gm->horiBearingX >> 6;
+            font->inkr[c] = (gm->horiBearingX + gm->width + 63) >> 6;
+        }
+    }
+
     D(("AAText: font %s/%ld: baseline=%ld xsize=%ld -> %s %ldpx "
-       "(asc=%ld desc=%ld)\n",
+       "(asc=%ld desc=%ld)%s\n",
        (ULONG)font->name, (LONG)font->ysize, (LONG)r->tf->tf_Baseline,
        (LONG)r->tf->tf_XSize, (ULONG)face->family_name, px,
        (LONG)(size->metrics.ascender >> 6),
-       (LONG)(size->metrics.descender >> 6)));
+       (LONG)(size->metrics.descender >> 6),
+       (ULONG)(font->real ? " real metrics" : "")));
     return TRUE;
 }
 
