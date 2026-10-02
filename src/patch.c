@@ -11,6 +11,7 @@
 #include <proto/dos.h>
 
 #include "patch.h"
+#include "render.h"
 #include "debug.h"
 
 #define LVO_Text    (-60)
@@ -217,8 +218,8 @@ void aa_TextHook(struct RastPort *rp, CONST_STRPTR string, LONG count,
     RecordCall(me);
 #endif
 
-    /* Stage 1: everything goes to the original function. */
-    CallOrigText(rp, string, count, gfx);
+    if (!aa_RenderText(rp, string, (WORD)count))
+        CallOrigText(rp, string, count, gfx);
 
     LeaveTask(me);
 }
@@ -265,6 +266,7 @@ BOOL aa_Remove(void)
 
 #ifdef DEBUG
     PrintStats();
+    aa_PrintRenderStats();
 #endif
     D(("AAText: removed\n"));
     return TRUE;

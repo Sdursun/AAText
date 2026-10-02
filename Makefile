@@ -26,8 +26,8 @@ ifeq ($(DEBUG),1)
 CFLAGS  += -DDEBUG
 endif
 
-SRCS_C := src/main.c src/patch.c src/debug.c
-SRCS_S := src/stub.s
+SRCS_C := src/main.c src/patch.c src/render.c src/debug.c
+SRCS_S := src/stub.s src/cgx.s
 OBJS   := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SRCS_C)) \
           $(patsubst src/%.s,$(BUILDDIR)/%.o,$(SRCS_S))
 
