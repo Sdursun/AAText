@@ -2,3 +2,4 @@ build/
 *.o
 *.map
 *.lnk
+third_party/
