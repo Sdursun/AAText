@@ -1,4 +1,4 @@
-AAText 0.9 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.10 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -96,6 +96,9 @@ setting per line; lines starting with # are comments.
                     window layouts change slightly. Start AAText from
                     WBStartup when you use this: windows opened before
                     AAText keep their old layout until reopened.
+                    Fixed-width fonts (e.g. the Shell font) always keep
+                    their character cells, since the Shell and editors
+                    position text by them.
 
   blacklist Name    Programs AAText must not touch, e.g.
                     "blacklist FinalWriter TypeSmith". Use the program
@@ -168,6 +171,10 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.10  Fixed-width fonts always keep their character cells, also with
+      "real on". With real metrics the Shell could leave half-erased
+      letters when deleting and gaps after Tab completion.
 
 0.9   Text is now placed exactly like the original bitmap font: it
       appeared shifted up by a pixel or two, most visibly in screen

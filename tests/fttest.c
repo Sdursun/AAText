@@ -144,6 +144,7 @@ int main(int argc, char **argv)
     strcpy(prefs.map[0].fontname, "Test");
     tf.tf_YSize = prefs.map[0].ysize;
     tf.tf_XSize = prefs.map[0].ysize / 2;
+    tf.tf_Flags = FPF_PROPORTIONAL;
     tf.tf_Baseline = prefs.map[0].ysize * 3 / 4;
     tf.tf_LoChar = 32;
     tf.tf_HiChar = 255;
@@ -181,6 +182,7 @@ int main(int argc, char **argv)
         memset(&bt, 0, sizeof(bt));
         bt.tf_YSize = bf->ysize;
         bt.tf_XSize = 8;
+        bt.tf_Flags = FPF_PROPORTIONAL;     /* real metrics need this */
         bt.tf_Baseline = 9;
         bt.tf_LoChar = 0;
         bt.tf_HiChar = 255;
@@ -204,8 +206,13 @@ int main(int argc, char **argv)
         printf("real=%d 'H' %d rows, top %d -> rows %d..%d, "
                "baseline 9 -> %s\n", (int)bf->real, g->rows, g->top, gy,
                bottom, (g->rows == 7 && bottom == 9) ? "OK" : "FAIL");
+        /* a fixed-width font (Shell) must never use real metrics */
+        bt.tf_Flags = 0;
+        printf("fixed-width font with \"real\": real metrics %s -> %s\n",
+               aa_UseReal(bf, &bt) ? "on" : "off",
+               aa_UseReal(bf, &bt) ? "FAIL" : "OK");
         aa_GlyphsCleanup();
-        return (g->rows == 7 && bottom == 9) ? 0 : 10;
+        return (g->rows == 7 && bottom == 9 && !aa_UseReal(bf, &bt)) ? 0 : 10;
     }
 
     /* "baseline": bitmap font whose letters stand 2 rows below

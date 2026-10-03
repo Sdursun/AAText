@@ -722,7 +722,7 @@ BOOL aa_RealMetrics(struct RastPort *rp, struct Task *me,
     if (aa_Mode != AA_MODE_TEXT || !tf)
         return FALSE;
     font = aa_FindFont(tf);
-    if (!font || !font->real)
+    if (!font || !aa_UseReal(font, tf))
         return FALSE;
     if (aa_NumBlack && IsBlacklisted(me))
         return FALSE;
@@ -906,7 +906,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     if (mode == AA_MODE_TEXT)
     {
         font = aa_FindFont(tf);
-        if (font && font->real)
+        if (font && aa_UseReal(font, tf))
             return RenderReal(rp, string, count, font);
     }
 

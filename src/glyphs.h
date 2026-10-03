@@ -67,6 +67,19 @@ struct AAFont
     WORD  *inkr;
 };
 
+/*
+ * Does this font use real metrics? Only proportional fonts do: programs
+ * like the Shell (console.device) position fixed-width text by
+ * tf_XSize cells, so fixed-width fonts always keep their cells, even
+ * with "real on". Decided by the TextFont alone, so the measuring hooks,
+ * Text() and font preparation always agree.
+ */
+static inline BOOL aa_UseReal(const struct AAFont *font,
+                              const struct TextFont *tf)
+{
+    return font->real && (tf->tf_Flags & FPF_PROPORTIONAL);
+}
+
 /* Gamma corrected coverage values, filled by aa_GlyphsInit(). */
 extern UBYTE aa_GammaLUT[256];
 

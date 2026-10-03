@@ -891,7 +891,7 @@ static LONG PrepareOnStack(APTR arg)
      */
     if (font->pixelsize)
         px = font->pixelsize;
-    else if (font->real && capheight > 0)
+    else if (aa_UseReal(font, r->tf) && capheight > 0)
         px = CapPixelSize(face, capheight);
     else
         px = 0;
@@ -909,7 +909,7 @@ static LONG PrepareOnStack(APTR arg)
      * Real metrics: advance and ink extent of every character code, with
      * the same load flags as RenderOnStack() so widths and drawing agree.
      */
-    if (font->real)
+    if (aa_UseReal(font, r->tf))
     {
         LONG c;
 
@@ -977,7 +977,7 @@ static LONG PrepareOnStack(APTR arg)
        (LONG)r->tf->tf_XSize, (ULONG)face->family_name, px,
        (LONG)(size->metrics.ascender >> 6),
        (LONG)(size->metrics.descender >> 6),
-       (ULONG)(font->real ? " real metrics" : "")));
+       (ULONG)(aa_UseReal(font, r->tf) ? " real metrics" : "")));
     return TRUE;
 }
 

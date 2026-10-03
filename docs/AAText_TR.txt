@@ -1,4 +1,4 @@
-AAText 0.9 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.10 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -101,7 +101,10 @@ düz bir metin dosyasıdır; # ile başlayan satırlar açıklamadır.
                     ancak pencere düzenleri biraz değişir. Bu ayarı
                     kullanıyorsanız AAText'i WBStartup'tan başlatın:
                     AAText'ten önce açılan pencereler yeniden açılana
-                    kadar eski düzenlerini korur.
+                    kadar eski düzenlerini korur. Sabit genişlikli
+                    fontlar (ör. Shell fontu) her zaman karakter
+                    hücrelerini korur, çünkü Shell ve editörler yazıyı
+                    bu hücrelere göre yerleştirir.
 
   blacklist Ad      AAText'in dokunmayacağı programlar, ör.
                     "blacklist FinalWriter TypeSmith". Workbench'te
@@ -177,6 +180,10 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.10  Sabit genişlikli fontlar "real on" ile de karakter hücrelerini
+      korur. Gerçek ölçü modunda Shell'de silinen harflerin yarısı
+      kalabiliyor ve Tab tamamlamasından sonra boşluk oluşabiliyordu.
 
 0.9   Yazılar artık orijinal bitmap fontla tam aynı yüksekliğe
       yerleşiyor: bir iki piksel yukarı kaymış görünüyordu, en çok

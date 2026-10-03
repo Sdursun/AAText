@@ -16,6 +16,7 @@
 # bitmap font's cells. Text looks more natural, but window layouts
 # change: start AAText before other programs (WBStartup); windows that
 # were already open keep their old layout until reopened.
+# Fixed-width fonts (Shell, editors) always keep their cells.
 #real on
 
 # Gamma for the antialiasing edge (0.5 - 4.0, default 0.8).
