@@ -30,7 +30,7 @@ struct AAPrefs
 {
     struct AAMapping map[AA_MAX_MAPPINGS];
     UWORD nummaps;
-    UWORD gamma100;                 /* gamma * 100, e.g. 180 */
+    UWORD gamma100;                 /* gamma * 100, default 80 */
     UBYTE charset;
     BOOL  offscreen;                /* use Workbench colours for bitmaps
                                        that belong to no screen */

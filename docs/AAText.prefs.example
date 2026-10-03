@@ -18,9 +18,9 @@
 # were already open keep their old layout until reopened.
 #real on
 
-# Gamma for the antialiasing edge (0.5 - 4.0, default 1.8).
-# Higher values make text look bolder.
-#gamma 1.8
+# Gamma for the antialiasing edge (0.5 - 4.0, default 0.8).
+# Lower values make text thinner and crisper, higher values bolder.
+#gamma 0.8
 
 # Glyph cache size in KB (32 - 16384, default 256). Least recently used
 # glyphs are dropped when it is full.

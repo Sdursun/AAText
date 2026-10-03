@@ -4,7 +4,7 @@
  *   # comment
  *   Arial          22  ->  FONTS:_TrueType/arial.ttf     [pixelsize] [real]
  *   "Some Font"    16  ->  "FONTS:My Fonts/x.ttf"
- *   gamma   1.8
+ *   gamma   0.8
  *   charset latin1 | latin5
  *   cache 256                (glyph cache size in KB)
  *   blacklist FinalWriter TypeSmith
@@ -303,7 +303,7 @@ BOOL aa_ReadPrefs(struct AAPrefs *prefs, const char *path, BOOL report)
 
     report_errors = report;
     prefs->nummaps = 0;
-    prefs->gamma100 = 180;
+    prefs->gamma100 = 80;       /* user tested, looks best at 0.8 */
     prefs->charset = AA_CHARSET_LATIN1;
     prefs->offscreen = FALSE;
     prefs->autodetect = TRUE;
