@@ -2,6 +2,11 @@
 
 Antialiased TrueType text for AmigaOS 3.2 on RTG screens.
 
+![AAText on AmigaOS 3.2.3: Workbench, Shell, TextEdit, MUI and ReAction programs with antialiased Arial and DejaVu Sans Mono](docs/screenshots/workbench.png)
+
+*AmigaOS 3.2.3 on PiStorm (Emu68), Picasso96, 1920×1080: Workbench, Shell,
+TextEdit, MUI Preferences and LumiPass, all with antialiased TrueType text.*
+
 AAText makes Workbench and applications draw TrueType fonts smoothly: icon
 labels, menus, window and screen titles, Shell windows, GadTools, ReAction
 and MUI programs — everything that draws text through `graphics.library`.
