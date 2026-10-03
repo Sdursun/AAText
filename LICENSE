@@ -19,11 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
--------------------------------------------------------------------------------
-
-Binary releases of AAText contain the FreeType 2 font engine, which is
-distributed under the FreeType License (FTL):
-
-Portions of this software are copyright (C) 2026 The FreeType Project
-(www.freetype.org). All rights reserved.
