@@ -5,7 +5,7 @@
 
 #define AA_MAX_MAPPINGS   16
 #define AA_MAX_BLACKLIST  32
-#define AA_NAME_LEN       32
+#define AA_NAME_LEN       48
 #define AA_PATH_LEN       256
 
 #define AA_DEFAULT_CACHE_KB  256
@@ -34,6 +34,9 @@ struct AAPrefs
     UBYTE charset;
     BOOL  offscreen;                /* use Workbench colours for bitmaps
                                        that belong to no screen */
+    BOOL  autodetect;               /* find TTFs of outline fonts via
+                                       their .otag files (default on) */
+    BOOL  autoreal;                 /* real metrics for detected fonts */
     ULONG cachekb;                  /* glyph cache size in KB */
     char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];
     UWORD numblack;

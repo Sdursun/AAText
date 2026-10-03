@@ -9,6 +9,8 @@
  *   cache 256                (glyph cache size in KB)
  *   blacklist FinalWriter TypeSmith
  *   offscreen on | off
+ *   auto on | off            (detect TrueType fonts via .otag, default on)
+ *   real on | off            (real metrics for detected fonts, default off)
  */
 
 #include <exec/types.h>
@@ -189,6 +191,19 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
             prefs->cachekb = kb;
         return;
     }
+    if (StrIEq(tok[0], "auto") || StrIEq(tok[0], "real"))
+    {
+        BOOL *flag = StrIEq(tok[0], "auto") ? &prefs->autodetect
+                                            : &prefs->autoreal;
+
+        if (n == 2 && StrIEq(tok[1], "on"))
+            *flag = TRUE;
+        else if (n == 2 && StrIEq(tok[1], "off"))
+            *flag = FALSE;
+        else
+            PrefsError(lineno, "expected on or off");
+        return;
+    }
     if (StrIEq(tok[0], "offscreen"))
     {
         if (n == 2 && StrIEq(tok[1], "on"))
@@ -291,6 +306,8 @@ BOOL aa_ReadPrefs(struct AAPrefs *prefs, const char *path, BOOL report)
     prefs->gamma100 = 180;
     prefs->charset = AA_CHARSET_LATIN1;
     prefs->offscreen = FALSE;
+    prefs->autodetect = TRUE;
+    prefs->autoreal = FALSE;
     prefs->cachekb = AA_DEFAULT_CACHE_KB;
     prefs->numblack = 0;
 

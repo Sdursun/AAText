@@ -1,33 +1,30 @@
-# AAText preferences - copy to ENVARC:AAText.prefs (and ENV:AAText.prefs)
+# AAText preferences - OPTIONAL.
 #
-# bitmapfont  size  ->  ttf file                         [pixelsize]
+# Without this file AAText works out of the box: every TrueType font
+# installed on the system (fonts with a .otag file in FONTS:) is drawn
+# antialiased, in every size, with the code page from its .otag file.
+# Bitmap fonts (topaz, XEN, ...) are left alone.
 #
-# - "bitmapfont" is the font name as shown in Font prefs (without .font);
-#   use double quotes if it contains spaces.
-# - "size" must match the font size exactly.
-# - pixelsize is optional; without it AAText picks the size whose
-#   character widths best match the bitmap font.
-# - "real" (optional) uses the TrueType font's own character widths
-#   instead of squeezing letters into the bitmap font's cells. Text looks
-#   more natural, but window layouts change: start AAText before other
-#   programs (WBStartup); windows that were already open keep their old
-#   layout until reopened. Try it with one font first:
-#       Arial  22  ->  FONTS:_TrueType/arial.ttf  real
-# - Fonts without a mapping are drawn by the system as before.
+# To change anything, copy this file to ENVARC:AAText.prefs (and
+# ENV:AAText.prefs) and edit it.
 
-Arial                  22  ->  FONTS:_TrueType/arial.ttf
-"BitStream Vera Sans"  16  ->  FONTS:_TrueType/Vera.ttf
+# Automatic TrueType detection via .otag files (default on).
+#auto off
+
+# Real metrics for detected fonts (default off): use the TrueType
+# font's own character widths instead of squeezing letters into the
+# bitmap font's cells. Text looks more natural, but window layouts
+# change: start AAText before other programs (WBStartup); windows that
+# were already open keep their old layout until reopened.
+#real on
 
 # Gamma for the antialiasing edge (0.5 - 4.0, default 1.8).
 # Higher values make text look bolder.
-gamma 1.8
-
-# Character set of your bitmap fonts: latin1 (default) or latin5 (Turkish)
-charset latin1
+#gamma 1.8
 
 # Glyph cache size in KB (32 - 16384, default 256). Least recently used
 # glyphs are dropped when it is full.
-cache 256
+#cache 256
 
 # Programs AAText must not touch (Workbench program name or Shell command
 # name, case does not matter). Several lines are allowed.
@@ -37,3 +34,20 @@ cache 256
 # "on" draws those with the Workbench screen colours; colours may be wrong
 # if the program is not on the Workbench screen. Default off.
 #offscreen on
+
+# Explicit mappings (rarely needed): draw a font with a TrueType file,
+# e.g. a bitmap font, or a font whose .otag is not found.
+#
+#   bitmapfont  size  ->  ttf file  [pixelsize] [real]
+#
+# - "bitmapfont" is the font name without .font; use double quotes if it
+#   contains spaces. "size" must match exactly.
+# - pixelsize is optional; without it AAText picks the size whose
+#   character widths best match the bitmap font.
+# - "real" uses the TrueType widths for this font only.
+#
+#topaz  8  ->  FONTS:_ttf/DejaVuSansMono.ttf
+
+# Character set for explicit mappings: latin1 (default) or latin5
+# (Turkish). Detected fonts use the code page of their .otag instead.
+#charset latin5

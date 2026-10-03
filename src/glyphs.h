@@ -3,9 +3,14 @@
 
 #include <exec/types.h>
 #include <exec/lists.h>
+#include <exec/tasks.h>
 #include <graphics/text.h>
 
 #include "prefs.h"
+
+#define AA_MAX_FONTS    64      /* bitmap font name + size entries */
+#define AA_MAX_FACES    32      /* loaded TrueType files */
+#define AA_MAX_NAMES    96      /* font names checked for a .otag */
 
 /* A rendered glyph: 8 bit coverage (gamma corrected), pitch == width. */
 struct AAGlyph
@@ -23,10 +28,13 @@ struct AAGlyph
     UBYTE  data[];
 };
 
-/* A bitmap font (name + size) mapped to a TrueType face. */
+/*
+ * A bitmap font (name + size) drawn with a TrueType face: either mapped
+ * in the prefs, or detected automatically from the font's .otag file.
+ */
 struct AAFont
 {
-    char   name[AA_NAME_LEN];
+    char   name[AA_NAME_LEN];   /* without directory and ".font" */
     UWORD  ysize;
     UWORD  pixelsize;           /* from prefs; 0 = automatic */
     struct AAFace *face;
@@ -35,13 +43,14 @@ struct AAFont
     BOOL   failed;
     BOOL   real;                /* real TrueType metrics */
     /*
-     * Real metrics mode, filled by aa_PrepareFont() and read-only after
-     * that (so measuring needs no lock): advance width and horizontal
-     * ink extent [inkl, inkr) relative to the pen, per character code.
+     * Real metrics mode, allocated and filled by aa_PrepareFont() and
+     * read-only after that (so measuring needs no lock): advance width
+     * and horizontal ink extent [inkl, inkr) relative to the pen, per
+     * character code.
      */
-    WORD   adv[256];
-    WORD   inkl[256];
-    WORD   inkr[256];
+    WORD  *adv;
+    WORD  *inkl;
+    WORD  *inkr;
 };
 
 /* Gamma corrected coverage values, filled by aa_GlyphsInit(). */
@@ -55,10 +64,26 @@ extern UBYTE aa_GammaLUT[256];
 LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report);
 void aa_GlyphsCleanup(void);
 
-/* Mapping for a TextFont, or NULL. Lock-free (table is read-only). */
+/*
+ * Mapping for a TextFont, or NULL. Lock-free in the common case. With
+ * automatic detection, an unknown font name is queued for the helper
+ * process (see aa_SetHelper) and NULL is returned until it is loaded;
+ * a detected font gets an entry for each size on first use.
+ */
 struct AAFont *aa_FindFont(struct TextFont *tf);
 
-/* All usable mappings, for preparing them at startup. */
+/*
+ * Automatic detection runs file I/O in AAText's own process: Text() may
+ * be called by tasks that cannot use DOS (input.device). aa_FindFont()
+ * signals the helper; the helper calls aa_ResolvePending().
+ */
+void aa_SetHelper(struct Task *task, ULONG sigmask);
+LONG aa_ResolvePending(BOOL report);
+
+/* Queue a font name (as in tf_Message.mn_Node.ln_Name) for detection. */
+void aa_RequestFont(const char *fontname);
+
+/* All font entries, for preparing them at startup. */
 LONG aa_FontCount(void);
 struct AAFont *aa_FontAt(LONG i);
 

@@ -1,12 +1,19 @@
 /*
- * AAText - TrueType faces, glyph rendering and glyph cache.
+ * AAText - TrueType faces, font detection, glyph rendering and cache.
  *
  * FreeType is only ever called on AAText's own stack (StackSwap), since
  * Text() callers such as input.device have only ~3 KB of stack left, and
  * only while aa_GlyphSem is held. That one semaphore also protects the
- * glyph cache and the shared render stack. While it is held, no
- * graphics/layers/intuition function is called, so it can never take
- * part in a deadlock with layer locks held by our callers.
+ * glyph cache, the shared render stack and additions to the font and
+ * name tables. While it is held, no graphics/layers/intuition function
+ * is called, so it can never take part in a deadlock with layer locks
+ * held by our callers.
+ *
+ * Fonts are found in two ways: explicit mappings from the prefs file,
+ * and automatic detection: an outline font installed with a font manager
+ * has a .otag file next to its .font file, naming the TrueType file and
+ * the code page. Reading it needs DOS, so Text() only queues the font
+ * name and AAText's own process (the helper) resolves it.
  */
 
 #include <exec/types.h>
@@ -30,11 +37,13 @@ FT_Memory FT_New_Memory(void);
 void FT_Done_Memory(FT_Memory memory);
 
 #include "glyphs.h"
+#include "otag.h"
 #include "debug.h"
 
 #define AA_STACK_SIZE   (32 * 1024)
 #define AA_HASH_SIZE    256
 #define AA_MAX_FONTFILE (8 * 1024 * 1024)
+#define AA_MAX_OTAG     (64 * 1024)
 
 struct AAFace
 {
@@ -42,6 +51,20 @@ struct AAFace
     APTR    data;
     ULONG   size;
     FT_Face face;
+    LONG    facenum;
+    BOOL    hascodepage;
+    UWORD   codepage[256];      /* from the .otag: character -> Unicode */
+};
+
+enum { NAME_PENDING = 1, NAME_READY, NAME_NONE };
+
+/* A font name checked (or queued) for automatic detection. */
+struct AAName
+{
+    char           name[AA_NAME_LEN];
+    char           otag[AA_PATH_LEN];
+    volatile UBYTE state;
+    struct AAFace *face;
 };
 
 /* stub.s */
@@ -55,11 +78,23 @@ static APTR aa_Stack;
 static FT_Memory aa_FTMemory;
 static FT_Library aa_FTLib;
 
-static struct AAFace aa_Faces[AA_MAX_MAPPINGS];
-static LONG aa_NumFaces;
-static struct AAFont aa_Fonts[AA_MAX_MAPPINGS];
-static LONG aa_NumFonts;
+/*
+ * Tables only grow while AAText runs. An entry is filled completely
+ * before the count is raised, so readers can scan them without a lock.
+ * Faces are only added by AAText's own process.
+ */
+static struct AAFace aa_Faces[AA_MAX_FACES];
+static volatile LONG aa_NumFaces;
+static struct AAFont aa_Fonts[AA_MAX_FONTS];
+static volatile LONG aa_NumFonts;
+static struct AAName aa_Names[AA_MAX_NAMES];
+static volatile LONG aa_NumNames;
+
 static UBYTE aa_Charset;
+static BOOL aa_AutoDetect;
+static BOOL aa_AutoReal;
+static struct Task *aa_HelperTask;
+static ULONG aa_HelperSig;
 
 static struct AAGlyph *aa_Hash[AA_HASH_SIZE];
 static struct MinList aa_LRU;           /* most recently used first */
@@ -71,9 +106,16 @@ static ULONG aa_CacheLimit = AA_DEFAULT_CACHE_KB * 1024;
 static ULONG stat_hits, stat_misses, stat_evictions, stat_missing;
 #endif
 
-/* ISO-8859-9 differs from ISO-8859-1 in six positions. */
-static ULONG ToUnicode(UBYTE c)
+/*
+ * Character code -> Unicode. Detected fonts carry the code page of
+ * their .otag file; mapped fonts use the "charset" preference
+ * (ISO-8859-9 differs from ISO-8859-1 in six positions).
+ */
+static ULONG ToUnicode(const struct AAFace *face, UBYTE c)
 {
+    if (face->hascodepage)
+        return face->codepage[c] ? face->codepage[c] : c;
+
     if (aa_Charset == AA_CHARSET_LATIN5)
     {
         switch (c)
@@ -94,24 +136,6 @@ static int ToLower(int c)
     return (c >= 'A' && c <= 'Z') ? c + ('a' - 'A') : c;
 }
 
-/* "Arial.font" matches mapping name "arial". */
-static BOOL FontNameMatches(const char *fontname, const char *mapname)
-{
-    while (*mapname && ToLower(*fontname) == ToLower(*mapname))
-    {
-        fontname++;
-        mapname++;
-    }
-    if (*mapname)
-        return FALSE;
-    return *fontname == 0 || (fontname[0] == '.' &&
-                              ToLower(fontname[1]) == 'f' &&
-                              ToLower(fontname[2]) == 'o' &&
-                              ToLower(fontname[3]) == 'n' &&
-                              ToLower(fontname[4]) == 't' &&
-                              fontname[5] == 0);
-}
-
 static BOOL StrEq(const char *a, const char *b)
 {
     while (*a && *a == *b)
@@ -122,12 +146,58 @@ static BOOL StrEq(const char *a, const char *b)
     return *a == *b;
 }
 
+static BOOL StrIEq(const char *a, const char *b)
+{
+    while (*a && ToLower(*a) == ToLower(*b))
+    {
+        a++;
+        b++;
+    }
+    return *a == 0 && *b == 0;
+}
+
 static void StrCopy(char *dst, const char *src, int size)
 {
     int i;
 
     for (i = 0; i < size - 1 && src[i]; i++)
         dst[i] = src[i];
+    dst[i] = 0;
+}
+
+static LONG StrLen(const char *s)
+{
+    LONG n = 0;
+
+    while (s[n])
+        n++;
+    return n;
+}
+
+/* Length of s without a trailing ".font" (any case). */
+static LONG StemLen(const char *s)
+{
+    LONG len = StrLen(s);
+
+    if (len > 5 && s[len - 5] == '.' && StrIEq(&s[len - 4], "font"))
+        len -= 5;
+    return len;
+}
+
+/* "Work:Fonts/Arial.font" -> "Arial" */
+static void BaseName(const char *src, char *dst)
+{
+    const char *p = src;
+    LONG len, i;
+
+    for (; *src; src++)
+        if (*src == ':' || *src == '/')
+            p = src + 1;
+    len = StemLen(p);
+    if (len > AA_NAME_LEN - 1)
+        len = AA_NAME_LEN - 1;
+    for (i = 0; i < len; i++)
+        dst[i] = p[i];
     dst[i] = 0;
 }
 
@@ -143,7 +213,7 @@ static LONG RunOnRenderStack(LONG (*func)(APTR), APTR arg)
 }
 
 /* ------------------------------------------------------------------ */
-/* Initialisation (main process)                                       */
+/* Loading (AAText's own process only)                                 */
 /* ------------------------------------------------------------------ */
 
 static void ReportError(BOOL report, const char *fmt, LONG a, LONG b)
@@ -158,18 +228,17 @@ static void ReportError(BOOL report, const char *fmt, LONG a, LONG b)
     VPrintf((CONST_STRPTR)fmt, args);
 }
 
-static BOOL LoadFile(struct AAFace *f, BOOL report)
+/* Read a whole file into AllocVec() memory; NULL on error. */
+static APTR ReadFile(const char *path, ULONG maxsize, ULONG *sizep)
 {
     BPTR fh;
     struct FileInfoBlock *fib;
     LONG size = -1;
+    APTR data;
 
-    fh = Open((CONST_STRPTR)f->path, MODE_OLDFILE);
+    fh = Open((CONST_STRPTR)path, MODE_OLDFILE);
     if (!fh)
-    {
-        ReportError(report, "AAText: cannot open %s\n", (LONG)f->path, 0);
-        return FALSE;
-    }
+        return NULL;
     fib = AllocDosObject(DOS_FIB, NULL);
     if (fib)
     {
@@ -177,30 +246,21 @@ static BOOL LoadFile(struct AAFace *f, BOOL report)
             size = fib->fib_Size;
         FreeDosObject(DOS_FIB, fib);
     }
-    if (size <= 0 || size > AA_MAX_FONTFILE)
+    if (size <= 0 || (ULONG)size > maxsize ||
+        !(data = AllocVec(size, MEMF_ANY)))
     {
-        ReportError(report, "AAText: bad file size for %s\n", (LONG)f->path, 0);
         Close(fh);
-        return FALSE;
+        return NULL;
     }
-    f->data = AllocVec(size, MEMF_ANY);
-    if (!f->data)
+    if (Read(fh, data, size) != size)
     {
-        ReportError(report, "AAText: no memory for %s\n", (LONG)f->path, 0);
         Close(fh);
-        return FALSE;
-    }
-    if (Read(fh, f->data, size) != size)
-    {
-        ReportError(report, "AAText: read error on %s\n", (LONG)f->path, 0);
-        Close(fh);
-        FreeVec(f->data);
-        f->data = NULL;
-        return FALSE;
+        FreeVec(data);
+        return NULL;
     }
     Close(fh);
-    f->size = size;
-    return TRUE;
+    *sizep = size;
+    return data;
 }
 
 static LONG InitLibraryOnStack(APTR arg)
@@ -216,7 +276,8 @@ static LONG OpenFaceOnStack(APTR arg)
 {
     struct AAFace *f = arg;
 
-    return FT_New_Memory_Face(aa_FTLib, f->data, f->size, 0, &f->face);
+    return FT_New_Memory_Face(aa_FTLib, f->data, f->size, f->facenum,
+                              &f->face);
 }
 
 static LONG DoneLibraryOnStack(APTR arg)
@@ -225,21 +286,46 @@ static LONG DoneLibraryOnStack(APTR arg)
     return 0;
 }
 
-static struct AAFace *GetFace(const char *path, BOOL report)
+/*
+ * Find or load a TrueType face. ot (may be NULL) supplies the code page.
+ * Takes the glyph lock only around FreeType, never around file I/O.
+ */
+static struct AAFace *GetFace(const char *path, LONG facenum,
+                              const struct AAOTagInfo *ot, BOOL report)
 {
     struct AAFace *f;
     LONG i, err;
 
     for (i = 0; i < aa_NumFaces; i++)
-        if (StrEq(aa_Faces[i].path, path))
+        if (aa_Faces[i].facenum == facenum && StrEq(aa_Faces[i].path, path))
             return aa_Faces[i].face ? &aa_Faces[i] : NULL;
 
-    f = &aa_Faces[aa_NumFaces++];
-    StrCopy(f->path, path, AA_PATH_LEN);
-    if (!LoadFile(f, report))
+    if (aa_NumFaces == AA_MAX_FACES)
+    {
+        ReportError(report, "AAText: too many TrueType files (%ld)\n",
+                    AA_MAX_FACES, 0);
         return NULL;
+    }
 
+    f = &aa_Faces[aa_NumFaces];
+    StrCopy(f->path, path, AA_PATH_LEN);
+    f->facenum = facenum;
+    f->face = NULL;
+    f->hascodepage = ot && ot->hascodepage;
+    if (f->hascodepage)
+        CopyMem((APTR)ot->codepage, f->codepage, sizeof(f->codepage));
+    f->data = ReadFile(path, AA_MAX_FONTFILE, &f->size);
+    aa_NumFaces++;          /* failed loads are remembered too */
+
+    if (!f->data)
+    {
+        ReportError(report, "AAText: cannot load %s\n", (LONG)path, 0);
+        return NULL;
+    }
+
+    ObtainSemaphore(&aa_GlyphSem);
     err = RunOnRenderStack(OpenFaceOnStack, f);
+    ReleaseSemaphore(&aa_GlyphSem);
     if (err)
     {
         ReportError(report, "AAText: FreeType error %ld opening %s\n",
@@ -249,17 +335,41 @@ static struct AAFace *GetFace(const char *path, BOOL report)
         f->face = NULL;
         return NULL;
     }
-    D(("AAText: loaded %s: \"%s\" %s, %ld glyphs, %ld units/em\n",
+    D(("AAText: loaded %s: \"%s\" %s, %ld glyphs, %ld units/em, "
+       "code page: %s\n",
        (ULONG)path, (ULONG)f->face->family_name,
        (ULONG)(f->face->style_name ? f->face->style_name : ""),
-       f->face->num_glyphs, (LONG)f->face->units_per_EM));
+       f->face->num_glyphs, (LONG)f->face->units_per_EM,
+       (ULONG)(f->hascodepage ? ".otag" : "charset pref")));
+    return f;
+}
+
+/* Append a font entry. Caller holds aa_GlyphSem or is still in init. */
+static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
+                              BOOL real, struct AAFace *face)
+{
+    struct AAFont *f;
+
+    if (aa_NumFonts == AA_MAX_FONTS)
+        return NULL;
+    f = &aa_Fonts[aa_NumFonts];
+    StrCopy(f->name, name, AA_NAME_LEN);
+    f->ysize = ysize;
+    f->pixelsize = px;
+    f->real = real;
+    f->face = face;
+    f->ftsize = NULL;
+    f->prepared = FALSE;
+    f->failed = FALSE;
+    f->adv = f->inkl = f->inkr = NULL;
+    aa_NumFonts++;          /* publish after the entry is complete */
     return f;
 }
 
 LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
 {
     double gamma = prefs->gamma100 / 100.0;
-    LONG i;
+    LONG i, err;
 
     InitSemaphore(&aa_GlyphSem);
     aa_LRU.mlh_Head = (struct MinNode *)&aa_LRU.mlh_Tail;
@@ -267,6 +377,8 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     aa_LRU.mlh_TailPred = (struct MinNode *)&aa_LRU.mlh_Head;
     aa_CacheLimit = prefs->cachekb * 1024;
     aa_Charset = prefs->charset;
+    aa_AutoDetect = prefs->autodetect;
+    aa_AutoReal = prefs->autoreal;
 
     for (i = 0; i < 256; i++)
         aa_GammaLUT[i] = (UBYTE)(pow(i / 255.0, 1.0 / gamma) * 255.0 + 0.5);
@@ -280,11 +392,11 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     }
 
     ObtainSemaphore(&aa_GlyphSem);
-
-    if (RunOnRenderStack(InitLibraryOnStack, NULL))
+    err = RunOnRenderStack(InitLibraryOnStack, NULL);
+    ReleaseSemaphore(&aa_GlyphSem);
+    if (err)
     {
         aa_FTLib = NULL;
-        ReleaseSemaphore(&aa_GlyphSem);
         ReportError(report, "AAText: FreeType initialisation failed\n", 0, 0);
         return 0;
     }
@@ -292,20 +404,11 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     for (i = 0; i < prefs->nummaps; i++)
     {
         const struct AAMapping *m = &prefs->map[i];
-        struct AAFace *face = GetFace(m->ttfpath, report);
-        struct AAFont *font;
+        struct AAFace *face = GetFace(m->ttfpath, 0, NULL, report);
 
-        if (!face)
-            continue;
-        font = &aa_Fonts[aa_NumFonts++];
-        StrCopy(font->name, m->fontname, AA_NAME_LEN);
-        font->ysize = m->ysize;
-        font->pixelsize = m->pixelsize;
-        font->real = m->real;
-        font->face = face;
+        if (face)
+            AddFont(m->fontname, m->ysize, m->pixelsize, m->real, face);
     }
-
-    ReleaseSemaphore(&aa_GlyphSem);
     return aa_NumFonts;
 }
 
@@ -348,7 +451,13 @@ void aa_GlyphsCleanup(void)
         aa_Faces[i].data = NULL;
         aa_Faces[i].face = NULL;
     }
-    aa_NumFaces = aa_NumFonts = 0;
+    for (i = 0; i < aa_NumFonts; i++)
+    {
+        if (aa_Fonts[i].adv)
+            FreeVec(aa_Fonts[i].adv);       /* inkl/inkr share it */
+        aa_Fonts[i].adv = NULL;
+    }
+    aa_NumFaces = aa_NumFonts = aa_NumNames = 0;
 
     if (aa_FTMemory)
         FT_Done_Memory(aa_FTMemory);
@@ -359,25 +468,205 @@ void aa_GlyphsCleanup(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* Automatic detection                                                 */
+/* ------------------------------------------------------------------ */
+
+void aa_SetHelper(struct Task *task, ULONG sigmask)
+{
+    aa_HelperSig = sigmask;
+    aa_HelperTask = task;
+}
+
+static LONG FindFontName(const char *base)
+{
+    LONG i, n = aa_NumNames;
+
+    for (i = 0; i < n; i++)
+        if (StrIEq(aa_Names[i].name, base))
+            return i;
+    return -1;
+}
+
+/*
+ * .otag path for a font name: next to the .font file if the name has a
+ * directory, otherwise in FONTS:.
+ */
+static void OTagPath(const char *fontname, const char *base, char *dst)
+{
+    const char *p;
+    LONG len = 0, i;
+    BOOL hasdir = FALSE;
+
+    for (p = fontname; *p; p++)
+        if (*p == ':' || *p == '/')
+            hasdir = TRUE;
+
+    if (hasdir)
+    {
+        len = StemLen(fontname);
+        if (len > AA_PATH_LEN - 6)
+            len = AA_PATH_LEN - 6;
+        for (i = 0; i < len; i++)
+            dst[i] = fontname[i];
+    }
+    else
+    {
+        CopyMem("FONTS:", dst, 6);
+        len = 6;
+        for (i = 0; base[i] && len < AA_PATH_LEN - 6; i++)
+            dst[len++] = base[i];
+    }
+    CopyMem(".otag", dst + len, 6);
+}
+
+void aa_RequestFont(const char *fontname)
+{
+    char base[AA_NAME_LEN];
+    BOOL added = FALSE;
+
+    if (!fontname || !aa_AutoDetect)
+        return;
+    BaseName(fontname, base);
+    if (!base[0] || FindFontName(base) >= 0)
+        return;
+
+    ObtainSemaphore(&aa_GlyphSem);
+    if (FindFontName(base) < 0 && aa_NumNames < AA_MAX_NAMES)
+    {
+        struct AAName *n = &aa_Names[aa_NumNames];
+
+        StrCopy(n->name, base, AA_NAME_LEN);
+        OTagPath(fontname, base, n->otag);
+        n->face = NULL;
+        n->state = NAME_PENDING;
+        aa_NumNames++;
+        added = TRUE;
+    }
+    ReleaseSemaphore(&aa_GlyphSem);
+
+    if (added && aa_HelperTask)
+        Signal(aa_HelperTask, aa_HelperSig);
+}
+
+/* Read a .otag file and load the TrueType file it names. */
+static struct AAFace *ResolveName(struct AAName *n, BOOL report)
+{
+    struct AAOTagInfo *ot;
+    struct AAFace *face = NULL;
+    UBYTE *buf;
+    ULONG size;
+
+    buf = ReadFile(n->otag, AA_MAX_OTAG, &size);
+    if (!buf)
+    {
+        D(("AAText: auto: %s: no .otag, bitmap font\n", (ULONG)n->name));
+        return NULL;
+    }
+    ot = AllocVec(sizeof(*ot), MEMF_ANY);
+    if (ot && aa_ParseOTag(buf, size, ot))
+    {
+        char path[AA_PATH_LEN];
+        const char *file = ot->fontfile;
+        BPTR lock;
+
+        /* absolute in practice; relative paths are tried in FONTS: */
+        StrCopy(path, file, AA_PATH_LEN);
+        lock = Lock((CONST_STRPTR)path, ACCESS_READ);
+        if (!lock)
+        {
+            CopyMem("FONTS:", path, 6);
+            StrCopy(path + 6, file, AA_PATH_LEN - 6);
+            lock = Lock((CONST_STRPTR)path, ACCESS_READ);
+        }
+        if (lock)
+        {
+            UnLock(lock);
+            D(("AAText: auto: %s -> %s (engine \"%s\")\n", (ULONG)n->name,
+               (ULONG)path, (ULONG)(ot->engine ? ot->engine : "?")));
+            face = GetFace(path, ot->facenum, ot, report);
+        }
+        else
+            ReportError(report, "AAText: %s: font file %s not found\n",
+                        (LONG)n->otag, (LONG)file);
+    }
+    else
+        D(("AAText: auto: %s: no TrueType file in .otag\n", (ULONG)n->name));
+
+    if (ot)
+        FreeVec(ot);
+    FreeVec(buf);
+    return face;
+}
+
+LONG aa_ResolvePending(BOOL report)
+{
+    LONG i, done = 0;
+
+    for (i = 0; i < aa_NumNames; i++)
+    {
+        struct AAName *n = &aa_Names[i];
+
+        if (n->state != NAME_PENDING)
+            continue;
+        n->face = ResolveName(n, report);
+        n->state = n->face ? NAME_READY : NAME_NONE;
+        done++;
+    }
+    return done;
+}
+
+/* ------------------------------------------------------------------ */
 /* Text() path                                                         */
 /* ------------------------------------------------------------------ */
 
 struct AAFont *aa_FindFont(struct TextFont *tf)
 {
-    const char *name = tf->tf_Message.mn_Node.ln_Name;
-    LONG i;
+    const char *fontname = tf->tf_Message.mn_Node.ln_Name;
+    char base[AA_NAME_LEN];
+    struct AAFont *font = NULL;
+    LONG i, n;
 
-    if (!name)
+    if (!fontname)
         return NULL;
-    for (i = 0; i < aa_NumFonts; i++)
+    BaseName(fontname, base);
+
+    n = aa_NumFonts;
+    for (i = 0; i < n; i++)
     {
         struct AAFont *f = &aa_Fonts[i];
 
-        if (f->ysize == tf->tf_YSize && !f->failed &&
-            FontNameMatches(name, f->name))
-            return f;
+        if (f->ysize == tf->tf_YSize && StrIEq(f->name, base))
+            return f->failed ? NULL : f;
     }
-    return NULL;
+
+    if (!aa_AutoDetect)
+        return NULL;
+
+    i = FindFontName(base);
+    if (i < 0)
+    {
+        aa_RequestFont(fontname);
+        return NULL;
+    }
+    if (aa_Names[i].state != NAME_READY)
+        return NULL;
+
+    /* detected face, first time in this size: add an entry */
+    ObtainSemaphore(&aa_GlyphSem);
+    for (n = 0; n < aa_NumFonts; n++)
+    {
+        if (aa_Fonts[n].ysize == tf->tf_YSize &&
+            StrIEq(aa_Fonts[n].name, base))
+        {
+            font = &aa_Fonts[n];
+            break;
+        }
+    }
+    if (!font)
+        font = AddFont(base, tf->tf_YSize, 0, aa_AutoReal, aa_Names[i].face);
+    ReleaseSemaphore(&aa_GlyphSem);
+
+    return (font && !font->failed) ? font : NULL;
 }
 
 LONG aa_FontCount(void)
@@ -483,9 +772,21 @@ static LONG PrepareOnStack(APTR arg)
     {
         LONG c;
 
+        if (!font->adv)
+        {
+            font->adv = AllocVec(3 * 256 * sizeof(WORD), MEMF_ANY);
+            if (!font->adv)
+            {
+                font->ftsize = NULL;
+                FT_Done_Size(size);
+                return FALSE;
+            }
+            font->inkl = font->adv + 256;
+            font->inkr = font->adv + 512;
+        }
         for (c = 0; c < 256; c++)
         {
-            FT_UInt gi = FT_Get_Char_Index(face, ToUnicode(c));
+            FT_UInt gi = FT_Get_Char_Index(face, ToUnicode(font->face, c));
             FT_Glyph_Metrics *gm = &face->glyph->metrics;
 
             if (FT_Load_Glyph(face, gi, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP))
@@ -547,7 +848,7 @@ static LONG RenderOnStack(APTR arg)
 
     FT_Activate_Size((FT_Size)r->font->ftsize);
 
-    gi = FT_Get_Char_Index(face, ToUnicode(r->code));
+    gi = FT_Get_Char_Index(face, ToUnicode(r->font->face, r->code));
 #ifdef DEBUG
     if (!gi && r->code > ' ')
         stat_missing++;

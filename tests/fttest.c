@@ -13,6 +13,7 @@
 #include "prefs.h"
 #include "glyphs.h"
 #include "metrics.h"
+#include "otag.h"
 
 /* stub.s references these; the patch itself is not linked here. */
 volatile LONG aa_UseCount;
@@ -42,7 +43,94 @@ int main(int argc, char **argv)
         printf("cannot read %s\n", argv[1]);
         return 10;
     }
+    /* "otag": parse a .otag file given as third argument */
+    if (strcmp(argv[2], "otag") == 0 && argc > 3)
+    {
+        static UBYTE buf[65536];
+        static struct AAOTagInfo info;
+        FILE *f = fopen(argv[3], "rb");
+        size_t len = f ? fread(buf, 1, sizeof(buf), f) : 0;
+        BOOL ok;
+
+        if (f)
+            fclose(f);
+        ok = aa_ParseOTag(buf, len, &info);
+        printf("otag %s: %lu bytes, ok=%d\n  font file: %s\n  engine: %s\n"
+               "  face %ld, code page: %s\n", argv[3], (unsigned long)len,
+               (int)ok, info.fontfile ? info.fontfile : "(none)",
+               info.engine ? info.engine : "(none)", (long)info.facenum,
+               info.hascodepage ? "yes" : "no");
+        if (info.hascodepage)
+            printf("  0xD0->%04X 0xDD->%04X 0xDE->%04X 0xF0->%04X 0xFD->%04X "
+                   "0xFE->%04X 0x41->%04X\n", info.codepage[0xD0],
+                   info.codepage[0xDD], info.codepage[0xDE],
+                   info.codepage[0xF0], info.codepage[0xFD],
+                   info.codepage[0xFE], info.codepage[0x41]);
+        return ok ? 0 : 10;
+    }
+
     n = aa_GlyphsInit(&prefs, TRUE);
+
+    /* "auto": detect a font via FONTS:<name>.otag like Text() would */
+    if (strcmp(argv[2], "auto") == 0 && argc > 3)
+    {
+        struct AAFont *af;
+        LONG done;
+
+        memset(&tf, 0, sizeof(tf));
+        tf.tf_Message.mn_Node.ln_Name = argv[3];
+        tf.tf_YSize = 16;
+        tf.tf_XSize = 8;
+        tf.tf_Baseline = 12;
+        tf.tf_LoChar = 32;
+        tf.tf_HiChar = 255;
+
+        af = aa_FindFont(&tf);
+        printf("first lookup: %s (expected: none, queued)\n",
+               af ? "found" : "none");
+        done = aa_ResolvePending(TRUE);
+        printf("resolved %ld pending name(s)\n", (long)done);
+        af = aa_FindFont(&tf);
+        printf("second lookup: %s\n", af ? af->name : "none");
+        if (!af)
+            return 10;
+        aa_LockGlyphs();
+        if (aa_PrepareFont(af, &tf))
+        {
+            static const UBYTE turkish[] = { 0xF0, 0xFD, 0xDE, 0 };
+            const UBYTE *t;
+
+            for (t = turkish; *t; t++)
+            {
+                struct AAGlyph *g = aa_GetGlyph(af, *t);
+                int x, y;
+
+                printf("code %02X: %dx%d\n", *t, g ? g->width : -1,
+                       g ? g->rows : -1);
+                for (y = 0; g && y < g->rows; y++)
+                {
+                    putchar('|');
+                    for (x = 0; x < g->width; x++)
+                        putchar(shades[g->data[y * g->width + x] * 9 / 255]);
+                    printf("|\n");
+                }
+            }
+        }
+        aa_UnlockGlyphs();
+        /* same name, other size: entry created without new I/O */
+        tf.tf_YSize = 24;
+        af = aa_FindFont(&tf);
+        printf("other size: %s, %ld font entries\n", af ? "found" : "none",
+               (long)aa_FontCount());
+        /* a bitmap font without .otag */
+        tf.tf_Message.mn_Node.ln_Name = (char *)"topaz.font";
+        aa_FindFont(&tf);
+        aa_ResolvePending(TRUE);
+        printf("topaz: %s (expected: none)\n",
+               aa_FindFont(&tf) ? "found" : "none");
+        aa_GlyphsCleanup();
+        return 0;
+    }
     printf("%ld font mapping(s), gamma %ld, cache %ld KB, offscreen %d\n",
            (long)n, (long)prefs.gamma100, (long)prefs.cachekb,
            (int)prefs.offscreen);

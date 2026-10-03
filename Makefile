@@ -41,8 +41,7 @@ CFLAGS  += -DDEBUG
 endif
 
 SRCS_C := src/main.c src/patch.c src/render.c src/metrics.c src/prefs.c \
-          src/glyphs.c \
-          src/debug.c
+          src/glyphs.c src/otag.c src/debug.c
 SRCS_S := src/stub.s src/cgx.s
 OBJS   := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SRCS_C)) \
           $(patsubst src/%.s,$(BUILDDIR)/%.o,$(SRCS_S))
@@ -99,6 +98,7 @@ clean:
 
 # Host-side smoke test (run under vamos, see test.ps1)
 TEST_OBJS := $(BUILDDIR)/prefs.o $(BUILDDIR)/glyphs.o $(BUILDDIR)/metrics.o \
+             $(BUILDDIR)/otag.o \
              $(BUILDDIR)/stub.o
 
 .PHONY: test

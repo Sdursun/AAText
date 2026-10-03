@@ -32,7 +32,7 @@
 #define AA_PORTNAME "AAText"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AAText 0.6 (3.10.2026)";
+    "$VER: AAText 0.7 (3.10.2026)";
 
 struct GfxBase *GfxBase;
 struct IntuitionBase *IntuitionBase;
@@ -86,47 +86,97 @@ static BOOL ArgIs(const char *arg, const char *name)
     return *arg == 0 && *name == 0;
 }
 
+/* A font (name as in the TextFont, size) to set up at startup. */
+struct FontRef
+{
+    char  name[AA_PATH_LEN];
+    UWORD ysize;
+};
+
+static struct FontRef refs[AA_MAX_FONTS];
+static LONG numrefs;
+
+static void AddRef(const char *name, UWORD ysize)
+{
+    LONG i, n;
+
+    for (i = 0; i < numrefs; i++)
+    {
+        if (refs[i].ysize != ysize)
+            continue;
+        for (n = 0; name[n] && name[n] == refs[i].name[n]; n++)
+            ;
+        if (name[n] == refs[i].name[n])
+            return;
+    }
+    if (numrefs == AA_MAX_FONTS)
+        return;
+    for (n = 0; n < AA_PATH_LEN - 1 && name[n]; n++)
+        refs[numrefs].name[n] = name[n];
+    refs[numrefs].name[n] = 0;
+    refs[numrefs].ysize = ysize;
+    numrefs++;
+}
+
 /*
- * Open each mapped bitmap font once and prepare its TrueType size now,
- * in our own process, so the first Text() call (possibly from
- * input.device) does not pay for it - real metrics fonts measure all
- * 256 characters. Fonts that cannot be opened are prepared on first use.
- * Returns TRUE if any mapping uses real metrics.
+ * Set up the fonts that matter right now, in our own process, so the
+ * first Text() call (possibly from input.device) finds them ready:
+ * every font currently open in the system (Workbench, screen, menu and
+ * window fonts) plus the fonts mapped in the prefs. Detected fonts are
+ * resolved via their .otag files; then each one is opened once and its
+ * TrueType size prepared (real metrics fonts measure all 256 characters).
  */
-static BOOL PrepareFonts(void)
+static void SetupFonts(void)
 {
     struct Library *DiskfontBase;
-    BOOL anyreal = FALSE;
+    struct Node *node;
     LONG i;
 
-    for (i = 0; i < aa_FontCount(); i++)
-        if (aa_FontAt(i)->real)
-            anyreal = TRUE;
+    /* fonts open in the system; copy names, the list may change later */
+    Forbid();
+    for (node = GfxBase->TextFonts.lh_Head; node->ln_Succ; node = node->ln_Succ)
+    {
+        struct TextFont *tf = (struct TextFont *)node;
 
-    DiskfontBase = OpenLibrary((CONST_STRPTR)"diskfont.library", 36);
-    if (!DiskfontBase)
-        return anyreal;
+        if (node->ln_Name)
+            AddRef(node->ln_Name, tf->tf_YSize);
+    }
+    Permit();
 
     for (i = 0; i < aa_FontCount(); i++)
     {
         struct AAFont *font = aa_FontAt(i);
         char name[AA_NAME_LEN + 6];
-        struct TextAttr ta;
-        struct TextFont *tf;
         int n;
 
         for (n = 0; font->name[n]; n++)
             name[n] = font->name[n];
         CopyMem(".font", name + n, 6);
+        AddRef(name, font->ysize);
+    }
 
-        ta.ta_Name = (STRPTR)name;
-        ta.ta_YSize = font->ysize;
+    for (i = 0; i < numrefs; i++)
+        aa_RequestFont(refs[i].name);
+    aa_ResolvePending(from_shell);
+
+    DiskfontBase = OpenLibrary((CONST_STRPTR)"diskfont.library", 36);
+    if (!DiskfontBase)
+        return;
+    for (i = 0; i < numrefs; i++)
+    {
+        struct TextAttr ta;
+        struct TextFont *tf;
+
+        ta.ta_Name = (STRPTR)refs[i].name;
+        ta.ta_YSize = refs[i].ysize;
         ta.ta_Style = 0;
         ta.ta_Flags = 0;
         tf = OpenDiskFont(&ta);
         if (tf)
         {
-            if (aa_FindFont(tf) == font)
+            struct AAFont *font;
+
+            if (tf->tf_YSize == refs[i].ysize && (font = aa_FindFont(tf)))
             {
                 aa_LockGlyphs();
                 aa_PrepareFont(font, tf);
@@ -134,18 +184,8 @@ static BOOL PrepareFonts(void)
             }
             CloseFont(tf);
         }
-        else
-        {
-            LONG args[2];
-
-            args[0] = (LONG)name;
-            args[1] = font->ysize;
-            MsgFmt("AAText: note: %s %ld not found now, "
-                   "will be set up on first use.\n", args);
-        }
     }
     CloseLibrary(DiskfontBase);
-    return anyreal;
 }
 
 static void Cleanup(void)
@@ -169,6 +209,8 @@ int main(int argc, char **argv)
     UBYTE mode = AA_MODE_TEXT;
     LONG numfonts;
     BOOL anyreal;
+    BYTE helpersig;
+    LONG i;
 
     from_shell = (argc != 0);
 
@@ -252,11 +294,11 @@ int main(int argc, char **argv)
     D(("AAText: cybergraphics.library %ld.%ld\n",
        (LONG)CyberGfxBase->lib_Version, (LONG)CyberGfxBase->lib_Revision));
 
+    /* The prefs file is optional; without it the defaults apply. */
     if (!aa_ReadPrefs(&prefs, have_prefspath ? prefspath : NULL, from_shell) &&
-        mode == AA_MODE_TEXT)
+        have_prefspath)
     {
-        Msg("AAText: no preferences file (ENV:AAText.prefs or "
-            "ENVARC:AAText.prefs).\n");
+        Msg("AAText: cannot read the PREFS file.\n");
         Cleanup();
         return RETURN_FAIL;
     }
@@ -269,14 +311,32 @@ int main(int argc, char **argv)
     }
 
     numfonts = aa_GlyphsInit(&prefs, from_shell);
-    if (numfonts == 0 && mode == AA_MODE_TEXT)
+    if (numfonts == 0 && !prefs.autodetect && mode == AA_MODE_TEXT)
     {
-        Msg("AAText: no usable font mappings, nothing to do.\n");
+        Msg("AAText: no usable font mappings and \"auto off\", "
+            "nothing to do.\n");
         Cleanup();
         return RETURN_FAIL;
     }
     aa_Mode = mode;
-    anyreal = PrepareFonts() && mode == AA_MODE_TEXT;
+
+    /* helper signal: Text() asks us to load newly seen fonts */
+    helpersig = AllocSignal(-1);
+    if (helpersig < 0)
+    {
+        Cleanup();
+        return RETURN_FAIL;
+    }
+    aa_SetHelper(FindTask(NULL), 1UL << helpersig);
+
+    SetupFonts();
+
+    /* the measuring functions are needed if any font may use real metrics */
+    anyreal = prefs.autoreal;
+    for (i = 0; i < prefs.nummaps; i++)
+        if (prefs.map[i].real)
+            anyreal = TRUE;
+    anyreal = anyreal && mode == AA_MODE_TEXT;
 
     port = CreateMsgPort();
     if (!port)
@@ -298,21 +358,29 @@ int main(int argc, char **argv)
     }
 
     {
-        LONG info[5];
+        LONG info[6];
 
-        info[0] = numfonts;
-        info[1] = prefs.gamma100 / 100;
-        info[2] = prefs.gamma100 % 100;
-        info[3] = prefs.cachekb;
-        info[4] = prefs.numblack;
-        MsgFmt("AAText installed: %ld font mapping(s), gamma %ld.%02ld, "
-               "cache %ld KB, %ld blacklisted.\n"
+        info[0] = aa_FontCount();
+        info[1] = (LONG)(prefs.autodetect ? "on" : "off");
+        info[2] = prefs.gamma100 / 100;
+        info[3] = prefs.gamma100 % 100;
+        info[4] = prefs.cachekb;
+        info[5] = prefs.numblack;
+        MsgFmt("AAText installed: %ld font(s) ready, auto detection %s, "
+               "gamma %ld.%02ld, cache %ld KB, %ld blacklisted.\n"
                "AAText: Ctrl-C or \"AAText QUIT\" removes it.\n", info);
     }
 
     for (;;)
     {
-        Wait(SIGBREAKF_CTRL_C);
+        ULONG sigs = Wait(SIGBREAKF_CTRL_C | (1UL << helpersig));
+
+        /* fonts seen by Text() for the first time: load them now */
+        if (sigs & (1UL << helpersig))
+            aa_ResolvePending(FALSE);
+
+        if (!(sigs & SIGBREAKF_CTRL_C))
+            continue;
         if (aa_Remove())
             break;
         Msg("AAText: another program has patched Text() after AAText.\n"
@@ -320,6 +388,8 @@ int main(int argc, char **argv)
             "Remove the other program first, then try again.\n");
     }
 
+    aa_SetHelper(NULL, 0);
+    FreeSignal(helpersig);
     RemPort(port);
     DeleteMsgPort(port);
     Cleanup();
