@@ -106,3 +106,26 @@ test: $(BUILDDIR)/fttest
 
 $(BUILDDIR)/fttest: tests/fttest.c $(TEST_OBJS) $(FT_LIB)
 	$(CC) $(CFLAGS) -o $@ tests/fttest.c $(TEST_OBJS) $(FT_LIB) $(LIBS)
+
+# Release archive for Aminet: build/dist/AAText.lha + AAText.readme
+# (docs are UTF-8 in the repository; the Turkish one is converted to
+# ISO-8859-9, the usual Turkish character set on the Amiga)
+DISTDIR := build/dist
+
+.PHONY: dist
+dist:
+	$(MAKE) CPU=68020 DEBUG=0
+	$(MAKE) CPU=68060 DEBUG=0
+	$(MAKE) CPU=68020 DEBUG=1
+	rm -rf $(DISTDIR)
+	mkdir -p $(DISTDIR)/AAText
+	cp build/68020/AAText $(DISTDIR)/AAText/AAText
+	cp build/68060/AAText $(DISTDIR)/AAText/AAText.060
+	cp build/68020-debug/AAText $(DISTDIR)/AAText/AAText.debug
+	cp docs/AAText_EN.txt docs/AAText.prefs.example $(DISTDIR)/AAText/
+	iconv -f UTF-8 -t ISO-8859-9 docs/AAText_TR.txt > $(DISTDIR)/AAText/AAText_TR.txt
+	cp docs/AAText.readme $(DISTDIR)/AAText.readme
+	chmod 644 $(DISTDIR)/AAText/*.txt $(DISTDIR)/AAText/*.example $(DISTDIR)/AAText.readme
+	chmod 755 $(DISTDIR)/AAText/AAText $(DISTDIR)/AAText/AAText.060 $(DISTDIR)/AAText/AAText.debug
+	cd $(DISTDIR) && lha ao5 AAText.lha AAText
+	@ls -l $(DISTDIR)

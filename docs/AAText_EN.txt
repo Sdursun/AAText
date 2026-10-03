@@ -1,0 +1,193 @@
+AAText 0.8 - antialiased TrueType text for AmigaOS 3.2
+======================================================
+
+AAText makes Workbench and applications draw TrueType fonts antialiased
+(smooth) on RTG screens: icon labels, menus, window and screen titles,
+Shell windows, GadTools, ReAction and MUI programs - everything that
+draws text through graphics.library.
+
+It needs no setup. Every TrueType font installed on your system is
+detected automatically and drawn smoothly in every size, with the
+correct character set (including Turkish, Central European etc. code
+pages). Bitmap fonts such as topaz are left untouched.
+
+AAText does not replace any system library. It patches four
+graphics.library functions while it runs and removes the patches
+cleanly when you quit it.
+
+
+Requirements
+------------
+
+- AmigaOS 3.2 or newer (developed and tested on 3.2.3)
+- 68020 or better
+- An RTG graphics system with cybergraphics.library, e.g. Picasso96
+  (P96). Tested with WinUAE (UAEGFX) and PiStorm (Emu68).
+- TrueType fonts installed with a font manager, so that each font has
+  a .otag file next to its .font file in FONTS:
+
+Screens with 15, 16, 24 or 32 bit colour are drawn antialiased. AGA and
+other palette screens (256 colours or fewer) are not changed.
+
+
+Which file?
+-----------
+
+  AAText         68020, 68030, 68040, PiStorm/Emu68, WinUAE.
+                 Use this one unless you have a real 68060.
+  AAText.060     Real 68060 CPUs with FPU only. The 68060 lacks some
+                 instructions the 68020 version uses; they would be
+                 emulated by 68060.library and slow down font loading.
+                 Does not run without an FPU (e.g. 68LC060).
+  AAText.debug   68020 version that writes diagnostics to the serial
+                 port. Only needed for bug reports (see below).
+
+
+Installation
+------------
+
+1. Copy AAText (or AAText.060, renamed to AAText) to SYS:WBStartup.
+   AAText then starts with Workbench, after the RTG system.
+
+   Alternatively copy it to C: and add this line near the end of
+   S:User-Startup:
+
+       Run >NIL: C:AAText
+
+2. Optional: copy AAText.prefs.example to ENVARC:AAText.prefs and edit
+   it (see "Settings"). Without it, the defaults are used.
+
+3. Reboot, or start AAText by hand. Windows that were already open are
+   drawn smoothly as soon as they are redrawn (e.g. resize them or
+   close and reopen them).
+
+
+Usage
+-----
+
+  AAText              Start (from Shell: Run >NIL: AAText)
+  AAText QUIT         Stop and remove the patches
+  AAText PREFS=file   Start with another settings file
+
+Starting AAText a second time - from Shell or by double-clicking its
+icon - stops the running copy, so the icon works as an on/off switch.
+Ctrl-C (or Break) on its process stops it as well.
+
+If another program patched the same functions after AAText, AAText
+cannot be removed safely. It then switches itself off (all text is drawn
+by the system again) and stays in memory; quit the other program first
+and try again.
+
+
+Settings
+--------
+
+The settings file is optional. AAText reads ENV:AAText.prefs, or if that
+does not exist, ENVARC:AAText.prefs. It is a plain text file with one
+setting per line; lines starting with # are comments.
+
+  gamma 0.8         Edge sharpness, 0.5 - 4.0 (default 0.8). Lower
+                    values give thinner, crisper text; higher values
+                    bolder text.
+
+  real on           Use the TrueType font's own character widths
+                    (default off). Text looks more natural, with the
+                    letter spacing the font designer intended, but
+                    window layouts change slightly. Start AAText from
+                    WBStartup when you use this: windows opened before
+                    AAText keep their old layout until reopened.
+
+  blacklist Name    Programs AAText must not touch, e.g.
+                    "blacklist FinalWriter TypeSmith". Use the program
+                    name as shown by the Workbench or the Shell command
+                    name; case does not matter. Several lines allowed.
+
+  cache 256         Memory for rendered characters in KB (32 - 16384,
+                    default 256).
+
+  offscreen on      Some programs (docks, gauges) draw text into a
+                    hidden bitmap first. AAText cannot tell which screen
+                    colours apply there and leaves such text alone. With
+                    "offscreen on" it uses the Workbench screen colours
+                    (default off).
+
+  auto off          Switch off automatic font detection; only the
+                    explicit mappings below are used.
+
+Explicit mappings are rarely needed. They draw a bitmap font, or a font
+whose .otag file is missing, with a TrueType file:
+
+  topaz 8 -> FONTS:_ttf/DejaVuSansMono.ttf
+  "Some Font" 16 -> "FONTS:My Fonts/x.ttf" 14 real
+
+Name (without .font; quotes if it contains spaces), size, "->", the
+TrueType file, then optionally the pixel size and "real". Without a
+pixel size AAText picks the size whose widths best match the bitmap
+font. "charset latin5" selects ISO-8859-9 for explicit mappings
+(detected fonts use the code page from their .otag file).
+
+A mistake in the file is reported with its line number when AAText is
+started from the Shell.
+
+
+Tips
+----
+
+- Icon labels with a solid box behind them: in Prefs/Font, "Select
+  Workbench Icon Text...", set the Mode to Text + Outline (or Shadow).
+  The outline is drawn smoothly as well and looks much better on
+  patterned backdrops.
+- If text looks too thin or too bold on your monitor, try gamma values
+  between 0.6 and 1.4.
+
+
+Limitations
+-----------
+
+- TrueType outlines only (.ttf, .ttc). OpenType fonts with PostScript
+  outlines (.otf/CFF) and Compugraphic fonts are drawn by the system as
+  before.
+- Palette screens (AGA, 256 colours or fewer) are not antialiased.
+- A font used for the first time is loaded in the background; its very
+  first line of text may appear unsmoothed.
+- Text drawn into hidden bitmaps is left alone unless "offscreen on" is
+  set.
+
+
+Bug reports
+-----------
+
+Please include the output of the debug version:
+
+1. Install Sushi (Aminet dev/debug/Sushi) and start it in a Shell:
+       Run >NIL: sushi >RAM:aatext.log
+2. Start AAText.debug instead of AAText, reproduce the problem, then
+   run "AAText.debug QUIT".
+3. Send RAM:aatext.log together with a description or screenshot.
+
+
+History
+-------
+
+0.8   First public release.
+      - Automatic TrueType detection via .otag files, all sizes,
+        code page from the .otag file
+      - Real metrics mode (real on), bold/italic/underline styles
+      - Glyph cache, blacklist, offscreen option
+
+
+Credits
+-------
+
+Portions of this software are copyright (C) 2026 The FreeType Project
+(www.freetype.org). All rights reserved.
+
+AAText uses the FreeType 2 font engine (version 2.14.3).
+
+
+Author
+------
+
+Serkan Dursun <EMAIL>
+
+Use at your own risk.
