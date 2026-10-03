@@ -169,8 +169,11 @@ Please include the output of the debug version:
 History
 -------
 
-0.9   Text is now vertically aligned like the original bitmap font
-      (it appeared shifted up in title bars with some fonts).
+0.9   Text is now placed exactly like the original bitmap font: it
+      appeared shifted up by a pixel or two, most visibly in screen
+      and window title bars.
+      With "real on" the TrueType size is chosen so that capital
+      letters are as tall as in the original font.
 
 0.8   First public release.
       - Automatic TrueType detection via .otag files, all sizes,

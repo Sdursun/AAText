@@ -20,7 +20,13 @@ struct AAGlyph
     struct AAFont  *font;
     UWORD  code;                /* Amiga character code */
     WORD   left;                /* bitmap offset from pen position */
-    WORD   top;                 /* rows above the baseline */
+    /*
+     * FreeType's bitmap_top: rows above the baseline *line*, so the
+     * glyph's last row just above it is row top-1. On the Amiga,
+     * tf_Baseline is the pixel row letters stand *on* (their bottom
+     * row), so a glyph's first row goes to tf_Baseline + 1 - top.
+     */
+    WORD   top;
     UWORD  width;
     UWORD  rows;
     WORD   advance;             /* pixels */
@@ -37,6 +43,7 @@ struct AAFont
     char   name[AA_NAME_LEN];   /* without directory and ".font" */
     UWORD  ysize;
     UWORD  pixelsize;           /* from prefs; 0 = automatic */
+    UWORD  pxused;              /* pixel size chosen by aa_PrepareFont() */
     struct AAFace *face;
     APTR   ftsize;              /* FT_Size, created on first use */
     BOOL   prepared;

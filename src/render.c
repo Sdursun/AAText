@@ -495,7 +495,7 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
         {
             /* centre the TrueType advance in the original cell */
             LONG gx = pen + g->left + (cell - g->advance) / 2;
-            LONG gy = baseline - g->top;
+            LONG gy = baseline + 1 - g->top;  /* see AAGlyph.top */
 
             BlendGlyph(buf, w, h, g, gx, gy, fg, -1);
         }
@@ -596,7 +596,7 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
         if (g && g->width)
         {
             LONG gx = pen + g->left;
-            LONG gy = baseline - g->top;
+            LONG gy = baseline + 1 - g->top;  /* see AAGlyph.top */
 
             if (rgb)
             {

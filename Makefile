@@ -98,7 +98,7 @@ clean:
 
 # Host-side smoke test (run under vamos, see test.ps1)
 TEST_OBJS := $(BUILDDIR)/prefs.o $(BUILDDIR)/glyphs.o $(BUILDDIR)/metrics.o \
-             $(BUILDDIR)/otag.o \
+             $(BUILDDIR)/otag.o $(BUILDDIR)/debug.o \
              $(BUILDDIR)/stub.o
 
 .PHONY: test

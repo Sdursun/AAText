@@ -178,8 +178,11 @@ Lütfen debug sürümünün çıktısını ekleyin:
 Geçmiş
 ------
 
-0.9   Yazılar artık orijinal bitmap font gibi dikey hizalanıyor
-      (bazı fontlarda başlık çubuklarında yukarı kaymış görünüyordu).
+0.9   Yazılar artık orijinal bitmap fontla tam aynı yüksekliğe
+      yerleşiyor: bir iki piksel yukarı kaymış görünüyordu, en çok
+      ekran ve pencere başlık çubuklarında fark ediliyordu.
+      "real on" ile TrueType boyutu, büyük harfler orijinal fonttaki
+      kadar uzun olacak şekilde seçiliyor.
 
 0.8   İlk genel sürüm.
       - .otag dosyalarıyla otomatik TrueType algılama, tüm boyutlar,

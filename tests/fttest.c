@@ -162,6 +162,52 @@ int main(int argc, char **argv)
         aa_UnlockGlyphs();
         return 10;
     }
+    /* "capsize": like the user's Arial/14 (baseline 9, 'H' rows 3..9):
+       a real metrics font must get a 7 pixel 'H' standing on row 9 */
+    if (strcmp(argv[2], "capsize") == 0)
+    {
+        static UBYTE data[16];
+        static ULONG loc[256];
+        struct TextFont bt;
+        struct AAFont *bf = aa_FontAt(0);
+        struct AAGlyph *g;
+        int y, gy, bottom;
+
+        aa_UnlockGlyphs();
+        for (y = 3; y <= 9; y++)
+            data[y] = 0x42;
+        for (y = 0; y < 256; y++)
+            loc[y] = 8;
+        memset(&bt, 0, sizeof(bt));
+        bt.tf_YSize = bf->ysize;
+        bt.tf_XSize = 8;
+        bt.tf_Baseline = 9;
+        bt.tf_LoChar = 0;
+        bt.tf_HiChar = 255;
+        bt.tf_CharData = data;
+        bt.tf_Modulo = 1;
+        bt.tf_CharLoc = loc;
+
+        /* main() already prepared it with a font without glyph data */
+        bf->prepared = FALSE;
+        bf->ftsize = NULL;
+        aa_LockGlyphs();
+        aa_PrepareFont(bf, &bt);
+        g = aa_GetGlyph(bf, 'H');
+        aa_UnlockGlyphs();
+        if (!g)
+            return 10;
+        /* the placement used by render.c */
+        gy = bt.tf_Baseline + bf->yoffset + 1 - g->top;
+        bottom = gy + g->rows - 1;
+        printf("capsize: %dpx ", bf->pxused);
+        printf("real=%d 'H' %d rows, top %d -> rows %d..%d, "
+               "baseline 9 -> %s\n", (int)bf->real, g->rows, g->top, gy,
+               bottom, (g->rows == 7 && bottom == 9) ? "OK" : "FAIL");
+        aa_GlyphsCleanup();
+        return (g->rows == 7 && bottom == 9) ? 0 : 10;
+    }
+
     /* "baseline": bitmap font whose letters stand 2 rows below
        tf_Baseline; the measured offset must be +2 */
     if (strcmp(argv[2], "baseline") == 0)

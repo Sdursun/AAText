@@ -808,6 +808,67 @@ static LONG MeasureBaseline(struct TextFont *tf, LONG *capheight)
     return base >= 0 ? base : tf->tf_Baseline;
 }
 
+/*
+ * Rows of a rendered glyph that look solid (some pixel at least 50%
+ * coverage): what the eye reads as the letter's height. Faint
+ * antialiasing rows at the edges do not count.
+ */
+static LONG SolidRows(const FT_Bitmap *bm)
+{
+    LONG rows = 0, x, y;
+
+    for (y = 0; y < (LONG)bm->rows; y++)
+    {
+        const UBYTE *row = bm->buffer + y * bm->pitch;
+
+        for (x = 0; x < (LONG)bm->width; x++)
+        {
+            if (row[x] >= 128)
+            {
+                rows++;
+                break;
+            }
+        }
+    }
+    return rows;
+}
+
+/*
+ * Pixel size at which the TrueType 'H' is capheight pixels tall, or 0.
+ * Hinting may round the result by a pixel; the neighbours are checked.
+ */
+static LONG CapPixelSize(FT_Face face, LONG capheight)
+{
+    FT_UInt gi = FT_Get_Char_Index(face, 'H');
+    static const BYTE tries[3] = { 0, -1, 1 };  /* exact estimate first */
+    LONG units, px, best = 0, besterr = 1000, i;
+
+    if (!gi || FT_Load_Glyph(face, gi, FT_LOAD_NO_SCALE))
+        return 0;
+    units = face->glyph->metrics.height;
+    if (units <= 0)
+        return 0;
+    px = (capheight * face->units_per_EM + units / 2) / units;
+
+    for (i = 0; i < 3; i++)
+    {
+        LONG p = px + tries[i], h, err;
+
+        if (p < 4 || FT_Set_Pixel_Sizes(face, 0, p) ||
+            FT_Load_Glyph(face, gi, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP) ||
+            FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
+            continue;
+        h = SolidRows(&face->glyph->bitmap);
+        err = h > capheight ? h - capheight : capheight - h;
+        if (err < besterr)
+        {
+            besterr = err;
+            best = p;
+        }
+    }
+    return best;
+}
+
 static LONG PrepareOnStack(APTR arg)
 {
     struct PrepareReq *r = arg;
@@ -816,17 +877,33 @@ static LONG PrepareOnStack(APTR arg)
     FT_Size size;
     LONG px;
 
+    LONG capheight, measured = MeasureBaseline(r->tf, &capheight);
+
     if (FT_New_Size(face, &size))
         return FALSE;
     FT_Activate_Size(size);
 
-    px = font->pixelsize ? font->pixelsize : AutoPixelSize(face, r->tf);
+    /*
+     * Safe metrics: match the bitmap font's widths, letters must fit its
+     * cells. Real metrics: widths come from the TrueType font anyway, so
+     * match the capital height and the text keeps the size of the
+     * original font.
+     */
+    if (font->pixelsize)
+        px = font->pixelsize;
+    else if (font->real && capheight > 0)
+        px = CapPixelSize(face, capheight);
+    else
+        px = 0;
+    if (px <= 0)
+        px = AutoPixelSize(face, r->tf);
     if (FT_Set_Pixel_Sizes(face, 0, px))
     {
         FT_Done_Size(size);
         return FALSE;
     }
     font->ftsize = size;
+    font->pxused = px;
 
     /*
      * Real metrics: advance and ink extent of every character code, with
@@ -870,7 +947,6 @@ static LONG PrepareOnStack(APTR arg)
      */
     {
         struct TextFont *tf = r->tf;
-        LONG capheight, measured = MeasureBaseline(tf, &capheight);
         LONG off = measured - tf->tf_Baseline;
         LONG limit = tf->tf_YSize / 2;
 
