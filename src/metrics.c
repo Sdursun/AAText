@@ -1,5 +1,42 @@
 /*
  * AAText - real metrics mode measuring functions. See metrics.h.
+ *
+ * This file is derived from AROS rom/graphics/textextent.c and
+ * rom/graphics/textfit.c (TextExtent() and TextFit()):
+ *
+ *   Copyright (C) 1995-2026, The AROS Development Team.
+ *   All rights reserved.
+ *
+ * Unlike the rest of AAText (MIT License), this file is distributed
+ * under the AROS Public License:
+ *
+ *   The contents of this file are subject to the AROS Public License
+ *   Version 1.1 (the "License"); you may not use this file except in
+ *   compliance with the License. You may obtain a copy of the License at
+ *   http://www.aros.org/license.html (also in the file LICENSE.APL).
+ *
+ *   Software distributed under the License is distributed on an "AS IS"
+ *   basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+ *   the License for the specific language governing rights and
+ *   limitations under the License.
+ *
+ *   The Original Code is AROS rom/graphics/textextent.c and textfit.c.
+ *   The Initial Developer of the Original Code is The AROS Development
+ *   Team. Portions created by The AROS Development Team are Copyright
+ *   (C) 1995-2026 The AROS Development Team. All Rights Reserved.
+ *
+ *   Contributor(s): Serkan Dursun.
+ *
+ * Changes made to the Original Code (APL section 3.3):
+ *
+ *   2026-10-03  Serkan Dursun
+ *     - Character widths and ink extents come from the TrueType advance
+ *       tables of an AAFont instead of tf_CharSpace/tf_CharKern/
+ *       tf_CharLoc; the RastPort is replaced by struct AAMetricsCtx.
+ *     - Turned into plain C functions without library calls:
+ *       aa_MLength(), aa_MExtent(), aa_MFit(); TextFit() measures each
+ *       character with aa_MExtent() instead of calling TextExtent().
+ *     - Ink extent only counted for characters with ink.
  */
 
 #include <exec/types.h>

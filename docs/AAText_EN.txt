@@ -185,10 +185,16 @@ History
 Credits
 -------
 
-Portions of this software are copyright (C) 2026 The FreeType Project
-(www.freetype.org). All rights reserved.
+FreeType: AAText uses the FreeType 2 font engine (version 2.14.3). This
+software is based in part on the work of the FreeType Team. Portions of
+this software are copyright (C) 2026 The FreeType Project
+(https://freetype.org). All rights reserved.
 
-AAText uses the FreeType 2 font engine (version 2.14.3).
+AROS: the measuring code of the real metrics mode (TextExtent and
+TextFit) is derived from AROS, Copyright (C) 1995-2026 The AROS
+Development Team. That part (src/metrics.c) is available as source code
+under the AROS Public License 1.1 (file LICENSE.APL) at
+https://github.com/Sdursun/AAText; the changes made are listed in it.
 
 
 Author and license
@@ -197,7 +203,8 @@ Author and license
 Serkan Dursun - https://github.com/Sdursun/AAText
 Bug reports and suggestions: https://github.com/Sdursun/AAText/issues
 
-AAText is released under the MIT License (see the file LICENSE): you
-may use, copy, modify and distribute it for any purpose, commercial or
-not, as long as the copyright notice is kept. Source code is available
-at the address above.
+AAText is released under the MIT License (see the file LICENSE.txt):
+you may use, copy, modify and distribute it for any purpose, commercial
+or not, as long as the copyright notice is kept. Source code is
+available at the address above. The code derived from AROS is under the
+AROS Public License 1.1 instead (see Credits).

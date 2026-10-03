@@ -42,6 +42,10 @@ Installation: copy AAText to SYS:WBStartup and reboot. See AAText_EN.txt
 
 License: MIT (free for any use, commercial or not; keep the copyright
 notice). Source code and bug reports: https://github.com/Sdursun/AAText
+The TextExtent/TextFit code of the real metrics mode is derived from
+AROS, Copyright (C) 1995-2026 The AROS Development Team, and its source
+(src/metrics.c) is available there under the AROS Public License 1.1.
 
+This software is based in part on the work of the FreeType Team.
 Portions of this software are copyright (C) 2026 The FreeType Project
-(www.freetype.org). All rights reserved.
+(https://freetype.org). All rights reserved.

@@ -87,8 +87,17 @@ AAText is released under the [MIT License](LICENSE): you may use it for any
 purpose, commercial or not, as long as the copyright notice (attribution to
 the author) is kept.
 
-Binary releases contain FreeType 2: portions of this software are copyright
-© 2026 The FreeType Project (www.freetype.org). All rights reserved.
+Exceptions and third-party code:
+
+- `src/metrics.c` is derived from AROS (`rom/graphics/textextent.c`,
+  `textfit.c`), Copyright © 1995-2026 The AROS Development Team, and is
+  distributed under the [AROS Public License 1.1](LICENSE.APL). Its header
+  lists the changes made.
+- Binary releases contain FreeType 2.14.3. This software is based in part
+  on the work of the FreeType Team. Portions of this software are copyright
+  © 2026 The FreeType Project (https://freetype.org). All rights reserved.
+  FreeType itself is not part of this repository; `tools/fetch-freetype.sh`
+  downloads the unmodified release.
 
 ---
 
@@ -110,6 +119,8 @@ yeniden başlatın. Ayrıntılı kullanım kılavuzu:
 
 **Lisans:** [MIT](LICENSE). Ticari ya da ticari olmayan her amaçla
 kullanılabilir, değiştirilebilir ve dağıtılabilir; tek şart telif satırının
-(geliştiriciye atfın) korunmasıdır.
+(geliştiriciye atfın) korunmasıdır. İstisna: `src/metrics.c` AROS'tan
+türetilmiştir ve [AROS Public License 1.1](LICENSE.APL) kapsamındadır.
+FreeType'a ait atıf yukarıdaki İngilizce bölümde.
 
 **Hata bildirimi ve öneriler:** [Issues](https://github.com/Sdursun/AAText/issues)
