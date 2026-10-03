@@ -200,9 +200,13 @@ Portions of this software are copyright (C) 2026 The FreeType Project
 AAText, FreeType 2 font motorunu (sürüm 2.14.3) kullanır.
 
 
-Yazar
------
+Yazar ve lisans
+---------------
 
-Serkan Dursun <EMAIL>
+Serkan Dursun - https://github.com/Sdursun/AAText
+Hata bildirimi ve öneriler: https://github.com/Sdursun/AAText/issues
 
-Kullanım riski size aittir.
+AAText MIT Lisansı ile dağıtılır (LICENSE dosyasına bakın): telif
+satırı korunduğu sürece ticari ya da ticari olmayan her amaçla
+kullanılabilir, kopyalanabilir, değiştirilebilir ve dağıtılabilir.
+Kaynak kodu yukarıdaki adreste.

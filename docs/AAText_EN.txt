@@ -191,9 +191,13 @@ Portions of this software are copyright (C) 2026 The FreeType Project
 AAText uses the FreeType 2 font engine (version 2.14.3).
 
 
-Author
-------
+Author and license
+------------------
 
-Serkan Dursun <EMAIL>
+Serkan Dursun - https://github.com/Sdursun/AAText
+Bug reports and suggestions: https://github.com/Sdursun/AAText/issues
 
-Use at your own risk.
+AAText is released under the MIT License (see the file LICENSE): you
+may use, copy, modify and distribute it for any purpose, commercial or
+not, as long as the copyright notice is kept. Source code is available
+at the address above.

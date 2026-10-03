@@ -40,5 +40,8 @@ Picasso96.
 Installation: copy AAText to SYS:WBStartup and reboot. See AAText_EN.txt
 (English) or AAText_TR.txt (Turkish, ISO-8859-9) for details.
 
+License: MIT (free for any use, commercial or not; keep the copyright
+notice). Source code and bug reports: https://github.com/Sdursun/AAText
+
 Portions of this software are copyright (C) 2026 The FreeType Project
 (www.freetype.org). All rights reserved.

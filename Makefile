@@ -123,6 +123,7 @@ dist:
 	cp build/68060/AAText $(DISTDIR)/AAText/AAText.060
 	cp build/68020-debug/AAText $(DISTDIR)/AAText/AAText.debug
 	cp docs/AAText_EN.txt docs/AAText.prefs.example $(DISTDIR)/AAText/
+	cp LICENSE $(DISTDIR)/AAText/LICENSE.txt
 	iconv -f UTF-8 -t ISO-8859-9 docs/AAText_TR.txt > $(DISTDIR)/AAText/AAText_TR.txt
 	cp docs/AAText.readme $(DISTDIR)/AAText.readme
 	chmod 644 $(DISTDIR)/AAText/*.txt $(DISTDIR)/AAText/*.example $(DISTDIR)/AAText.readme
