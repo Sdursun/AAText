@@ -1,4 +1,4 @@
-AAText 0.8 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.9 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -177,6 +177,9 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.9   Yazılar artık orijinal bitmap font gibi dikey hizalanıyor
+      (bazı fontlarda başlık çubuklarında yukarı kaymış görünüyordu).
 
 0.8   İlk genel sürüm.
       - .otag dosyalarıyla otomatik TrueType algılama, tüm boyutlar,

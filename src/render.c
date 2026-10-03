@@ -480,7 +480,7 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
     WORD *space = (WORD *)tf->tf_CharSpace;
     LONG defidx = tf->tf_HiChar - tf->tf_LoChar + 1;  /* "not in font" glyph */
     LONG pen = 0;
-    LONG baseline = tf->tf_Baseline;
+    LONG baseline = tf->tf_Baseline + font->yoffset;   /* measured, see glyphs.h */
 
     while (count--)
     {
@@ -582,7 +582,7 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
 {
     struct TextFont *tf = rp->Font;
     UBYTE style = rp->AlgoStyle;
-    LONG baseline = tf->tf_Baseline;
+    LONG baseline = tf->tf_Baseline + font->yoffset;   /* measured, see glyphs.h */
     LONG italicbase = (style & FSF_ITALIC) ? baseline : -1;
     LONG smear = (style & FSF_BOLD) ? (tf->tf_BoldSmear ? tf->tf_BoldSmear : 1)
                                     : 0;

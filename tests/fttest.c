@@ -162,6 +162,48 @@ int main(int argc, char **argv)
         aa_UnlockGlyphs();
         return 10;
     }
+    /* "baseline": bitmap font whose letters stand 2 rows below
+       tf_Baseline; the measured offset must be +2 */
+    if (strcmp(argv[2], "baseline") == 0)
+    {
+        static UBYTE data[16];
+        static ULONG loc[256];
+        struct TextFont bt;
+        struct AAFont *bf;
+        int y;
+
+        aa_UnlockGlyphs();
+        for (y = 3; y <= 12; y++)
+            data[y] = 0x42;                 /* 'H'-like, ink rows 3..12 */
+        for (y = 0; y < 256; y++)
+            loc[y] = 8;                     /* bit offset 0, width 8 */
+
+        memset(&bt, 0, sizeof(bt));
+        bt.tf_Message.mn_Node.ln_Name = (char *)"Base.font";
+        strcpy(prefs.map[0].fontname, "Base");
+        bt.tf_YSize = prefs.map[0].ysize;   /* 16 in tests/test.prefs */
+        bt.tf_XSize = 8;
+        bt.tf_Baseline = 10;
+        bt.tf_LoChar = 0;
+        bt.tf_HiChar = 255;
+        bt.tf_CharData = data;
+        bt.tf_Modulo = 1;
+        bt.tf_CharLoc = loc;
+
+        /* a fresh entry: aa_FindFont() on a new name/size */
+        bf = aa_FontAt(0);
+        bf->prepared = FALSE;
+        bf->ftsize = NULL;
+        strcpy(bf->name, "Base");
+        aa_LockGlyphs();
+        aa_PrepareFont(bf, &bt);
+        aa_UnlockGlyphs();
+        printf("baseline: tf_Baseline 10, ink bottom 12 -> yoffset %d -> %s\n",
+               bf->yoffset, bf->yoffset == 2 ? "OK" : "FAIL");
+        aa_GlyphsCleanup();
+        return bf->yoffset == 2 ? 0 : 10;
+    }
+
     /* "metrics": real metrics consistency checks */
     if (strcmp(argv[2], "metrics") == 0)
     {

@@ -43,6 +43,13 @@ struct AAFont
     BOOL   failed;
     BOOL   real;                /* real TrueType metrics */
     /*
+     * Rows to add to tf_Baseline to reach the row the bitmap font's
+     * letters actually sit on (measured from its glyph images; some
+     * outline engines report a baseline that differs from where they
+     * put the glyphs). Set by aa_PrepareFont().
+     */
+    WORD   yoffset;
+    /*
      * Real metrics mode, allocated and filled by aa_PrepareFont() and
      * read-only after that (so measuring needs no lock): advance width
      * and horizontal ink extent [inkl, inkr) relative to the pen, per

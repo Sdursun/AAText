@@ -1,4 +1,4 @@
-AAText 0.8 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.9 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -168,6 +168,9 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.9   Text is now vertically aligned like the original bitmap font
+      (it appeared shifted up in title bars with some fonts).
 
 0.8   First public release.
       - Automatic TrueType detection via .otag files, all sizes,

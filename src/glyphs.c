@@ -362,6 +362,7 @@ static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
     f->prepared = FALSE;
     f->failed = FALSE;
     f->adv = f->inkl = f->inkr = NULL;
+    f->yoffset = 0;
     aa_NumFonts++;          /* publish after the entry is complete */
     return f;
 }
@@ -744,6 +745,69 @@ static LONG AutoPixelSize(FT_Face face, struct TextFont *tf)
     return px;
 }
 
+/*
+ * Top and bottom ink rows of a character in the bitmap font's glyph
+ * image (tf_CharData), or FALSE if it has none.
+ */
+static BOOL InkRows(struct TextFont *tf, UBYTE c, LONG *top, LONG *bottom)
+{
+    const UBYTE *data = tf->tf_CharData;
+    ULONG loc;
+    LONG idx, bit0, w, x, y;
+
+    if (!data || !tf->tf_CharLoc || (tf->tf_Style & FSF_COLORFONT) ||
+        c < tf->tf_LoChar || c > tf->tf_HiChar)
+        return FALSE;
+    idx = c - tf->tf_LoChar;
+    loc = ((ULONG *)tf->tf_CharLoc)[idx];
+    bit0 = loc >> 16;
+    w = loc & 0xFFFF;
+
+    *top = -1;
+    for (y = 0; y < tf->tf_YSize; y++)
+    {
+        const UBYTE *row = data + y * tf->tf_Modulo;
+
+        for (x = 0; x < w; x++)
+        {
+            LONG b = bit0 + x;
+
+            if (row[b >> 3] & (0x80 >> (b & 7)))
+            {
+                if (*top < 0)
+                    *top = y;
+                *bottom = y;
+                break;
+            }
+        }
+    }
+    return *top >= 0;
+}
+
+/*
+ * The row the bitmap font's letters really sit on: the lowest ink row of
+ * letters without descenders. Returns tf_Baseline if it cannot be
+ * measured (e.g. colour fonts).
+ */
+static LONG MeasureBaseline(struct TextFont *tf, LONG *capheight)
+{
+    static const char flat[] = "HEIxzn0";
+    const char *s;
+    LONG base = -1, top, bottom;
+
+    *capheight = 0;
+    for (s = flat; *s; s++)
+    {
+        if (!InkRows(tf, (UBYTE)*s, &top, &bottom))
+            continue;
+        if (bottom > base)
+            base = bottom;
+        if (*s == 'H')
+            *capheight = bottom - top + 1;
+    }
+    return base >= 0 ? base : tf->tf_Baseline;
+}
+
 static LONG PrepareOnStack(APTR arg)
 {
     struct PrepareReq *r = arg;
@@ -798,6 +862,37 @@ static LONG PrepareOnStack(APTR arg)
             font->inkl[c] = gm->horiBearingX >> 6;
             font->inkr[c] = (gm->horiBearingX + gm->width + 63) >> 6;
         }
+    }
+
+    /*
+     * Vertical position: put our baseline where the bitmap font's
+     * letters actually stand, so text stays centred in title bars etc.
+     */
+    {
+        struct TextFont *tf = r->tf;
+        LONG capheight, measured = MeasureBaseline(tf, &capheight);
+        LONG off = measured - tf->tf_Baseline;
+        LONG limit = tf->tf_YSize / 2;
+
+        if (off > limit)
+            off = limit;
+        if (off < -limit)
+            off = -limit;
+        font->yoffset = off;
+
+#ifdef DEBUG
+        {
+            FT_UInt gi = FT_Get_Char_Index(face, 'H');
+            LONG ftcap = 0;
+
+            if (gi && !FT_Load_Glyph(face, gi, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP))
+                ftcap = (face->glyph->metrics.horiBearingY + 32) >> 6;
+            kprintf("AAText: font %s/%ld: baseline=%ld measured=%ld "
+                    "(offset %ld), cap height bitmap=%ld TrueType=%ld\n",
+                    (ULONG)font->name, (LONG)font->ysize,
+                    (LONG)tf->tf_Baseline, measured, off, capheight, ftcap);
+        }
+#endif
     }
 
     D(("AAText: font %s/%ld: baseline=%ld xsize=%ld -> %s %ldpx "
