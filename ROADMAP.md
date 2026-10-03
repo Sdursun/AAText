@@ -16,8 +16,8 @@ TrueType algılama eklendi. **6. aşama (AGA ekranlar) yapılmadı.**
 1. **Geri bildirim toplamak.** Birkaç gün kullanıcıların bildirdiği
    hatalara bakmak. Gerçek hatalar her zaman yeni özelliklerden önce
    gelir.
-2. **OpenType/CFF desteği** ve **hinting seçeneği**: küçük işler, hemen
-   fark edilir.
+2. **Hinting seçeneği** (küçük iş, hemen fark edilir); **OpenType/CFF**
+   ancak freetype2.library ile `.otf` kurulabildiği doğrulanırsa (madde 2).
 3. **Ayar programı (GUI).** Kullanıcı sayısı arttıkça "metin dosyası
    düzenleyin" demek zorlaşır.
 4. Diğerleri talebe göre. AGA ancak istek gelirse.
@@ -35,11 +35,24 @@ TrueType algılama eklendi. **6. aşama (AGA ekranlar) yapılmadı.**
   ayarları yeniden okumasını söyler; bunun için AAText'te küçük bir
   mesaj arayüzü gerekir.
 
-### 2. OpenType/CFF desteği (`.otf`) — kolay
-- PostScript anahatlı OpenType fontlar şu an atlanıyor.
-- FreeType'a `cff`, `psaux`, `pshinter` ve `psnames` modüllerini eklemek
-  yeterli. Program yaklaşık 60–80 KB büyür.
-- `.otag` okuyucusu `.otf` dosyalarını zaten tanıyor.
+### 2. OpenType/CFF desteği (`.otf`) — kolay, ama bir ön koşula bağlı
+- AAText sadece sistemin açtığı fontları çizer. Bir `.otf`'ten Amiga fontu
+  (ve `.otag`) üretecek bir **motor** olmadan AAText'e CFF eklemek işe
+  yaramaz.
+- Mevcut kurulumdaki motor **ttf.library** (`.otag` içinde motor adı
+  `ttf`): sadece TrueType, OpenType/CFF yok.
+- OS 3 için **freetype2.library** var (Aminet `util/libs/freetype2_lib`,
+  AROS'un motoru, FTManager ile). OpenType/CFF desteği teorik olarak var
+  ama **doğrulanmadı** (eski bir FreeType sürümü olabilir). Önce bunun
+  `.otf` kurup kuramadığı denenmeli.
+- Kurabiliyorsa AAText tarafı kolay: FreeType'a `cff`, `psaux`,
+  `pshinter` ve `psnames` modüllerini eklemek (program ~60–80 KB büyür).
+  `.otag` okuyucusu AROS biçimini ve `.otf` dosyalarını zaten tanıyor.
+- Bugünkü pratik çözüm: `.otf` fontları PC'de FontForge gibi bir araçla
+  `.ttf`'e çevirip ttf.library ile kurmak.
+- Daha büyük bir seçenek: OS 3.2 için güncel FreeType tabanlı bir motor
+  (bullet API) yazmak ya da AROS'unkini taşımak (APL). Ayrı bir proje
+  kadar iş.
 
 ### 3. Gerçek ölçü modunda kerning — orta
 - TTF'in harf çifti aralıklarının (ör. "AV", "To", "Ye") uygulanması;
