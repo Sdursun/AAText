@@ -5,7 +5,7 @@
 ; Lines starting with ';' are comments.
 ;
 ## language türkçe
-## version $VER: aatextprefs.catalog 1.0 (8.10.2026)
+## version $VER: aatextprefs.catalog 1.1 (9.10.2026)
 
 MSG_WINDOW_TITLE
 AAText Tercihleri
@@ -40,13 +40,13 @@ Pijamalı hasta yağız şoföre çabucak güvendi.
 MSG_PREVIEW_LINE2
 ÇĞİÖŞÜ çğıöşü 0123456789 (illüstrasyon)
 MSG_SAVE
-Kaydet
+_Kaydet
 MSG_USE
-Kullan
+K_ullan
 MSG_TEST
 Dene
 MSG_CANCEL
-İptal
+İ_ptal
 MSG_STATUS_RUNNING
 %s çalışıyor.
 MSG_STATUS_STOPPED
@@ -62,6 +62,10 @@ Tamam
 MSG_WRITE_ERROR
 %s yazılamadı.
 MSG_STATUS_TESTED
-Ayarlar denendi - Kaydet veya Kullan ile kalıcı olur.
+Canlı gösteriliyor - Kaydet veya Kullan ile kalıcı olur.
 MSG_STATUS_OLD
 Çalışan AAText canlı değişiklik için çok eski.
+MSG_PREVIEW_FONT
+Ekran fontu: %s %ld
+MSG_PREVIEW_PLAIN
+Ekran fontu: %s %ld (AAText kapalı: düz yazı)

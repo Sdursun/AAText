@@ -4,7 +4,8 @@
 /*
  * User interface strings of AATextPrefs. English is built in; other
  * languages come from aatextprefs.catalog (locale.library). The IDs are
- * part of the catalog format: never renumber, only append.
+ * part of the catalog format: never renumber, only append. A "_" marks
+ * a button's keyboard shortcut. MSG_TEST is no longer used.
  * Translations: catalogs/<language>.ct, compiled by tools/mkcatalog.pl.
  */
 
@@ -27,10 +28,10 @@
     S(MSG_PREVIEW,          13, "Preview") \
     S(MSG_PREVIEW_LINE1,    14, "The quick brown fox jumps over the lazy dog") \
     S(MSG_PREVIEW_LINE2,    15, "0123456789 (illustrate) WAVE mmm") \
-    S(MSG_SAVE,             16, "Save") \
-    S(MSG_USE,              17, "Use") \
+    S(MSG_SAVE,             16, "_Save") \
+    S(MSG_USE,              17, "_Use") \
     S(MSG_TEST,             18, "Test") \
-    S(MSG_CANCEL,           19, "Cancel") \
+    S(MSG_CANCEL,           19, "_Cancel") \
     S(MSG_STATUS_RUNNING,   20, "%s is running.") \
     S(MSG_STATUS_STOPPED,   21, "AAText is not running: settings are only saved.") \
     S(MSG_NOT_YET,          22, "This page comes in a later version.") \
@@ -38,8 +39,10 @@
     S(MSG_RESTART_TEXT,     24, "Real character widths change when AAText\nis restarted (e.g. at the next reboot).") \
     S(MSG_OK,               25, "OK") \
     S(MSG_WRITE_ERROR,      26, "Cannot write %s.") \
-    S(MSG_STATUS_TESTED,    27, "Settings tried out - Save or Use keeps them.") \
-    S(MSG_STATUS_OLD,       28, "The running AAText is too old for live changes.")
+    S(MSG_STATUS_TESTED,    27, "Changes are shown live - Save or Use keeps them.") \
+    S(MSG_STATUS_OLD,       28, "The running AAText is too old for live changes.") \
+    S(MSG_PREVIEW_FONT,     29, "Screen font: %s %ld") \
+    S(MSG_PREVIEW_PLAIN,    30, "Screen font: %s %ld (AAText off: plain text)")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

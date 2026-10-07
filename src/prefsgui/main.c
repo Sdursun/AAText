@@ -4,10 +4,10 @@
  * Reads ENV:AAText.prefs (or ENVARC:), shows the settings on four tabs
  * and talks to a running AAText through its message port (aamsg.h):
  *
- *   Test    APPLY the shown settings without writing a file
+ *   change  gamma and hinting are APPLYed at once (live preview)
  *   Use     write ENV:AAText.prefs, then RELOAD
  *   Save    write ENVARC: and ENV:AAText.prefs, then RELOAD
- *   Cancel  if Test was used, APPLY the settings AAText had before
+ *   Cancel  if anything was applied, APPLY the settings AAText had before
  *
  * Shell options: LANGUAGE=<name> (e.g. türkçe) overrides the locale.
  */
@@ -59,7 +59,7 @@
 #include "strings.h"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AATextPrefs 0.1 (8.10.2026)";
+    "$VER: AATextPrefs 0.2 (9.10.2026)";
 
 #define ENV_PREFS     "ENV:AAText.prefs"
 #define ENVARC_PREFS  "ENVARC:AAText.prefs"
@@ -75,7 +75,7 @@ struct Library *WindowBase, *LayoutBase, *ClickTabBase, *ChooserBase,
 enum
 {
     GID_TABS = 1, GID_GAMMA, GID_GAMMAVAL, GID_HINTING, GID_REAL,
-    GID_PREVIEW, GID_STATUS, GID_SAVE, GID_USE, GID_TEST, GID_CANCEL,
+    GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
     GID_COUNT
 };
 
@@ -93,9 +93,10 @@ static struct List tablist, hintlist;
 static struct AAPrefs cur;      /* what the window shows */
 static struct AAPrefs before;   /* AAText's settings when we started */
 static BOOL running;            /* AAText answered STATUS */
-static BOOL tested;             /* Test sent new settings to AAText */
+static BOOL tested;             /* new settings were APPLYed to AAText */
 static char statustext[160];
 static char gammatext[8];
+static char fontinfo[80];
 
 static struct TextFont *previewfont;
 static struct Hook previewhook;
@@ -274,16 +275,28 @@ static void RefreshPreview(void)
 }
 
 /*
+ * The gamma slider moves in steps of 0.05 (level = gamma100 / 5). A value
+ * from the file that is not on a step is kept until the slider is moved.
+ */
+#define GAMMA_STEP 5
+
+static LONG GammaLevel(UWORD gamma100)
+{
+    return (gamma100 + GAMMA_STEP / 2) / GAMMA_STEP;
+}
+
+/*
  * Read the settings back from the gadgets. The code value that comes
- * with WMHI_GADGETUP is not reliable for every event, so Test, Use and
- * Save always take the gadgets' current state.
+ * with WMHI_GADGETUP is not reliable for every event, so the gadgets'
+ * current state is always used.
  */
 static void ReadGadgets(void)
 {
     ULONG v = 0;
 
-    if (GetAttr(SLIDER_Level, (Object *)gads[GID_GAMMA], &v))
-        cur.gamma100 = v;
+    if (GetAttr(SLIDER_Level, (Object *)gads[GID_GAMMA], &v) &&
+        (LONG)v != GammaLevel(cur.gamma100))
+        cur.gamma100 = v * GAMMA_STEP;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_HINTING], &v))
         cur.hinting = hint_order[v & 3];
     if (GetAttr(GA_Selected, (Object *)gads[GID_REAL], &v))
@@ -292,11 +305,58 @@ static void ReadGadgets(void)
 
 static void UpdateGammaText(void)
 {
-    snprintf(gammatext, sizeof(gammatext), "%d.%02d",
-             cur.gamma100 / 100, cur.gamma100 % 100);
+    snprintf(gammatext, sizeof(gammatext), "%ld.%02ld",
+             (long)(cur.gamma100 / 100), (long)(cur.gamma100 % 100));
     if (win)
         SetGadgetAttrs(gads[GID_GAMMAVAL], win, NULL,
                        GA_Text, (ULONG)gammatext, TAG_DONE);
+}
+
+/*
+ * Gamma or hinting changed: let AAText use it at once and redraw the
+ * preview. Real widths need a restart, so AAText keeps its own value.
+ */
+static void LiveApply(void)
+{
+    struct AAPrefs p;
+
+    ReadGadgets();
+    UpdateGammaText();
+    if (!running)
+        return;
+    CopyMem(&cur, &p, sizeof(p));
+    p.autoreal = before.autoreal;
+    Send(AACMD_APPLY, &p);
+    if (!running)
+    {
+        SetStatus(GetString(MSG_STATUS_STOPPED));
+        return;
+    }
+    tested = TRUE;
+    SetStatus(GetString(MSG_STATUS_TESTED));
+    RefreshPreview();
+}
+
+/* "Screen font: XEN 8", without the ".font" */
+static void MakeFontInfo(const struct TextAttr *ta)
+{
+    char name[AA_NAME_LEN];
+    char *dot;
+
+    snprintf(name, sizeof(name), "%s", ta->ta_Name ? (char *)ta->ta_Name : "");
+    if ((dot = strstr(name, ".font")))
+        *dot = 0;
+    snprintf(fontinfo, sizeof(fontinfo),
+             GetString(running ? MSG_PREVIEW_FONT : MSG_PREVIEW_PLAIN),
+             name, (long)ta->ta_YSize);
+}
+
+/* The key after '_' in a label, lower case; 0 if there is none. */
+static ULONG ShortcutKey(LONG msg)
+{
+    const char *s = strchr(GetString(msg), '_');
+
+    return s && s[1] ? ToLower((UBYTE)s[1]) : 0;
 }
 
 static void AddTab(struct List *list, LONG msg, ULONG number)
@@ -357,9 +417,9 @@ static Object *AppearancePage(void)
             LAYOUT_AddChild, gads[GID_GAMMA] = (struct Gadget *)SliderObject,
                 GA_ID, GID_GAMMA,
                 GA_RelVerify, TRUE,
-                SLIDER_Min, 50,
-                SLIDER_Max, 400,
-                SLIDER_Level, cur.gamma100,
+                SLIDER_Min, 50 / GAMMA_STEP,
+                SLIDER_Max, 400 / GAMMA_STEP,
+                SLIDER_Level, GammaLevel(cur.gamma100),
                 SLIDER_Orientation, SLIDER_HORIZONTAL,
             End,
             LAYOUT_AddChild, gads[GID_GAMMAVAL] = (struct Gadget *)ButtonObject,
@@ -401,6 +461,14 @@ static Object *AppearancePage(void)
                 SPACE_MinWidth, 360,
                 SPACE_RenderHook, (ULONG)&previewhook,
             End,
+            LAYOUT_AddChild, gads[GID_FONTINFO] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_FONTINFO,
+                GA_ReadOnly, TRUE,
+                GA_Text, (ULONG)fontinfo,
+                BUTTON_BevelStyle, BVS_NONE,
+                BUTTON_Justification, BCJ_LEFT,
+            End,
+            CHILD_WeightedHeight, 0,
         End,
     End;
 }
@@ -428,6 +496,7 @@ static BOOL OpenWin(struct Screen *scr)
         WA_CloseGadget, TRUE,
         WA_SizeGadget, TRUE,
         WA_Activate, TRUE,
+        WA_IDCMP, IDCMP_GADGETUP | IDCMP_CLOSEWINDOW | IDCMP_VANILLAKEY,
         WINDOW_Position, WPOS_CENTERSCREEN,
         WINDOW_ParentGroup, VLayoutObject,
             LAYOUT_SpaceOuter, TRUE,
@@ -465,10 +534,6 @@ static BOOL OpenWin(struct Screen *scr)
                     GA_ID, GID_USE, GA_RelVerify, TRUE,
                     GA_Text, (ULONG)GetString(MSG_USE),
                 End,
-                LAYOUT_AddChild, gads[GID_TEST] = (struct Gadget *)ButtonObject,
-                    GA_ID, GID_TEST, GA_RelVerify, TRUE,
-                    GA_Text, (ULONG)GetString(MSG_TEST),
-                End,
                 LAYOUT_AddChild, gads[GID_CANCEL] = (struct Gadget *)ButtonObject,
                     GA_ID, GID_CANCEL, GA_RelVerify, TRUE,
                     GA_Text, (ULONG)GetString(MSG_CANCEL),
@@ -486,11 +551,53 @@ static BOOL OpenWin(struct Screen *scr)
 
 /* ------------------------------------------------------------------ */
 
+/* A button or its key; TRUE when the window is to close. */
+static BOOL Action(ULONG id)
+{
+    switch (id)
+    {
+        case GID_GAMMA:
+        case GID_HINTING:
+            LiveApply();
+            break;
+
+        case GID_REAL:
+            ReadGadgets();
+            break;
+
+        case GID_USE:
+            ReadGadgets();
+            if (WritePrefsFile(ENV_PREFS, ENV_PREFS))
+            {
+                Send(AACMD_RELOAD, NULL);
+                return TRUE;
+            }
+            break;
+
+        case GID_SAVE:
+            ReadGadgets();
+            /* ENVARC: keeps its own comments and mappings */
+            if (WritePrefsFile(ENVARC_PREFS, ENVARC_PREFS) &&
+                WritePrefsFile(ENV_PREFS, ENVARC_PREFS))
+            {
+                Send(AACMD_RELOAD, NULL);
+                return TRUE;
+            }
+            break;
+
+        case GID_CANCEL:
+            if (tested)
+                Send(AACMD_APPLY, &before);
+            return TRUE;
+    }
+    return FALSE;
+}
+
 int main(int argc, char **argv)
 {
     char language[AA_NAME_LEN] = "";
     struct Screen *scr = NULL;
-    ULONG sigmask = 0;
+    ULONG sigmask = 0, keys[3];
     BOOL done = FALSE;
     int rc = RETURN_FAIL;
 
@@ -523,6 +630,7 @@ int main(int argc, char **argv)
     if (!scr)
         goto out;
     previewfont = OpenDiskFont(scr->Font);
+    MakeFontInfo(scr->Font);
 
     if (!OpenWin(scr))
         goto out;
@@ -530,6 +638,9 @@ int main(int argc, char **argv)
     scr = NULL;
 
     GetAttr(WINDOW_SigMask, winobj, &sigmask);
+    keys[0] = ShortcutKey(MSG_SAVE);
+    keys[1] = ShortcutKey(MSG_USE);
+    keys[2] = ShortcutKey(MSG_CANCEL);
     while (!done)
     {
         ULONG sigs = Wait(sigmask | SIGBREAKF_CTRL_C);
@@ -541,61 +652,28 @@ int main(int argc, char **argv)
         while ((result = DoMethod(winobj, WM_HANDLEINPUT, &code)) !=
                WMHI_LASTMSG)
         {
+            ULONG key;
+
             switch (result & WMHI_CLASSMASK)
             {
                 case WMHI_CLOSEWINDOW:
-                    if (tested)
-                        Send(AACMD_APPLY, &before);
-                    done = TRUE;
+                    done |= Action(GID_CANCEL);
                     break;
 
                 case WMHI_GADGETUP:
-                    switch (result & WMHI_GADGETMASK)
-                    {
-                        case GID_GAMMA:
-                        case GID_HINTING:
-                        case GID_REAL:
-                            ReadGadgets();
-                            UpdateGammaText();
-                            break;
+                    done |= Action(result & WMHI_GADGETMASK);
+                    break;
 
-                        case GID_TEST:
-                            ReadGadgets();
-                            if (running)
-                            {
-                                Send(AACMD_APPLY, &cur);
-                                tested = TRUE;
-                                SetStatus(GetString(MSG_STATUS_TESTED));
-                                RefreshPreview();
-                            }
-                            break;
-
-                        case GID_USE:
-                            ReadGadgets();
-                            if (WritePrefsFile(ENV_PREFS, ENV_PREFS))
-                            {
-                                Send(AACMD_RELOAD, NULL);
-                                done = TRUE;
-                            }
-                            break;
-
-                        case GID_SAVE:
-                            ReadGadgets();
-                            /* ENVARC: keeps its own comments and mappings */
-                            if (WritePrefsFile(ENVARC_PREFS, ENVARC_PREFS) &&
-                                WritePrefsFile(ENV_PREFS, ENVARC_PREFS))
-                            {
-                                Send(AACMD_RELOAD, NULL);
-                                done = TRUE;
-                            }
-                            break;
-
-                        case GID_CANCEL:
-                            if (tested)
-                                Send(AACMD_APPLY, &before);
-                            done = TRUE;
-                            break;
-                    }
+                case WMHI_VANILLAKEY:
+                    key = ToLower(result & WMHI_KEYMASK);
+                    if (key == 0x1b)        /* Esc */
+                        done |= Action(GID_CANCEL);
+                    else if (key && key == keys[0])
+                        done |= Action(GID_SAVE);
+                    else if (key && key == keys[1])
+                        done |= Action(GID_USE);
+                    else if (key && key == keys[2])
+                        done |= Action(GID_CANCEL);
                     break;
             }
         }
