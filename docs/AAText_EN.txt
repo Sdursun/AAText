@@ -23,8 +23,9 @@ Requirements
 - 68020 or better
 - An RTG graphics system with cybergraphics.library, e.g. Picasso96
   (P96). Tested with WinUAE (UAEGFX) and PiStorm (Emu68).
-- TrueType fonts installed with a font manager, so that each font has
-  a .otag file next to its .font file in FONTS:
+- TrueType or OpenType fonts installed with a font manager (e.g.
+  ttf.library, or freetype2.library with FTManager), so that each font
+  has a .otag file next to its .font file in FONTS:
 
 Screens with 15, 16, 24 or 32 bit colour are drawn antialiased. AGA and
 other palette screens (256 colours or fewer) are not changed.
@@ -134,8 +135,8 @@ whose .otag file is missing, with a TrueType file:
 Name (without .font; quotes if it contains spaces), size, "->", the
 TrueType file, then optionally the pixel size and "real". Without a
 pixel size AAText picks the size whose widths best match the bitmap
-font. "charset latin5" selects ISO-8859-9 for explicit mappings
-(detected fonts use the code page from their .otag file).
+font. "charset latin5" selects ISO-8859-9 for explicit mappings and for
+detected fonts whose .otag file has no code page (see Tips).
 
 A mistake in the file is reported with its line number when AAText is
 started from the Shell.
@@ -150,14 +151,22 @@ Tips
   patterned backdrops.
 - If text looks too thin or too bold on your monitor, try gamma values
   between 0.6 and 1.4.
+- Turkish (or another code page) with freetype2.library: FTManager
+  writes no code page into the .otag file, so freetype2.library and
+  AAText both use ENV:ftcodepage, or ISO-8859-1 without it. For Turkish
+  copy the included file:
+      Copy ftcodepage.latin5 ENVARC:ftcodepage
+      Copy ftcodepage.latin5 ENV:ftcodepage
+  Fonts generated before keep their old characters until the system is
+  restarted. (ttf.library stores the code page in each .otag file and
+  needs nothing.)
 
 
 Limitations
 -----------
 
-- TrueType outlines only (.ttf, .ttc). OpenType fonts with PostScript
-  outlines (.otf/CFF) and Compugraphic fonts are drawn by the system as
-  before.
+- TrueType and OpenType outlines (.ttf, .ttc, .otf). Type 1 and
+  Compugraphic fonts are drawn by the system as before.
 - Palette screens (AGA, 256 colours or fewer) are not antialiased.
 - A font used for the first time is loaded in the background; its very
   first line of text may appear unsmoothed.
@@ -180,7 +189,10 @@ Please include the output of the debug version:
 History
 -------
 
-0.11  New setting "hinting none | light | normal | full" to choose how
+0.11  OpenType fonts with PostScript (CFF) outlines, e.g. installed
+      with freetype2.library and FTManager. ENV:ftcodepage is honoured
+      like freetype2.library does; ftcodepage.latin5 included.
+      New setting "hinting none | light | normal | full" to choose how
       letters are fitted to the pixel grid, from smoothest to crispest.
 
 0.10  Fixed-width fonts always keep their character cells, also with

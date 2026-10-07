@@ -11,7 +11,7 @@ AAText makes Workbench and applications draw TrueType fonts smoothly: icon
 labels, menus, window and screen titles, Shell windows, GadTools, ReAction
 and MUI programs — everything that draws text through `graphics.library`.
 
-- **Zero configuration.** Every TrueType font installed with a font manager
+- **Zero configuration.** Every TrueType or OpenType (CFF) font installed with a font manager
   (a `.otag` file next to the `.font` file) is detected automatically and
   drawn antialiased in every size, using the code page from its `.otag` file.
 - **No replaced libraries.** AAText patches `Text()`, and optionally
@@ -28,7 +28,8 @@ and MUI programs — everything that draws text through `graphics.library`.
 
 - AmigaOS 3.2 or newer, 68020 or better
 - RTG with `cybergraphics.library` (e.g. Picasso96)
-- TrueType fonts installed with `.otag` files
+- TrueType or OpenType fonts installed with `.otag` files (ttf.library, or
+  freetype2.library + FTManager)
 
 Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 

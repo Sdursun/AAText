@@ -5,14 +5,14 @@ Type:         util/wb
 Version:      0.11
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
-Requires:     68020+, RTG (Picasso96), TrueType fonts
+Requires:     68020+, RTG (Picasso96), TrueType or OpenType fonts
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
 on RTG screens (15/16/24/32 bit): icon labels, menus, window and screen
 titles, Shell windows, GadTools, ReAction and MUI programs - everything
 that draws text through graphics.library.
 
-No setup needed: every TrueType font installed with a font manager
+No setup needed: every TrueType or OpenType font installed with a font manager
 (fonts with a .otag file) is detected automatically and drawn smoothly
 in every size, using the code page from its .otag file (Turkish,
 Central European etc. work out of the box). Bitmap fonts and AGA

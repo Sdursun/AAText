@@ -24,8 +24,9 @@ Gereksinimler
 - 68020 veya üstü işlemci
 - cybergraphics.library sunan bir RTG sistemi, örneğin Picasso96 (P96).
   WinUAE (UAEGFX) ve PiStorm (Emu68) ile denendi.
-- Bir font yöneticisiyle kurulmuş TrueType fontlar: her fontun FONTS:
-  içinde .font dosyasının yanında bir .otag dosyası olmalı.
+- Bir font yöneticisiyle (ör. ttf.library ya da FTManager ile
+  freetype2.library) kurulmuş TrueType veya OpenType fontlar: her fontun
+  FONTS: içinde .font dosyasının yanında bir .otag dosyası olmalı.
 
 15, 16, 24 veya 32 bit renkli ekranlar yumuşatılmış çizilir. AGA ve
 diğer paletli ekranlar (256 renk ve altı) değiştirilmez.
@@ -141,9 +142,9 @@ bulunmayan bir fontu bir TrueType dosyasıyla çizer:
 Ad (.font olmadan; boşluk içeriyorsa tırnak içinde), boyut, "->",
 TrueType dosyası, ardından isteğe bağlı olarak piksel boyutu ve "real".
 Piksel boyutu verilmezse AAText, genişlikleri bitmap fonta en iyi uyan
-boyutu seçer. "charset latin5" elle eşlemeler için ISO-8859-9'u seçer
-(otomatik bulunan fontlar kendi .otag dosyalarındaki kod sayfasını
-kullanır).
+boyutu seçer. "charset latin5" elle eşlemeler ve .otag dosyasında kod
+sayfası olmayan otomatik bulunan fontlar için ISO-8859-9'u seçer
+(İpuçları bölümüne bakın).
 
 Dosyadaki bir hata, AAText Shell'den başlatıldığında satır numarasıyla
 bildirilir.
@@ -158,14 +159,22 @@ bildirilir.
   arka planlarda çok daha iyi görünür.
 - Yazı monitörünüzde fazla ince veya kalın görünüyorsa 0.6 ile 1.4
   arasında gamma değerleri deneyin.
+- freetype2.library ile Türkçe (veya başka bir kod sayfası): FTManager
+  .otag dosyasına kod sayfası yazmaz; bu yüzden freetype2.library de
+  AAText de ENV:ftcodepage dosyasını, o yoksa ISO-8859-1'i kullanır.
+  Türkçe için paketteki dosyayı kopyalayın:
+      Copy ftcodepage.latin5 ENVARC:ftcodepage
+      Copy ftcodepage.latin5 ENV:ftcodepage
+  Daha önce üretilmiş fontlar, sistem yeniden başlatılana kadar eski
+  karakterleriyle kalır. (ttf.library kod sayfasını her .otag
+  dosyasına yazar, ek bir şey gerekmez.)
 
 
 Sınırlamalar
 ------------
 
-- Sadece TrueType anahatları (.ttf, .ttc). PostScript anahatlı OpenType
-  fontlar (.otf/CFF) ve Compugraphic fontlar eskisi gibi sistem
-  tarafından çizilir.
+- TrueType ve OpenType anahatları (.ttf, .ttc, .otf). Type 1 ve
+  Compugraphic fontlar eskisi gibi sistem tarafından çizilir.
 - Paletli ekranlar (AGA, 256 renk ve altı) yumuşatılmaz.
 - İlk kez kullanılan bir font arka planda yüklenir; ilk yazı satırı
   yumuşatılmamış görünebilir.
@@ -189,7 +198,10 @@ Lütfen debug sürümünün çıktısını ekleyin:
 Geçmiş
 ------
 
-0.11  Yeni ayar "hinting none | light | normal | full": harflerin
+0.11  PostScript (CFF) anahatlı OpenType fontlar, ör. freetype2.library
+      ve FTManager ile kurulanlar. ENV:ftcodepage, freetype2.library'deki
+      gibi dikkate alınır; pakette ftcodepage.latin5 var.
+      Yeni ayar "hinting none | light | normal | full": harflerin
       piksel ızgarasına nasıl oturtulacağı, en yumuşaktan en keskine.
 
 0.10  Sabit genişlikli fontlar "real on" ile de karakter hücrelerini

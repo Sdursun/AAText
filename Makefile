@@ -56,6 +56,10 @@ FT_SRCS := $(FT_DIR)/src/base/ftinit.c \
            $(FT_DIR)/src/truetype/truetype.c \
            $(FT_DIR)/src/smooth/smooth.c \
            $(FT_DIR)/src/autofit/autofit.c \
+           $(FT_DIR)/src/cff/cff.c \
+           $(FT_DIR)/src/psaux/psaux.c \
+           $(FT_DIR)/src/pshinter/pshinter.c \
+           $(FT_DIR)/src/psnames/psnames.c \
            src/ft/aa_ftsystem.c
 FT_OBJS := $(addprefix $(BUILDDIR)/ft/,$(notdir $(FT_SRCS:.c=.o)))
 FT_LIB  := $(BUILDDIR)/libft.a
@@ -126,6 +130,8 @@ dist:
 	cp docs/AAText_EN.txt docs/AAText.prefs.example $(DISTDIR)/AAText/
 	cp LICENSE $(DISTDIR)/AAText/LICENSE.txt
 	cp LICENSE.APL $(DISTDIR)/AAText/LICENSE.APL.txt
+	cp docs/ftcodepage.latin5 $(DISTDIR)/AAText/ftcodepage.latin5
+	chmod 644 $(DISTDIR)/AAText/ftcodepage.latin5
 	iconv -f UTF-8 -t ISO-8859-9 docs/AAText_TR.txt > $(DISTDIR)/AAText/AAText_TR.txt
 	cp docs/AAText.readme $(DISTDIR)/AAText.readme
 	chmod 644 $(DISTDIR)/AAText/*.txt $(DISTDIR)/AAText/*.example $(DISTDIR)/AAText.readme

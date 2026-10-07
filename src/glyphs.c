@@ -21,6 +21,7 @@
 #include <exec/semaphores.h>
 #include <exec/tasks.h>
 #include <dos/dos.h>
+#include <dos/var.h>
 #include <graphics/text.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -102,6 +103,14 @@ static UBYTE aa_Hinting;
  * Set from the "hinting" preference in aa_GlyphsInit().
  */
 static FT_Int32 aa_LoadFlags = FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP;
+/*
+ * ENV:ftcodepage: 256 big-endian UWORDs, character code -> Unicode.
+ * freetype2.library uses it for fonts whose .otag has no code page;
+ * otherwise it maps 1:1 (ISO-8859-1), as AAText's charset default does.
+ */
+static UWORD aa_EnvCodePage[256];
+static BOOL aa_HaveEnvCodePage;
+
 static struct Task *aa_HelperTask;
 static ULONG aa_HelperSig;
 
@@ -351,6 +360,12 @@ static struct AAFace *GetFace(const char *path, LONG facenum,
     f->hascodepage = ot && ot->hascodepage;
     if (f->hascodepage)
         CopyMem((APTR)ot->codepage, f->codepage, sizeof(f->codepage));
+    else if (ot && aa_HaveEnvCodePage)
+    {
+        /* like freetype2.library: no code page in the .otag -> ENV var */
+        CopyMem(aa_EnvCodePage, f->codepage, sizeof(f->codepage));
+        f->hascodepage = TRUE;
+    }
     f->data = ReadFile(path, AA_MAX_FONTFILE, &f->size);
     aa_NumFaces++;          /* failed loads are remembered too */
 
@@ -377,7 +392,7 @@ static struct AAFace *GetFace(const char *path, LONG facenum,
        (ULONG)path, (ULONG)f->face->family_name,
        (ULONG)(f->face->style_name ? f->face->style_name : ""),
        f->face->num_glyphs, (LONG)f->face->units_per_EM,
-       (ULONG)(f->hascodepage ? ".otag" : "charset pref")));
+       (ULONG)(f->hascodepage ? (ot && ot->hascodepage ? ".otag" : "ENV:ftcodepage") : "charset pref")));
     return f;
 }
 
@@ -418,6 +433,14 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     aa_AutoDetect = prefs->autodetect;
     aa_AutoReal = prefs->autoreal;
     aa_Hinting = prefs->hinting;
+
+    aa_HaveEnvCodePage =
+        GetVar((CONST_STRPTR)"ftcodepage", (STRPTR)aa_EnvCodePage,
+               sizeof(aa_EnvCodePage),
+               LV_VAR | GVF_BINARY_VAR | GVF_DONT_NULL_TERM) ==
+        (LONG)sizeof(aa_EnvCodePage);
+    D(("AAText: ENV:ftcodepage %s\n",
+       (ULONG)(aa_HaveEnvCodePage ? "found" : "not set")));
 
     for (i = 0; i < 256; i++)
         aa_GammaLUT[i] = (UBYTE)(pow(i / 255.0, 1.0 / gamma) * 255.0 + 0.5);
