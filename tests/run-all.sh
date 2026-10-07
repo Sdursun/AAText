@@ -1,0 +1,41 @@
+#!/bin/sh
+# Runs every fttest mode under vamos with the settings file it needs and
+# checks each return code. Run inside the aatext-vamos container after
+# "make test" (test.ps1 -All does both).
+#
+# Needs third_party/dejavu-fonts-ttf-2.37 (tools/fetch-testfonts.sh).
+
+V="vamos -C 68020 -m 8192 -V testfonts:$(pwd)/tests/data/fonts -a FONTS:testfonts:"
+fail=0
+
+run()
+{
+    name=$1
+    shift
+    out=$($V build/68020/fttest "$@" 2>&1)
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        echo "ok    $name"
+    else
+        echo "FAIL  $name (return code $rc)"
+        echo "$out" | tail -15 | sed 's/^/      /'
+        fail=$((fail + 1))
+    fi
+}
+
+run render          tests/test.prefs Ag
+run stress          tests/test.prefs stress
+run baseline        tests/test.prefs baseline
+run capsize         tests/capsize.prefs capsize
+run metrics         tests/real.prefs metrics
+run metrics-nokern  tests/realnokern.prefs metrics
+run otag            tests/test.prefs otag tests/data/arial.otag
+run auto            tests/data/empty.prefs auto AutoTest.font
+
+echo
+if [ $fail -eq 0 ]; then
+    echo "all tests passed"
+else
+    echo "$fail test(s) failed"
+fi
+exit $fail

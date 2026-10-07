@@ -95,11 +95,11 @@ Olası iyileştirmeler (ölçüm gerektirirse):
 **Ayrı 68040 sürümü gerekmiyor.** Emu68 komutları JIT ile ARM'a çeviriyor;
 AAText FPU'yu sadece açılışta kullanıyor.
 
-### 4. Test altyapısı — küçük
-- [ ] `fttest capsize` testi başarısız (kerning'den önce de öyleydi):
-      `tests/test.prefs` piksel boyutunu sabitlediği için test ettiği
-      otomatik boyut seçimi hiç çalışmıyor. Ayrı bir ayar dosyasıyla
-      düzeltilmeli.
+### 4. Test altyapısı — **yapıldı**
+- `capsize` testi kendi ayar dosyasıyla (`tests/capsize.prefs`, piksel
+  boyutu yok) çalışıyor ve geçiyor.
+- `.\test.ps1 -All` (`tests/run-all.sh`) bütün test modlarını gereken ayar
+  dosyalarıyla çalıştırıp dönüş kodlarını kontrol ediyor; 8 test.
 
 ### 5. GPOS kerning — orta, talep gelirse
 - `kern` tablosu olmayan fontlar (ör. Tahoma) için `GPOS` PairPos
@@ -136,5 +136,5 @@ AAText FPU'yu sadece açılışta kullanıyor.
 2. Yayın (madde 2).
 3. Geri bildirim toplamak; gerçek hatalar her zaman yeni özelliklerden
    önce gelir.
-4. Küçük test düzeltmesi (madde 4) ara iş olarak.
+4. Her değişiklikten sonra `.	est.ps1 -All`.
 5. Diğerleri talebe göre. AGA ancak istek gelirse.

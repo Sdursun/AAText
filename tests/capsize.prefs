@@ -1,0 +1,3 @@
+# fttest capsize: real metrics without a pixel size, so AAText picks
+# the size whose capital H matches the bitmap font (7 rows)
+Test 14 -> third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf real

@@ -76,10 +76,11 @@ The glyph, `.otag`, metrics and cache code is pure enough to run under the
 ```sh
 sh tools/fetch-testfonts.sh     # DejaVu fonts for tests/test.prefs
 .\test.ps1 Ag                   # builds tools/vamos image on first use
+.\test.ps1 -All                 # every test mode, with the settings file each needs
 ```
 
 See `tests/fttest.c` for the test modes (`metrics`, `stress`, `auto`,
-`otag`, `baseline`, `capsize`).
+`otag`, `baseline`, `capsize`) and `tests/run-all.sh` for how each is run.
 
 ### Source overview
 
