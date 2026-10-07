@@ -1,4 +1,4 @@
-AAText 0.10 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.11 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -179,6 +179,9 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.11  New setting "hinting none | light | normal | full" to choose how
+      letters are fitted to the pixel grid, from smoothest to crispest.
 
 0.10  Fixed-width fonts always keep their character cells, also with
       "real on". With real metrics the Shell could leave half-erased

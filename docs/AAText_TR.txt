@@ -1,4 +1,4 @@
-AAText 0.10 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.11 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -188,6 +188,9 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.11  Yeni ayar "hinting none | light | normal | full": harflerin
+      piksel ızgarasına nasıl oturtulacağı, en yumuşaktan en keskine.
 
 0.10  Sabit genişlikli fontlar "real on" ile de karakter hücrelerini
       korur. Gerçek ölçü modunda Shell'de silinen harflerin yarısı

@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text for Workbench
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/wb
-Version:      0.10
+Version:      0.11
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 Requires:     68020+, RTG (Picasso96), TrueType fonts
@@ -19,8 +19,9 @@ Central European etc. work out of the box). Bitmap fonts and AGA
 screens are left untouched.
 
 Features
-- Zero configuration; optional ENVARC:AAText.prefs for gamma, glyph
-  cache size, program blacklist and explicit font mappings
+- Zero configuration; optional ENVARC:AAText.prefs for gamma, hinting
+  (none/light/normal/full), glyph cache size, program blacklist and
+  explicit font mappings
 - "Safe" metrics by default: letters keep the cells of the system's
   bitmap font, so no window layout changes
 - Optional real metrics mode ("real on"): the TrueType font's own
