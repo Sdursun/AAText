@@ -30,6 +30,7 @@
 #include "prefs.h"
 #include "glyphs.h"
 #include "aamsg.h"
+#include "aaclient.h"
 #include "debug.h"
 
 #include <string.h>
@@ -81,58 +82,17 @@ static BOOL SignalRunningInstance(void)
 /* Controller side: "AAText RELOAD" / "AAText STATUS"                   */
 /* ------------------------------------------------------------------ */
 
-/*
- * Send a command to the running AAText and wait (at most 5 s) for the
- * reply. Returns the reply, or NULL if no AAText runs or it did not
- * answer. On a timeout the message is deliberately not freed: it may
- * still be queued at a running AAText too old to understand it.
- */
-static struct AAMessage *SendCommand(UWORD cmd, const char *path)
+/* Explain a failed aa_SendCommand(); TRUE if m is a reply. */
+static BOOL ReplyOk(struct AAMessage *m)
 {
-    struct AAMessage *m;
-    struct MsgPort *reply, *port;
-    LONG i;
-
-    m = AllocVec(sizeof(*m), MEMF_PUBLIC | MEMF_CLEAR);
-    reply = CreateMsgPort();
-    if (!m || !reply)
-    {
-        if (m)
-            FreeVec(m);
-        if (reply)
-            DeleteMsgPort(reply);
-        return NULL;
-    }
-    m->msg.mn_Node.ln_Type = NT_MESSAGE;
-    m->msg.mn_ReplyPort = reply;
-    m->msg.mn_Length = sizeof(*m);
-    m->magic = AAMSG_MAGIC;
-    m->version = AAMSG_VERSION;
-    m->cmd = cmd;
-    m->path = (CONST_STRPTR)path;
-
-    Forbid();
-    port = FindPort((CONST_STRPTR)AA_PORTNAME);
-    if (port)
-        PutMsg(port, &m->msg);
-    Permit();
-    if (!port)
-    {
-        DeleteMsgPort(reply);
-        FreeVec(m);
-        return NULL;
-    }
-
-    for (i = 0; i < 250 && !GetMsg(reply); i++)
-        Delay(1);
-    if (i == 250)
-    {
+    if (m == AACLIENT_NOTRUNNING)
+        Msg("AAText is not running.\n");
+    else if (m == AACLIENT_TIMEOUT)
         Msg("AAText: the running AAText does not answer "
             "(an older version?).\n");
-        return NULL;        /* m and reply leak on purpose */
-    }
-    DeleteMsgPort(reply);
-    return m;
+    else
+        return TRUE;
+    return FALSE;
 }
 
 static int Controller(BOOL reload, BOOL status)
@@ -141,12 +101,10 @@ static int Controller(BOOL reload, BOOL status)
 
     if (reload)
     {
-        m = SendCommand(AACMD_RELOAD, have_prefspath ? prefspath : NULL);
-        if (!m)
-        {
-            Msg("AAText is not running.\n");
+        m = aa_SendCommand(AACMD_RELOAD, have_prefspath ? prefspath : NULL,
+                           NULL, 250);
+        if (!ReplyOk(m))
             return RETURN_WARN;
-        }
         if (m->result == AARES_NOFILE)
             Msg("AAText: cannot read the prefs file.\n");
         else if (m->result == AARES_RESTART)
@@ -154,18 +112,15 @@ static int Controller(BOOL reload, BOOL status)
                 "change when AAText is restarted.\n");
         else
             Msg("AAText: settings applied.\n");
-        FreeVec(m);
+        aa_FreeReply(m);
     }
     if (status)
     {
         LONG args[12];
 
-        m = SendCommand(AACMD_STATUS, NULL);
-        if (!m)
-        {
-            Msg("AAText is not running.\n");
+        m = aa_SendCommand(AACMD_STATUS, NULL, NULL, 250);
+        if (!ReplyOk(m))
             return RETURN_WARN;
-        }
         args[0] = (LONG)m->versionstr;
         args[1] = (LONG)((m->flags & AASTAT_PASSTHROUGH) ? " (inactive)" : "");
         args[2] = m->numfaces;
@@ -184,7 +139,7 @@ static int Controller(BOOL reload, BOOL status)
                "  fonts: %ld file(s), %ld font size(s), auto detection %s\n"
                "  gamma %ld.%02ld, hinting %s, real metrics %s\n"
                "  glyph cache: %ld glyphs, %ld of %ld KB\n", args);
-        FreeVec(m);
+        aa_FreeReply(m);
     }
     return RETURN_OK;
 }

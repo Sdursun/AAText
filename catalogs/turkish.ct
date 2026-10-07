@@ -1,0 +1,67 @@
+; AATextPrefs - Turkish translation (UTF-8; converted to ISO-8859-9)
+;
+; Format: a line with the string's name (see src/prefsgui/strings.h),
+; then the translation on the next line. "\n" is a line break.
+; Lines starting with ';' are comments.
+;
+## language türkçe
+## version $VER: aatextprefs.catalog 1.0 (8.10.2026)
+
+MSG_WINDOW_TITLE
+AAText Tercihleri
+MSG_TAB_APPEARANCE
+Görünüm
+MSG_TAB_FONTS
+Fontlar
+MSG_TAB_PROGRAMS
+Programlar
+MSG_TAB_ADVANCED
+Gelişmiş
+MSG_GAMMA
+Gamma
+MSG_HINTING
+Hinting
+MSG_HINT_NORMAL
+Normal (fontun kendi bilgisi)
+MSG_HINT_NONE
+Yok (en yumuşak)
+MSG_HINT_LIGHT
+Hafif (yumuşak ama net)
+MSG_HINT_FULL
+Tam (en keskin)
+MSG_REAL
+Gerçek harf genişlikleri
+MSG_REAL_NOTE
+Düzenleri değiştirir; AAText yeniden başlatılınca geçerli olur.
+MSG_PREVIEW
+Önizleme
+MSG_PREVIEW_LINE1
+Pijamalı hasta yağız şoföre çabucak güvendi.
+MSG_PREVIEW_LINE2
+ÇĞİÖŞÜ çğıöşü 0123456789 (illüstrasyon)
+MSG_SAVE
+Kaydet
+MSG_USE
+Kullan
+MSG_TEST
+Dene
+MSG_CANCEL
+İptal
+MSG_STATUS_RUNNING
+%s çalışıyor.
+MSG_STATUS_STOPPED
+AAText çalışmıyor: ayarlar sadece kaydedilir.
+MSG_NOT_YET
+Bu sayfa sonraki bir sürümde gelecek.
+MSG_RESTART_TITLE
+AAText Tercihleri
+MSG_RESTART_TEXT
+Gerçek harf genişlikleri AAText yeniden\nbaşlatılınca (ör. sonraki açılışta) değişir.
+MSG_OK
+Tamam
+MSG_WRITE_ERROR
+%s yazılamadı.
+MSG_STATUS_TESTED
+Ayarlar denendi - Kaydet veya Kullan ile kalıcı olur.
+MSG_STATUS_OLD
+Çalışan AAText canlı değişiklik için çok eski.

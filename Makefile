@@ -41,7 +41,7 @@ CFLAGS  += -DDEBUG
 endif
 
 SRCS_C := src/main.c src/patch.c src/render.c src/metrics.c src/prefs.c \
-          src/glyphs.c src/otag.c src/debug.c
+          src/glyphs.c src/otag.c src/aaclient.c src/debug.c
 SRCS_S := src/stub.s src/cgx.s
 OBJS   := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SRCS_C)) \
           $(patsubst src/%.s,$(BUILDDIR)/%.o,$(SRCS_S))
@@ -138,3 +138,34 @@ dist:
 	chmod 755 $(DISTDIR)/AAText/AAText $(DISTDIR)/AAText/AAText.060 $(DISTDIR)/AAText/AAText.debug
 	cd $(DISTDIR) && lha ao5 AAText.lha AAText
 	@ls -l $(DISTDIR)
+
+# Preferences program (ReAction); objects in their own directory because
+# both programs have a main.c
+GUI_TARGET := $(BUILDDIR)/AATextPrefs
+GUI_SRCS   := src/prefsgui/main.c src/prefsgui/strings.c src/prefs.c \
+              src/prefswrite.c src/aaclient.c
+GUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/gui/%.o,$(GUI_SRCS))
+
+.PHONY: gui
+gui: $(GUI_TARGET)
+
+$(GUI_TARGET): $(GUI_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ -lamiga
+ifneq ($(DEBUG),1)
+	$(STRIP) --strip-unneeded $@
+endif
+	@ls -l $@
+
+$(BUILDDIR)/gui/%.o: src/%.c src/*.h src/prefsgui/*.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -Wno-pointer-sign -c -o $@ $<
+
+# Turkish catalog for AATextPrefs
+CATALOG := build/catalogs/aatextprefs.catalog
+
+.PHONY: catalogs
+catalogs: $(CATALOG)
+
+$(CATALOG): catalogs/turkish.ct src/prefsgui/strings.h tools/mkcatalog.pl
+	@mkdir -p $(dir $@)
+	perl tools/mkcatalog.pl src/prefsgui/strings.h catalogs/turkish.ct $@
