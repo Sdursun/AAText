@@ -5,7 +5,8 @@
  * User interface strings of AATextPrefs. English is built in; other
  * languages come from aatextprefs.catalog (locale.library). The IDs are
  * part of the catalog format: never renumber, only append. A "_" marks
- * a button's keyboard shortcut. MSG_TEST is no longer used.
+ * a button's keyboard shortcut. MSG_TEST and MSG_TAB_FONTS are no longer
+ * used (font mappings are edited in the prefs file only).
  * Translations: catalogs/<language>.ct, compiled by tools/mkcatalog.pl.
  */
 

@@ -1,7 +1,7 @@
 /*
  * AATextPrefs - preferences program for AAText (ReAction).
  *
- * Reads ENV:AAText.prefs (or ENVARC:), shows the settings on four tabs
+ * Reads ENV:AAText.prefs (or ENVARC:), shows the settings on three tabs
  * and talks to a running AAText through its message port (aamsg.h):
  *
  *   change  gamma and hinting are APPLYed at once (live preview)
@@ -476,9 +476,8 @@ static Object *AppearancePage(void)
 static BOOL OpenWin(struct Screen *scr)
 {
     AddTab(&tablist, MSG_TAB_APPEARANCE, 0);
-    AddTab(&tablist, MSG_TAB_FONTS, 1);
-    AddTab(&tablist, MSG_TAB_PROGRAMS, 2);
-    AddTab(&tablist, MSG_TAB_ADVANCED, 3);
+    AddTab(&tablist, MSG_TAB_PROGRAMS, 1);
+    AddTab(&tablist, MSG_TAB_ADVANCED, 2);
     AddChoice(&hintlist, MSG_HINT_NORMAL);
     AddChoice(&hintlist, MSG_HINT_LIGHT);
     AddChoice(&hintlist, MSG_HINT_NONE);
@@ -509,7 +508,6 @@ static BOOL OpenWin(struct Screen *scr)
                 CLICKTAB_Current, 0,
                 CLICKTAB_PageGroup, PageObject,
                     PAGE_Add, AppearancePage(),
-                    PAGE_Add, PlaceholderPage(),
                     PAGE_Add, PlaceholderPage(),
                     PAGE_Add, PlaceholderPage(),
                 End,
