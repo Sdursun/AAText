@@ -21,4 +21,8 @@ BOOL aa_Install(struct GfxBase *gfx, BOOL measuring);
  */
 BOOL aa_Remove(void);
 
+/* For the STATUS message. */
+BOOL aa_IsPassthrough(void);    /* removal failed, patch inactive */
+BOOL aa_MeasuringPatched(void); /* TextLength() etc. patched too */
+
 #endif

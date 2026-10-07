@@ -281,13 +281,17 @@ static APTR ReadFile(const char *path, ULONG maxsize, ULONG *sizep)
     return data;
 }
 
-static LONG InitLibraryOnStack(APTR arg)
+/*
+ * Apply aa_Hinting: load flags for every glyph load, and the TrueType
+ * interpreter version (a library-wide property, so it is set back to
+ * v40 for the other modes). On the render stack, glyph lock held.
+ */
+static LONG SetHintingOnStack(APTR arg)
 {
-    FT_Error err = FT_New_Library(aa_FTMemory, &aa_FTLib);
+    FT_UInt version = aa_Hinting == AA_HINT_FULL ? TT_INTERPRETER_VERSION_35
+                                                 : TT_INTERPRETER_VERSION_40;
 
-    if (err)
-        return err;
-    FT_Add_Default_Modules(aa_FTLib);
+    FT_Property_Set(aa_FTLib, "truetype", "interpreter-version", &version);
 
     switch (aa_Hinting)
     {
@@ -301,21 +305,21 @@ static LONG InitLibraryOnStack(APTR arg)
                            FT_LOAD_NO_BITMAP;
             break;
 
-        case AA_HINT_FULL:
-        {
-            /* classic TrueType bytecode interpreter: full grid fitting */
-            FT_UInt v35 = TT_INTERPRETER_VERSION_35;
-
-            FT_Property_Set(aa_FTLib, "truetype", "interpreter-version", &v35);
-            aa_LoadFlags = FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP;
-            break;
-        }
-
-        default:    /* AA_HINT_NORMAL: v40 interpreter, FreeType's default */
+        default:    /* normal (v40) and full (v35): the font's own hints */
             aa_LoadFlags = FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP;
             break;
     }
     return 0;
+}
+
+static LONG InitLibraryOnStack(APTR arg)
+{
+    FT_Error err = FT_New_Library(aa_FTMemory, &aa_FTLib);
+
+    if (err)
+        return err;
+    FT_Add_Default_Modules(aa_FTLib);
+    return SetHintingOnStack(NULL);
 }
 
 static LONG OpenFaceOnStack(APTR arg)
@@ -419,9 +423,19 @@ static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
     return f;
 }
 
+/* Coverage -> gamma corrected coverage. Uses floating point: call it
+   from AAText's own process, never from Text(). */
+static void MakeGammaLUT(UWORD gamma100, UBYTE *lut)
+{
+    double gamma = gamma100 / 100.0;
+    LONG i;
+
+    for (i = 0; i < 256; i++)
+        lut[i] = (UBYTE)(pow(i / 255.0, 1.0 / gamma) * 255.0 + 0.5);
+}
+
 LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
 {
-    double gamma = prefs->gamma100 / 100.0;
     LONG i, err;
 
     InitSemaphore(&aa_GlyphSem);
@@ -442,8 +456,7 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     D(("AAText: ENV:ftcodepage %s\n",
        (ULONG)(aa_HaveEnvCodePage ? "found" : "not set")));
 
-    for (i = 0; i < 256; i++)
-        aa_GammaLUT[i] = (UBYTE)(pow(i / 255.0, 1.0 / gamma) * 255.0 + 0.5);
+    MakeGammaLUT(prefs->gamma100, aa_GammaLUT);
 
     aa_Stack = AllocVec(AA_STACK_SIZE, MEMF_ANY);
     aa_FTMemory = FT_New_Memory();
@@ -491,6 +504,67 @@ static void FlushCache(void)
         aa_Hash[i] = NULL;
     aa_CacheBytes = 0;
     aa_CacheCount = 0;
+}
+
+/*
+ * Forget every prepared size, so fonts are set up again on next use with
+ * the current hinting and code page (real metrics tables included).
+ * On the render stack, glyph lock held.
+ */
+static LONG ResetFontsOnStack(APTR arg)
+{
+    LONG i;
+
+    for (i = 0; i < aa_NumFonts; i++)
+    {
+        struct AAFont *f = &aa_Fonts[i];
+
+        f->prepared = FALSE;    /* first: measuring hooks re-prepare */
+        if (f->ftsize)
+            FT_Done_Size((FT_Size)f->ftsize);
+        f->ftsize = NULL;
+        f->failed = FALSE;
+    }
+    return 0;
+}
+
+void aa_GlyphsReconfigure(const struct AAPrefs *prefs)
+{
+    UBYTE lut[256];
+
+    MakeGammaLUT(prefs->gamma100, lut);
+
+    ObtainSemaphore(&aa_GlyphSem);
+    CopyMem(lut, aa_GammaLUT, sizeof(lut));
+    aa_Charset = prefs->charset;
+    aa_AutoDetect = prefs->autodetect;
+    aa_CacheLimit = prefs->cachekb * 1024;
+    aa_Hinting = prefs->hinting;
+    if (aa_FTLib)
+    {
+        RunOnRenderStack(SetHintingOnStack, NULL);
+        FlushCache();
+        RunOnRenderStack(ResetFontsOnStack, NULL);
+    }
+    ReleaseSemaphore(&aa_GlyphSem);
+    D(("AAText: reconfigured: gamma %ld, hinting %ld, cache %ld KB\n",
+       (LONG)prefs->gamma100, (LONG)prefs->hinting, prefs->cachekb));
+}
+
+void aa_GlyphsStatus(LONG *numfonts, LONG *numfaces, ULONG *bytes,
+                     ULONG *glyphs)
+{
+    LONG i, n = 0;
+
+    ObtainSemaphore(&aa_GlyphSem);
+    for (i = 0; i < aa_NumFaces; i++)
+        if (aa_Faces[i].face)
+            n++;
+    *numfonts = aa_NumFonts;
+    *numfaces = n;
+    *bytes = aa_CacheBytes;
+    *glyphs = aa_CacheCount;
+    ReleaseSemaphore(&aa_GlyphSem);
 }
 
 void aa_GlyphsCleanup(void)

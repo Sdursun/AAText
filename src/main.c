@@ -9,6 +9,8 @@
  * Options:  PREFS=<file>               default ENV:AAText.prefs,
  *                                      then ENVARC:AAText.prefs
  *           TEST=TEXT|BOX|RPA|OFF      debug drawing modes (default TEXT)
+ *           RELOAD                     running AAText re-reads its prefs
+ *           STATUS                     shows the running AAText's state
  */
 
 #include <exec/types.h>
@@ -27,9 +29,10 @@
 #include "render.h"
 #include "prefs.h"
 #include "glyphs.h"
+#include "aamsg.h"
 #include "debug.h"
 
-#define AA_PORTNAME "AAText"
+#include <string.h>
 
 static const char version[] __attribute__((used)) =
     "$VER: AAText 0.11 (7.10.2026)";
@@ -37,8 +40,11 @@ static const char version[] __attribute__((used)) =
 struct GfxBase *GfxBase;
 struct IntuitionBase *IntuitionBase;
 
-static struct AAPrefs prefs;
+static struct AAPrefs prefs;            /* the settings in effect */
+static struct AAPrefs newprefs;         /* RELOAD/APPLY scratch */
 static BOOL from_shell;
+static char prefspath[AA_PATH_LEN];
+static BOOL have_prefspath;
 
 /* Print to the Shell; silently does nothing when started from Workbench. */
 static void Msg(const char *text)
@@ -69,6 +75,213 @@ static BOOL SignalRunningInstance(void)
     Permit();
 
     return port != NULL;
+}
+
+/* ------------------------------------------------------------------ */
+/* Controller side: "AAText RELOAD" / "AAText STATUS"                   */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Send a command to the running AAText and wait (at most 5 s) for the
+ * reply. Returns the reply, or NULL if no AAText runs or it did not
+ * answer. On a timeout the message is deliberately not freed: it may
+ * still be queued at a running AAText too old to understand it.
+ */
+static struct AAMessage *SendCommand(UWORD cmd, const char *path)
+{
+    struct AAMessage *m;
+    struct MsgPort *reply, *port;
+    LONG i;
+
+    m = AllocVec(sizeof(*m), MEMF_PUBLIC | MEMF_CLEAR);
+    reply = CreateMsgPort();
+    if (!m || !reply)
+    {
+        if (m)
+            FreeVec(m);
+        if (reply)
+            DeleteMsgPort(reply);
+        return NULL;
+    }
+    m->msg.mn_Node.ln_Type = NT_MESSAGE;
+    m->msg.mn_ReplyPort = reply;
+    m->msg.mn_Length = sizeof(*m);
+    m->magic = AAMSG_MAGIC;
+    m->version = AAMSG_VERSION;
+    m->cmd = cmd;
+    m->path = (CONST_STRPTR)path;
+
+    Forbid();
+    port = FindPort((CONST_STRPTR)AA_PORTNAME);
+    if (port)
+        PutMsg(port, &m->msg);
+    Permit();
+    if (!port)
+    {
+        DeleteMsgPort(reply);
+        FreeVec(m);
+        return NULL;
+    }
+
+    for (i = 0; i < 250 && !GetMsg(reply); i++)
+        Delay(1);
+    if (i == 250)
+    {
+        Msg("AAText: the running AAText does not answer "
+            "(an older version?).\n");
+        return NULL;        /* m and reply leak on purpose */
+    }
+    DeleteMsgPort(reply);
+    return m;
+}
+
+static int Controller(BOOL reload, BOOL status)
+{
+    struct AAMessage *m;
+
+    if (reload)
+    {
+        m = SendCommand(AACMD_RELOAD, have_prefspath ? prefspath : NULL);
+        if (!m)
+        {
+            Msg("AAText is not running.\n");
+            return RETURN_WARN;
+        }
+        if (m->result == AARES_NOFILE)
+            Msg("AAText: cannot read the prefs file.\n");
+        else if (m->result == AARES_RESTART)
+            Msg("AAText: settings applied; real metrics and font mappings "
+                "change when AAText is restarted.\n");
+        else
+            Msg("AAText: settings applied.\n");
+        FreeVec(m);
+    }
+    if (status)
+    {
+        LONG args[12];
+
+        m = SendCommand(AACMD_STATUS, NULL);
+        if (!m)
+        {
+            Msg("AAText is not running.\n");
+            return RETURN_WARN;
+        }
+        args[0] = (LONG)m->versionstr;
+        args[1] = (LONG)((m->flags & AASTAT_PASSTHROUGH) ? " (inactive)" : "");
+        args[2] = m->numfaces;
+        args[3] = m->numfonts;
+        args[4] = (LONG)((m->flags & AASTAT_AUTODETECT) ? "on" : "off");
+        args[5] = m->active.gamma100 / 100;
+        args[6] = m->active.gamma100 % 100;
+        args[7] = (LONG)(m->active.hinting == AA_HINT_NONE ? "none" :
+                         m->active.hinting == AA_HINT_LIGHT ? "light" :
+                         m->active.hinting == AA_HINT_FULL ? "full" : "normal");
+        args[8] = (LONG)((m->flags & AASTAT_MEASURING) ? "on" : "off");
+        args[9] = m->cacheglyphs;
+        args[10] = m->cachebytes / 1024;
+        args[11] = m->active.cachekb;
+        MsgFmt("%s%s\n"
+               "  fonts: %ld file(s), %ld font size(s), auto detection %s\n"
+               "  gamma %ld.%02ld, hinting %s, real metrics %s\n"
+               "  glyph cache: %ld glyphs, %ld of %ld KB\n", args);
+        FreeVec(m);
+    }
+    return RETURN_OK;
+}
+
+/* ------------------------------------------------------------------ */
+/* Server side: messages to the running AAText                         */
+/* ------------------------------------------------------------------ */
+
+static BOOL MappingsDiffer(const struct AAPrefs *a, const struct AAPrefs *b)
+{
+    LONG i;
+
+    if (a->nummaps != b->nummaps)
+        return TRUE;
+    for (i = 0; i < a->nummaps; i++)
+    {
+        const struct AAMapping *x = &a->map[i], *y = &b->map[i];
+
+        if (x->ysize != y->ysize || x->pixelsize != y->pixelsize ||
+            x->real != y->real || strcmp(x->fontname, y->fontname) ||
+            strcmp(x->ttfpath, y->ttfpath))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/*
+ * Apply new settings. Real metrics and font mappings are fixed while
+ * AAText runs (the measuring patches and font tables depend on them);
+ * they keep their values and AARES_RESTART tells the caller.
+ */
+static LONG ApplyPrefs(const struct AAPrefs *np)
+{
+    LONG result = (np->autoreal != prefs.autoreal || MappingsDiffer(np, &prefs))
+                  ? AARES_RESTART : AARES_OK;
+    UWORD nummaps = prefs.nummaps;
+    BOOL autoreal = prefs.autoreal;
+
+    if (np != &newprefs)
+        CopyMem((APTR)np, &newprefs, sizeof(newprefs));
+    CopyMem(prefs.map, newprefs.map, sizeof(prefs.map));
+    newprefs.nummaps = nummaps;
+    newprefs.autoreal = autoreal;
+    CopyMem(&newprefs, &prefs, sizeof(prefs));
+
+    aa_GlyphsReconfigure(&prefs);
+    aa_RenderReconfigure(&prefs);
+    return result;
+}
+
+static void HandleMessage(struct AAMessage *m)
+{
+    /* foreign or newer messages: answer without touching them */
+    if (m->msg.mn_Length < sizeof(*m) || m->magic != AAMSG_MAGIC ||
+        m->version != AAMSG_VERSION)
+    {
+        if (m->msg.mn_Length >= sizeof(*m) && m->magic == AAMSG_MAGIC)
+            m->result = AARES_BADMSG;
+        ReplyMsg(&m->msg);
+        return;
+    }
+
+    switch (m->cmd)
+    {
+        case AACMD_RELOAD:
+        {
+            const char *path = m->path ? (const char *)m->path :
+                               have_prefspath ? prefspath : NULL;
+
+            /* without a file the defaults apply, as at startup */
+            if (!aa_ReadPrefs(&newprefs, path, FALSE) && path)
+                m->result = AARES_NOFILE;
+            else
+                m->result = ApplyPrefs(&newprefs);
+            break;
+        }
+
+        case AACMD_APPLY:
+            m->result = m->prefs ? ApplyPrefs(m->prefs) : AARES_BADMSG;
+            break;
+
+        case AACMD_STATUS:
+            strncpy(m->versionstr, version + 6, sizeof(m->versionstr) - 1);
+            m->flags = (prefs.autodetect ? AASTAT_AUTODETECT : 0) |
+                       (aa_MeasuringPatched() ? AASTAT_MEASURING : 0) |
+                       (aa_IsPassthrough() ? AASTAT_PASSTHROUGH : 0);
+            aa_GlyphsStatus(&m->numfonts, &m->numfaces, &m->cachebytes,
+                            &m->cacheglyphs);
+            CopyMem(&prefs, &m->active, sizeof(prefs));
+            m->result = AARES_OK;
+            break;
+
+        default:
+            m->result = AARES_BADMSG;
+            break;
+    }
+    ReplyMsg(&m->msg);
 }
 
 /* Case-insensitive compare of a TEST= value. */
@@ -203,9 +416,7 @@ static void Cleanup(void)
 int main(int argc, char **argv)
 {
     struct MsgPort *port;
-    LONG quit = FALSE;
-    char prefspath[AA_PATH_LEN];
-    BOOL have_prefspath = FALSE;
+    LONG quit = FALSE, reload = FALSE, status = FALSE;
     UBYTE mode = AA_MODE_TEXT;
     LONG numfonts;
     BOOL anyreal;
@@ -222,9 +433,10 @@ int main(int argc, char **argv)
 
     if (from_shell)
     {
-        LONG args[3] = { 0, 0, 0 };
-        struct RDArgs *rda = ReadArgs((CONST_STRPTR)"PREFS/K,TEST/K,QUIT/S",
-                                      args, NULL);
+        LONG args[5] = { 0, 0, 0, 0, 0 };
+        struct RDArgs *rda =
+            ReadArgs((CONST_STRPTR)"PREFS/K,TEST/K,QUIT/S,RELOAD/S,STATUS/S",
+                     args, NULL);
 
         if (!rda)
         {
@@ -261,8 +473,13 @@ int main(int argc, char **argv)
             }
         }
         quit = args[2];
+        reload = args[3];
+        status = args[4];
         FreeArgs(rda);
     }
+
+    if (reload || status)
+        return Controller(reload, status);
 
     if (SignalRunningInstance())
     {
@@ -373,11 +590,18 @@ int main(int argc, char **argv)
 
     for (;;)
     {
-        ULONG sigs = Wait(SIGBREAKF_CTRL_C | (1UL << helpersig));
+        ULONG portsig = 1UL << port->mp_SigBit;
+        ULONG sigs = Wait(SIGBREAKF_CTRL_C | (1UL << helpersig) | portsig);
+        struct AAMessage *m;
 
         /* fonts seen by Text() for the first time: load them now */
         if (sigs & (1UL << helpersig))
             aa_ResolvePending(FALSE);
+
+        /* commands from the prefs program, "AAText RELOAD" etc. */
+        if (sigs & portsig)
+            while ((m = (struct AAMessage *)GetMsg(port)))
+                HandleMessage(m);
 
         if (!(sigs & SIGBREAKF_CTRL_C))
             continue;
@@ -391,6 +615,13 @@ int main(int argc, char **argv)
     aa_SetHelper(NULL, 0);
     FreeSignal(helpersig);
     RemPort(port);
+    {
+        struct AAMessage *m;
+
+        /* nobody may be left waiting for a reply */
+        while ((m = (struct AAMessage *)GetMsg(port)))
+            HandleMessage(m);
+    }
     DeleteMsgPort(port);
     Cleanup();
 

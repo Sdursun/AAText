@@ -22,6 +22,9 @@ extern UBYTE aa_Mode;
 BOOL aa_RenderInit(const struct AAPrefs *prefs);
 void aa_RenderCleanup(void);
 
+/* Blacklist and offscreen option, while AAText runs. */
+void aa_RenderReconfigure(const struct AAPrefs *prefs);
+
 /*
  * Try to draw the string ourselves. Returns FALSE if the rastport is not
  * one we handle; the caller must then call the original Text().

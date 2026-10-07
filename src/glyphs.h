@@ -92,6 +92,17 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report);
 void aa_GlyphsCleanup(void);
 
 /*
+ * Apply the settings that can change while AAText runs: gamma, hinting,
+ * charset, cache size, automatic detection. Flushes the glyph cache and
+ * sets fonts up again on next use. From AAText's own process only.
+ */
+void aa_GlyphsReconfigure(const struct AAPrefs *prefs);
+
+/* Counts for the STATUS message. */
+void aa_GlyphsStatus(LONG *numfonts, LONG *numfaces, ULONG *bytes,
+                     ULONG *glyphs);
+
+/*
  * Mapping for a TextFont, or NULL. Lock-free in the common case. With
  * automatic detection, an unknown font name is queued for the helper
  * process (see aa_SetHelper) and NULL is returned until it is loaded;

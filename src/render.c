@@ -95,17 +95,30 @@ static ULONG stat_widthmismatch;
 #define COUNT(r) ((void)0)
 #endif
 
+/*
+ * Blacklist and offscreen option. Text() reads them without a lock, so
+ * they are replaced inside Forbid(): no task can run halfway through.
+ */
+void aa_RenderReconfigure(const struct AAPrefs *prefs)
+{
+    LONG i;
+
+    Forbid();
+    for (i = 0; i < prefs->numblack; i++)
+        CopyMem((APTR)prefs->blacklist[i], aa_Blacklist[i], AA_NAME_LEN);
+    aa_NumBlack = prefs->numblack;
+    aa_Offscreen = prefs->offscreen;
+    Permit();
+
+    for (i = 0; i < aa_NumBlack; i++)
+        D(("AAText: blacklisted \"%s\"\n", (ULONG)aa_Blacklist[i]));
+}
+
 BOOL aa_RenderInit(const struct AAPrefs *prefs)
 {
     LONG i;
 
-    for (i = 0; i < prefs->numblack; i++)
-    {
-        CopyMem((APTR)prefs->blacklist[i], aa_Blacklist[i], AA_NAME_LEN);
-        D(("AAText: blacklisted \"%s\"\n", (ULONG)aa_Blacklist[i]));
-    }
-    aa_NumBlack = prefs->numblack;
-    aa_Offscreen = prefs->offscreen;
+    aa_RenderReconfigure(prefs);
 
 #ifdef DEBUG
     if (!OpenDevice((CONST_STRPTR)TIMERNAME, UNIT_ECLOCK,

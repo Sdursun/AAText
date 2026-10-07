@@ -362,3 +362,13 @@ BOOL aa_Remove(void)
     D(("AAText: removed\n"));
     return TRUE;
 }
+
+BOOL aa_IsPassthrough(void)
+{
+    return aa_Passthrough;
+}
+
+BOOL aa_MeasuringPatched(void)
+{
+    return aa_NumPatches > 1;
+}
