@@ -136,5 +136,5 @@ AAText FPU'yu sadece açılışta kullanıyor.
 2. Yayın (madde 2).
 3. Geri bildirim toplamak; gerçek hatalar her zaman yeni özelliklerden
    önce gelir.
-4. Her değişiklikten sonra `.	est.ps1 -All`.
+4. Her değişiklikten sonra `.\test.ps1 -All`.
 5. Diğerleri talebe göre. AGA ancak istek gelirse.
