@@ -90,9 +90,16 @@ static BOOL aa_TimerOpen;
 static ULONG aa_EFreq;
 static ULONG stat_ticks, stat_maxticks, stat_chars, stat_offscreen;
 static ULONG stat_widthmismatch;
+static ULONG stat_phase[4];          /* setup, read, draw, write */
+static ULONG stat_declined, stat_declinedticks;
+/* E-clock low word for phase timing (differences only, never wraps) */
+#define TSTAMP(v) \
+    do { if (aa_TimerOpen) { struct EClockVal e_; ReadEClock(&e_); \
+         (v) = e_.ev_lo; } } while (0)
 #else
 #define FAIL(r) return FALSE
 #define COUNT(r) ((void)0)
+#define TSTAMP(v) ((void)0)
 #endif
 
 /*
@@ -917,7 +924,11 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     UBYTE fg[3], bg[3];
     UBYTE *buf;
     LONG x, y, w, h;
+#ifdef DEBUG
+    ULONG ts0 = 0, ts1 = 0, ts2 = 0, ts3 = 0, ts4 = 0;
+#endif
 
+    TSTAMP(ts0);
     if (!tf)
         FAIL(R_NOBITMAP);
     if (mode == AA_MODE_TEXT)
@@ -996,6 +1007,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     PenToRGB(vp, GetAPen(rp), fg);
 
     /* JAM2: background is the BgPen colour, no need to read it. */
+    TSTAMP(ts1);
     if (rp->DrawMode & JAM2)
     {
         PenToRGB(vp, GetBPen(rp), bg);
@@ -1004,6 +1016,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     else
         cgx_ReadPixelArray(CyberGfxBase, buf, 0, 0, w * 3, rp, x, y, w, h,
                            RECTFMT_RGB);
+    TSTAMP(ts2);
 
     if (font)
     {
@@ -1014,9 +1027,20 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     else
         DrawGradient(buf, w, h, fg);
 
+    TSTAMP(ts3);
     cgx_WritePixelArray(CyberGfxBase, buf, 0, 0, w * 3, rp, x, y, w, h,
                         RECTFMT_RGB);
     FreeBuffer(buf);
+    TSTAMP(ts4);
+#ifdef DEBUG
+    if (aa_TimerOpen)
+    {
+        stat_phase[0] += ts1 - ts0;
+        stat_phase[1] += ts2 - ts1;
+        stat_phase[2] += ts3 - ts2;
+        stat_phase[3] += ts4 - ts3;
+    }
+#endif
 
     rp->cp_x += w;
     COUNT(R_DRAWN);
@@ -1042,16 +1066,25 @@ BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count,
 #endif
     done = RenderString(rp, string, count);
 #ifdef DEBUG
-    if (done && aa_TimerOpen)
+    if (aa_TimerOpen)
     {
         ULONG d;
 
         ReadEClock(&t1);
         d = t1.ev_lo - t0.ev_lo;    /* calls are far shorter than a wrap */
-        stat_ticks += d;
-        if (d > stat_maxticks)
-            stat_maxticks = d;
-        stat_chars += count;
+        if (done)
+        {
+            stat_ticks += d;
+            if (d > stat_maxticks)
+                stat_maxticks = d;
+            stat_chars += count;
+        }
+        else
+        {
+            /* what AAText costs for text it leaves to the system */
+            stat_declined++;
+            stat_declinedticks += d;
+        }
     }
 #endif
     return done;
@@ -1084,6 +1117,16 @@ void aa_PrintRenderStats(void)
                 TicksToMicros(stat_ticks) / drawn,
                 TicksToMicros(stat_ticks) / stat_chars,
                 TicksToMicros(stat_maxticks), drawn, stat_chars, aa_EFreq);
+    if (drawn && aa_EFreq)
+        kprintf("AAText: per drawn call (safe metrics): setup %ld us, "
+                "read %ld us, draw %ld us, write %ld us\n",
+                TicksToMicros(stat_phase[0]) / drawn,
+                TicksToMicros(stat_phase[1]) / drawn,
+                TicksToMicros(stat_phase[2]) / drawn,
+                TicksToMicros(stat_phase[3]) / drawn);
+    if (stat_declined && aa_EFreq)
+        kprintf("AAText: declined calls: %ld, %ld us each\n", stat_declined,
+                TicksToMicros(stat_declinedticks) / stat_declined);
     aa_PrintGlyphStats();
 }
 #endif
