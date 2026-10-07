@@ -7,3 +7,4 @@ third_party/
 
 # Local project notes, not published
 CLAUDE.md
+__pycache__/
