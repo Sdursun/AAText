@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text for Workbench
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/wb
-Version:      0.11
+Version:      0.12
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 Requires:     68020+, RTG (Picasso96), TrueType or OpenType fonts
@@ -22,6 +22,9 @@ Features
 - Zero configuration; optional ENVARC:AAText.prefs for gamma, hinting
   (none/light/normal/full), glyph cache size, program blacklist and
   explicit font mappings
+- Preferences program AATextPrefs (English and Turkish, ReAction): a
+  running AAText takes every change at once, so you see it while you
+  try it; Save/Use/Cancel and the usual Prefs menus
 - "Safe" metrics by default: letters keep the cells of the system's
   bitmap font, so no window layout changes
 - Optional real metrics mode ("real on"): the TrueType font's own
@@ -38,7 +41,8 @@ Features
 Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68),
 Picasso96.
 
-Installation: copy AAText to SYS:WBStartup and reboot. See AAText_EN.txt
+Installation: copy AAText to SYS:WBStartup and reboot; copy AATextPrefs
+and its icon to SYS:Prefs for the preferences program. See AAText_EN.txt
 (English) or AAText_TR.txt (Turkish, ISO-8859-9) for details.
 
 License: MIT (free for any use, commercial or not; keep the copyright

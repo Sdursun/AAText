@@ -1,4 +1,4 @@
-AAText 0.11 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.12 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -58,9 +58,14 @@ Kurulum
 
        Run >NIL: C:AAText
 
-2. İsteğe bağlı: AAText.prefs.example dosyasını ENVARC:AAText.prefs
-   olarak kopyalayıp düzenleyin ("Ayarlar" bölümüne bakın). Dosya
-   yoksa varsayılan değerler kullanılır.
+2. İsteğe bağlı: ayar programı. AATextPrefs ve AATextPrefs.info
+   dosyalarını SYS:Prefs içine kopyalayın. Türkçe arayüz için katalogu
+   da kopyalayın:
+
+       Copy Catalogs/türkçe/aatextprefs.catalog LOCALE:Catalogs/türkçe/
+
+   AATextPrefs olmadan varsayılan değerler ya da elle yazdığınız bir
+   ayar dosyası kullanılır ("Ayarlar" bölümüne bakın).
 
 3. Sistemi yeniden başlatın ya da AAText'i elle çalıştırın. Önceden
    açık olan pencereler yeniden çizildiklerinde (ör. boyutlarını
@@ -73,6 +78,9 @@ Kullanım
   AAText              Başlatır (Shell'den: Run >NIL: AAText)
   AAText QUIT         Durdurur ve yamaları kaldırır
   AAText PREFS=dosya  Başka bir ayar dosyasıyla başlatır
+  AAText RELOAD       Çalışan kopya ayar dosyasını yeniden okur
+  AAText STATUS       Çalışan kopyanın sürümünü, ayarlarını ve önbellek
+                      kullanımını gösterir
 
 AAText'i ikinci kez başlatmak - Shell'den ya da ikonuna çift
 tıklayarak - çalışan kopyayı durdurur; böylece ikon bir aç/kapa
@@ -85,12 +93,46 @@ AAText güvenle kaldırılamaz. Bu durumda kendini devre dışı bırakır
 önce diğer programı kapatıp yeniden deneyin.
 
 
+Ayar programı
+-------------
+
+AATextPrefs ayarları bir pencereden, Türkçe veya İngilizce olarak
+(Locale ayarlarına göre) değiştirir. AAText çalışıyorsa her değişiklik
+hemen uygulanır; denerken sonucu ekranda ve pencerenin önizleme
+satırında görürsünüz.
+
+  Kaydet    ayarları kalıcı olarak saklar (ENVARC: ve ENV:)
+  Kullan    ayarları bir sonraki açılışa kadar kullanır (sadece ENV:)
+  İptal     AAText'i önceki ayarlarına döndürür
+
+  Görünüm     gamma, hinting, gerçek harf genişlikleri, önizleme
+  Programlar  AAText'in dokunmayacağı programlar (kara liste): adı
+              yazın, program dosyasını "Seç..." ile seçin ya da
+              "Çalışan bir program ekle..." listesinden alın. Programın
+              o an çalışması gerekmez; AAText onu adından tanır.
+  Gelişmiş    otomatik font algılama, ekran dışı bitmap'ler, önbellek
+              boyutu (o anki kullanımıyla), karakter seti ve "Türkçe
+              ENV:ftcodepage yaz" (İpuçları bölümüne bakın)
+
+Menülerde, sistemin Prefs programlarındaki gibi Aç..., Farklı
+Kaydet..., Varsayılan Ayarlar, Son Kaydedilen ve Geri Al bulunur.
+
+"Gerçek harf genişlikleri" AAText yeniden başlatılınca geçerli olur;
+diğer bütün ayarlar hemen değişir. AATextPrefs ayar dosyasını
+kaydederken dosyadaki açıklamaları ve font eşlemelerini korur
+(eşlemeler sadece dosyada düzenlenir).
+
+Shell seçenekleri: LANGUAGE=english (veya türkçe) dili seçer,
+PUBSCREEN=ad pencereyi başka bir public screen'de açar.
+
+
 Ayarlar
 -------
 
-Ayar dosyası isteğe bağlıdır. AAText önce ENV:AAText.prefs dosyasını,
-o yoksa ENVARC:AAText.prefs dosyasını okur. Her satırda bir ayar olan
-düz bir metin dosyasıdır; # ile başlayan satırlar açıklamadır.
+Ayar dosyası isteğe bağlıdır; AATextPrefs onu sizin için yazar. AAText
+önce ENV:AAText.prefs dosyasını, o yoksa ENVARC:AAText.prefs dosyasını
+okur. Her satırda bir ayar olan düz bir metin dosyasıdır; # ile
+başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
 
   gamma 0.8         Kenar keskinliği, 0.5 - 4.0 (varsayılan 0.8).
                     Düşük değerler daha ince ve keskin, yüksek
@@ -162,10 +204,12 @@ bildirilir.
 - freetype2.library ile Türkçe (veya başka bir kod sayfası): FTManager
   .otag dosyasına kod sayfası yazmaz; bu yüzden freetype2.library de
   AAText de ENV:ftcodepage dosyasını, o yoksa ISO-8859-1'i kullanır.
-  Türkçe için paketteki dosyayı kopyalayın:
+  Türkçe için AATextPrefs'te (Gelişmiş) "Türkçe ENV:ftcodepage yaz"
+  düğmesine basın ya da paketteki dosyayı kopyalayın:
       Copy ftcodepage.latin5 ENVARC:ftcodepage
       Copy ftcodepage.latin5 ENV:ftcodepage
-  Daha önce üretilmiş fontlar, sistem yeniden başlatılana kadar eski
+  AAText bunu hemen kullanır; diğer programlarda freetype2.library'nin
+  daha önce ürettiği fontlar, sistem yeniden başlatılana kadar eski
   karakterleriyle kalır. (ttf.library kod sayfasını her .otag
   dosyasına yazar, ek bir şey gerekmez.)
 
@@ -197,6 +241,12 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.12  Ayar programı AATextPrefs (Türkçe ve İngilizce): değişiklikler
+      hemen görünür, Prefs menüleri, GlowIcon. AAText yeni ayarları
+      çalışırken ondan alır.
+      ENV:ftcodepage ayarlar değişince yeniden okunur; yeni bir kod
+      sayfası AAText yeniden başlatılmadan geçerli olur.
 
 0.11  PostScript (CFF) anahatlı OpenType fontlar, ör. freetype2.library
       ve FTManager ile kurulanlar. ENV:ftcodepage, freetype2.library'deki

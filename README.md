@@ -20,6 +20,9 @@ and MUI programs — everything that draws text through `graphics.library`.
 - **Safe metrics by default.** Letters keep the cells of the system's bitmap
   font, so no window layout changes. Optional real metrics mode (`real on`)
   uses the TrueType widths and keeps all measuring functions consistent.
+- **Preferences program.** AATextPrefs (English and Turkish) changes gamma,
+  hinting, the program blacklist and the other settings with a live preview:
+  a running AAText takes every change at once.
 - Bitmap fonts and palette (AGA) screens are left untouched.
 
 *Türkçe açıklama aşağıda.*
@@ -37,7 +40,8 @@ Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 
 Binary releases are on Aminet (`util/wb/AAText.lha`) and on the
 [Releases](https://github.com/Sdursun/AAText/releases) page. Copy `AAText` to
-`SYS:WBStartup` and reboot. The full user guide is in
+`SYS:WBStartup` and reboot; copy `AATextPrefs` (and its icon) to `SYS:Prefs`
+if you want the preferences program. The full user guide is in
 [docs/AAText_EN.txt](docs/AAText_EN.txt) (Turkish:
 [docs/AAText_TR.txt](docs/AAText_TR.txt)); all settings are described in
 [docs/AAText.prefs.example](docs/AAText.prefs.example).
@@ -52,6 +56,8 @@ sh tools/fetch-freetype.sh      # FreeType 2.14.3 into third_party/ (sha256 chec
 .\build.ps1                     # build/68020/AAText
 .\build.ps1 DEBUG=1             # build/68020-debug/AAText (serial kprintf output)
 .\build.ps1 CPU=68060           # build/68060/AAText
+.\build.ps1 gui                 # build/68020/AATextPrefs
+.\build.ps1 catalogs icons      # Turkish catalog and GlowIcon (build/catalogs, build/icons)
 .\build.ps1 dist                # build/dist/AAText.lha + AAText.readme
 ```
 
@@ -85,6 +91,10 @@ See `tests/fttest.c` for the test modes (`metrics`, `stress`, `auto`,
 | `src/metrics.c` | `TextLength`/`TextExtent`/`TextFit` for real metrics mode |
 | `src/otag.c` | `.otag` file parser |
 | `src/prefs.c` | settings file parser |
+| `src/aamsg.h`, `src/aaclient.c` | message port interface of a running AAText (RELOAD, APPLY, STATUS) |
+| `src/prefswrite.c` | writes the settings file, keeping comments and font mappings |
+| `src/prefsgui/` | AATextPrefs (ReAction); strings in `strings.h`, Turkish in `catalogs/turkish.ct` |
+| `tools/mkcatalog.pl`, `tools/mkicon.py` | locale catalog and GlowIcon builders (`icons/` holds the icon art) |
 | `src/ft/` | minimal FreeType configuration and exec memory pool allocator |
 
 ## License
@@ -117,10 +127,14 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
   otomatik bulunur ve her boyutta, doğru kod sayfasıyla (Türkçe dahil) çizilir.
 - **Hiçbir kütüphanenin yerine geçmez.** Çalışırken `graphics.library`
   fonksiyonlarını yamalar, kapatıldığında temizce kaldırır.
+- **Ayar programı.** AATextPrefs (Türkçe ve İngilizce) gamma, hinting, kara
+  liste ve diğer ayarları canlı önizlemeyle değiştirir; çalışan AAText her
+  değişikliği hemen uygular.
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
 
 **Kurulum:** `AAText` dosyasını `SYS:WBStartup` içine kopyalayıp sistemi
-yeniden başlatın. Ayrıntılı kullanım kılavuzu:
+yeniden başlatın; ayar programı için `AATextPrefs` dosyasını (ikonuyla)
+`SYS:Prefs` içine kopyalayın. Ayrıntılı kullanım kılavuzu:
 [docs/AAText_TR.txt](docs/AAText_TR.txt).
 
 **Lisans:** [MIT](LICENSE). Ticari ya da ticari olmayan her amaçla
