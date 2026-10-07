@@ -310,13 +310,8 @@ static BPTR OpenPrefsFile(const char *path)
     return fh;
 }
 
-BOOL aa_ReadPrefs(struct AAPrefs *prefs, const char *path, BOOL report)
+void aa_DefaultPrefs(struct AAPrefs *prefs)
 {
-    BPTR fh;
-    char *buf, *line, *p;
-    LONG len, lineno = 1;
-
-    report_errors = report;
     prefs->nummaps = 0;
     prefs->gamma100 = 80;       /* user tested, looks best at 0.8 */
     prefs->charset = AA_CHARSET_LATIN1;
@@ -326,6 +321,16 @@ BOOL aa_ReadPrefs(struct AAPrefs *prefs, const char *path, BOOL report)
     prefs->autoreal = FALSE;
     prefs->cachekb = AA_DEFAULT_CACHE_KB;
     prefs->numblack = 0;
+}
+
+BOOL aa_ReadPrefs(struct AAPrefs *prefs, const char *path, BOOL report)
+{
+    BPTR fh;
+    char *buf, *line, *p;
+    LONG len, lineno = 1;
+
+    report_errors = report;
+    aa_DefaultPrefs(prefs);
 
     fh = OpenPrefsFile(path);
     if (!fh)

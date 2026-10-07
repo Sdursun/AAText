@@ -58,4 +58,7 @@ struct AAPrefs
  */
 BOOL aa_ReadPrefs(struct AAPrefs *prefs, const char *path, BOOL report);
 
+/* The settings AAText uses without a preferences file. */
+void aa_DefaultPrefs(struct AAPrefs *prefs);
+
 #endif

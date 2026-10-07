@@ -5,14 +5,12 @@
 ; Lines starting with ';' are comments.
 ;
 ## language türkçe
-## version $VER: aatextprefs.catalog 1.1 (9.10.2026)
+## version $VER: aatextprefs.catalog 1.1 (7.10.2026)
 
 MSG_WINDOW_TITLE
 AAText Tercihleri
 MSG_TAB_APPEARANCE
 Görünüm
-MSG_TAB_FONTS
-Fontlar
 MSG_TAB_PROGRAMS
 Programlar
 MSG_TAB_ADVANCED
@@ -43,16 +41,12 @@ MSG_SAVE
 _Kaydet
 MSG_USE
 K_ullan
-MSG_TEST
-Dene
 MSG_CANCEL
 İ_ptal
 MSG_STATUS_RUNNING
 %s çalışıyor.
 MSG_STATUS_STOPPED
 AAText çalışmıyor: ayarlar sadece kaydedilir.
-MSG_NOT_YET
-Bu sayfa sonraki bir sürümde gelecek.
 MSG_RESTART_TITLE
 AAText Tercihleri
 MSG_RESTART_TEXT
@@ -111,3 +105,25 @@ MSG_PICK
 Seç...
 MSG_PICK_TITLE
 AAText'in dokunmayacağı program
+MSG_MENU_PROJECT
+Proje
+MSG_MENU_OPEN
+Aç...
+MSG_MENU_SAVEAS
+Farklı Kaydet...
+MSG_MENU_QUIT
+Çık
+MSG_MENU_EDIT
+Düzen
+MSG_MENU_DEFAULTS
+Varsayılan Ayarlar
+MSG_MENU_LASTSAVED
+Son Kaydedilen
+MSG_MENU_RESTORE
+Geri Al
+MSG_OPEN_TITLE
+AAText ayarlarını aç
+MSG_SAVEAS_TITLE
+AAText ayarlarını farklı kaydet
+MSG_READ_ERROR
+%s okunamadı.

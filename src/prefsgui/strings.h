@@ -5,8 +5,8 @@
  * User interface strings of AATextPrefs. English is built in; other
  * languages come from aatextprefs.catalog (locale.library). The IDs are
  * part of the catalog format: never renumber, only append. A "_" marks
- * a button's keyboard shortcut. MSG_TEST and MSG_TAB_FONTS are no longer
- * used (font mappings are edited in the prefs file only).
+ * a button's keyboard shortcut. Retired IDs, never to be reused:
+ * 2 (Fonts tab), 18 (Test button), 22 (placeholder page).
  * Translations: catalogs/<language>.ct, compiled by tools/mkcatalog.pl.
  */
 
@@ -15,7 +15,6 @@
 #define AA_STRINGS \
     S(MSG_WINDOW_TITLE,     0,  "AAText Preferences") \
     S(MSG_TAB_APPEARANCE,   1,  "Appearance") \
-    S(MSG_TAB_FONTS,        2,  "Fonts") \
     S(MSG_TAB_PROGRAMS,     3,  "Programs") \
     S(MSG_TAB_ADVANCED,     4,  "Advanced") \
     S(MSG_GAMMA,            5,  "Gamma") \
@@ -31,11 +30,9 @@
     S(MSG_PREVIEW_LINE2,    15, "0123456789 (illustrate) WAVE mmm") \
     S(MSG_SAVE,             16, "_Save") \
     S(MSG_USE,              17, "_Use") \
-    S(MSG_TEST,             18, "Test") \
     S(MSG_CANCEL,           19, "_Cancel") \
     S(MSG_STATUS_RUNNING,   20, "%s is running.") \
     S(MSG_STATUS_STOPPED,   21, "AAText is not running: settings are only saved.") \
-    S(MSG_NOT_YET,          22, "This page comes in a later version.") \
     S(MSG_RESTART_TITLE,    23, "AAText Preferences") \
     S(MSG_RESTART_TEXT,     24, "Real character widths change when AAText\nis restarted (e.g. at the next reboot).") \
     S(MSG_OK,               25, "OK") \
@@ -64,7 +61,18 @@
     S(MSG_FTCODEPAGE_DONE,  48, "ENV:ftcodepage written (ENVARC: too).") \
     S(MSG_FTCODEPAGE_FAIL,  49, "Cannot write ENV:ftcodepage.") \
     S(MSG_PICK,             50, "Choose...") \
-    S(MSG_PICK_TITLE,       51, "Program AAText should leave alone")
+    S(MSG_PICK_TITLE,       51, "Program AAText should leave alone") \
+    S(MSG_MENU_PROJECT,     52, "Project") \
+    S(MSG_MENU_OPEN,        53, "Open...") \
+    S(MSG_MENU_SAVEAS,      54, "Save As...") \
+    S(MSG_MENU_QUIT,        55, "Quit") \
+    S(MSG_MENU_EDIT,        56, "Edit") \
+    S(MSG_MENU_DEFAULTS,    57, "Reset To Defaults") \
+    S(MSG_MENU_LASTSAVED,   58, "Last Saved") \
+    S(MSG_MENU_RESTORE,     59, "Restore") \
+    S(MSG_OPEN_TITLE,       60, "Open AAText preferences") \
+    S(MSG_SAVEAS_TITLE,     61, "Save AAText preferences as") \
+    S(MSG_READ_ERROR,       62, "Cannot read %s.")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

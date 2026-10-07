@@ -9,7 +9,8 @@
  *   Save    write ENVARC: and ENV:AAText.prefs, then RELOAD
  *   Cancel  if anything was applied, APPLY the settings AAText had before
  *
- * Shell options: LANGUAGE=<name> (e.g. türkçe) overrides the locale.
+ * Shell options: LANGUAGE=<name> (e.g. türkçe) overrides the locale,
+ * PUBSCREEN=<name> opens the window on that public screen.
  */
 
 #include <exec/types.h>
@@ -24,6 +25,7 @@
 #include <graphics/text.h>
 #include <utility/hooks.h>
 #include <libraries/locale.h>
+#include <libraries/gadtools.h>
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -70,7 +72,7 @@
 #include "strings.h"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AATextPrefs 0.2 (9.10.2026)";
+    "$VER: AATextPrefs 0.12 (7.10.2026)";
 
 #define ENV_PREFS     "ENV:AAText.prefs"
 #define ENVARC_PREFS  "ENVARC:AAText.prefs"
@@ -101,12 +103,13 @@ static const UBYTE hint_order[4] =
 };
 
 static struct Gadget *gads[GID_COUNT];
-static Object *winobj;
+static Object *winobj, *pages;
 static struct Window *win;
 static struct List tablist, hintlist, blacklb, runlist, charsetlist;
 
 static struct AAPrefs cur;      /* what the window shows */
 static struct AAPrefs before;   /* AAText's settings when we started */
+static struct AAPrefs orig;     /* the settings read at start (Restore) */
 static BOOL running;            /* AAText answered STATUS */
 static BOOL tested;             /* new settings were APPLYed to AAText */
 static char statustext[160];
@@ -180,6 +183,68 @@ static void CloseLibs(void)
     }
 }
 
+/* Tab page of a gadget (0-2), -1 for the gadgets outside the pages. */
+static LONG PageOf(LONG gid)
+{
+    if (gid >= GID_GAMMA && gid <= GID_FONTINFO)
+        return 0;
+    if ((gid >= GID_BLACKLIST && gid <= GID_RUNNING) || gid == GID_PICKFILE)
+        return 1;
+    if (gid >= GID_AUTO && gid <= GID_FTCODEPAGE)
+        return 2;
+    return -1;
+}
+
+static ULONG CurrentPage(void)
+{
+    ULONG page = 0;
+
+    if (gads[GID_TABS])
+        GetAttr(CLICKTAB_Current, (Object *)gads[GID_TABS], &page);
+    return page;
+}
+
+/*
+ * Change a gadget's attributes. Gadgets on a hidden tab page go through
+ * the page object, so that they do not draw over the shown page; the
+ * others are set directly and draw themselves.
+ * No varargs: a tag list taken from the address of a stack argument
+ * gave wrong values (garbage text in a button).
+ */
+static void SetGad2(LONG gid, Tag tag1, ULONG data1, Tag tag2, ULONG data2)
+{
+    struct TagItem tags[3];
+
+    tags[0].ti_Tag = tag1;
+    tags[0].ti_Data = data1;
+    tags[1].ti_Tag = tag2;
+    tags[1].ti_Data = data2;
+    tags[2].ti_Tag = TAG_DONE;
+    if (!win || !gads[gid])
+        return;
+    if (PageOf(gid) >= 0 && PageOf(gid) != (LONG)CurrentPage())
+    {
+        SetPageGadgetAttrsA(gads[gid], pages, win, NULL, tags);
+        return;
+    }
+    SetGadgetAttrsA(gads[gid], win, NULL, tags);
+    if (gid == GID_REAL || gid == GID_AUTO || gid == GID_OFFSCREEN)
+    {
+        /* checkbox.gadget does not redraw itself on GA_Selected; erase
+           first, or its (antialiased) label is drawn over itself */
+        struct Gadget *g = gads[gid];
+
+        EraseRect(win->RPort, g->LeftEdge, g->TopEdge,
+                  g->LeftEdge + g->Width - 1, g->TopEdge + g->Height - 1);
+        RefreshGList(g, win, NULL, 1);
+    }
+}
+
+static void SetGad(LONG gid, Tag tag, ULONG data)
+{
+    SetGad2(gid, tag, data, TAG_IGNORE, 0);
+}
+
 /* ------------------------------------------------------------------ */
 /* Talking to AAText                                                   */
 /* ------------------------------------------------------------------ */
@@ -188,9 +253,7 @@ static void SetStatus(const char *text)
 {
     if (text != statustext)
         snprintf(statustext, sizeof(statustext), "%s", text);
-    if (win)
-        SetGadgetAttrs(gads[GID_STATUS], win, NULL,
-                       GA_Text, (ULONG)statustext, TAG_DONE);
+    SetGad(GID_STATUS, GA_Text, (ULONG)statustext);
 }
 
 static void QueryAAText(void)
@@ -203,6 +266,12 @@ static void QueryAAText(void)
         SetStatus(GetString(MSG_STATUS_OLD));
     else if (m == AACLIENT_NOTRUNNING)
         SetStatus(GetString(MSG_STATUS_STOPPED));
+    else if (m->result != AARES_OK)
+    {
+        /* another protocol version: AAText answered without the status */
+        SetStatus(GetString(MSG_STATUS_OLD));
+        aa_FreeReply(m);
+    }
     else
     {
         running = TRUE;
@@ -296,7 +365,7 @@ static ULONG PreviewRender(struct Hook *hook, Object *obj,
 static void RefreshPreview(void)
 {
     if (win)
-        RefreshGList(gads[GID_PREVIEW], win, NULL, 1);
+        RefreshPageGadget(gads[GID_PREVIEW], pages, win, NULL);
 }
 
 /*
@@ -351,8 +420,7 @@ static void UpdateCacheUsed(void)
         aa_FreeReply(m);
     }
     if (win)
-        SetGadgetAttrs(gads[GID_CACHEUSED], win, NULL,
-                       GA_Text, (ULONG)cacheused, TAG_DONE);
+        SetGad(GID_CACHEUSED, GA_Text, (ULONG)cacheused);
 }
 
 static void UpdateGammaText(void)
@@ -360,8 +428,7 @@ static void UpdateGammaText(void)
     snprintf(gammatext, sizeof(gammatext), "%ld.%02ld",
              (long)(cur.gamma100 / 100), (long)(cur.gamma100 % 100));
     if (win)
-        SetGadgetAttrs(gads[GID_GAMMAVAL], win, NULL,
-                       GA_Text, (ULONG)gammatext, TAG_DONE);
+        SetGad(GID_GAMMAVAL, GA_Text, (ULONG)gammatext);
 }
 
 /*
@@ -400,8 +467,7 @@ static void ShowBlacklist(void)
     LONG i;
 
     if (win)
-        SetGadgetAttrs(gads[GID_BLACKLIST], win, NULL,
-                       LISTBROWSER_Labels, ~0UL, TAG_DONE);
+        SetGad(GID_BLACKLIST, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&blacklb);
     for (i = 0; i < cur.numblack; i++)
     {
@@ -411,9 +477,8 @@ static void ShowBlacklist(void)
             AddTail(&blacklb, n);
     }
     if (win)
-        SetGadgetAttrs(gads[GID_BLACKLIST], win, NULL,
-                       LISTBROWSER_Labels, (ULONG)&blacklb,
-                       LISTBROWSER_Selected, -1, TAG_DONE);
+        SetGad2(GID_BLACKLIST, LISTBROWSER_Labels, (ULONG)&blacklb,
+                LISTBROWSER_Selected, (ULONG)-1);
 }
 
 static void AddProgram(const char *name)
@@ -445,8 +510,7 @@ static void AddProgram(const char *name)
     strcpy(cur.blacklist[cur.numblack++], buf);
     ShowBlacklist();
     if (win)
-        SetGadgetAttrs(gads[GID_PROGNAME], win, NULL,
-                       STRINGA_TextVal, (ULONG)"", TAG_DONE);
+        SetGad(GID_PROGNAME, STRINGA_TextVal, (ULONG)"");
     LiveApply();
 }
 
@@ -592,8 +656,7 @@ static void FillRunning(void)
     LONG i, j;
 
     if (win)
-        SetGadgetAttrs(gads[GID_RUNNING], win, NULL,
-                       CHOOSER_Labels, ~0UL, TAG_DONE);
+        SetGad(GID_RUNNING, CHOOSER_Labels, ~0UL);
     while ((n = RemHead(&runlist)))
         FreeChooserNode(n);
 
@@ -620,8 +683,7 @@ static void FillRunning(void)
         if ((n = AllocChooserNode(CNA_Text, (ULONG)runnames[i], TAG_DONE)))
             AddTail(&runlist, n);
     if (win)
-        SetGadgetAttrs(gads[GID_RUNNING], win, NULL,
-                       CHOOSER_Labels, (ULONG)&runlist, TAG_DONE);
+        SetGad(GID_RUNNING, CHOOSER_Labels, (ULONG)&runlist);
 }
 
 /* ------------------------------------------------------------------ */
@@ -974,8 +1036,45 @@ static Object *AppearancePage(void)
     End;
 }
 
+enum
+{
+    MENU_OPEN = 1, MENU_SAVEAS, MENU_QUIT, MENU_DEFAULTS, MENU_LASTSAVED,
+    MENU_RESTORE
+};
+
+/* The standard Prefs menus; labels are filled in by OpenWin(). */
+static struct NewMenu menu[] =
+{
+    { NM_TITLE, NULL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, "O",  0, 0, (APTR)MENU_OPEN },
+    { NM_ITEM,  NULL, "A",  0, 0, (APTR)MENU_SAVEAS },
+    { NM_ITEM,  NM_BARLABEL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, "Q",  0, 0, (APTR)MENU_QUIT },
+    { NM_TITLE, NULL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, "D",  0, 0, (APTR)MENU_DEFAULTS },
+    { NM_ITEM,  NULL, "L",  0, 0, (APTR)MENU_LASTSAVED },
+    { NM_ITEM,  NULL, "R",  0, 0, (APTR)MENU_RESTORE },
+    { NM_END,   NULL, NULL, 0, 0, NULL }
+};
+
+static void LocalizeMenu(void)
+{
+    static const LONG labels[] =
+    {
+        MSG_MENU_PROJECT, MSG_MENU_OPEN, MSG_MENU_SAVEAS, 0, MSG_MENU_QUIT,
+        MSG_MENU_EDIT, MSG_MENU_DEFAULTS, MSG_MENU_LASTSAVED,
+        MSG_MENU_RESTORE
+    };
+    ULONG i;
+
+    for (i = 0; i < sizeof(labels) / sizeof(labels[0]); i++)
+        if (labels[i])
+            menu[i].nm_Label = (CONST_STRPTR)GetString(labels[i]);
+}
+
 static BOOL OpenWin(struct Screen *scr)
 {
+    LocalizeMenu();
     AddTab(&tablist, MSG_TAB_APPEARANCE, 0);
     AddTab(&tablist, MSG_TAB_PROGRAMS, 1);
     AddTab(&tablist, MSG_TAB_ADVANCED, 2);
@@ -1000,7 +1099,9 @@ static BOOL OpenWin(struct Screen *scr)
         WA_CloseGadget, TRUE,
         WA_SizeGadget, TRUE,
         WA_Activate, TRUE,
-        WA_IDCMP, IDCMP_GADGETUP | IDCMP_CLOSEWINDOW | IDCMP_VANILLAKEY,
+        WA_IDCMP, IDCMP_GADGETUP | IDCMP_CLOSEWINDOW | IDCMP_VANILLAKEY |
+                  IDCMP_MENUPICK,
+        WINDOW_NewMenu, (ULONG)menu,
         WINDOW_Position, WPOS_CENTERSCREEN,
         WINDOW_ParentGroup, VLayoutObject,
             LAYOUT_SpaceOuter, TRUE,
@@ -1011,7 +1112,7 @@ static BOOL OpenWin(struct Screen *scr)
                 GA_RelVerify, TRUE,
                 CLICKTAB_Labels, (ULONG)&tablist,
                 CLICKTAB_Current, 0,
-                CLICKTAB_PageGroup, PageObject,
+                CLICKTAB_PageGroup, pages = PageObject,
                     PAGE_Add, AppearancePage(),
                     PAGE_Add, ProgramsPage(),
                     PAGE_Add, AdvancedPage(),
@@ -1148,9 +1249,114 @@ static BOOL Action(ULONG id)
     return FALSE;
 }
 
+/* Show cur in every gadget and let AAText use it. */
+static void ShowPrefs(void)
+{
+    SetGad(GID_GAMMA, SLIDER_Level, GammaLevel(cur.gamma100));
+    SetGad(GID_HINTING, CHOOSER_Selected, HintIndex(cur.hinting));
+    SetGad(GID_REAL, GA_Selected, cur.autoreal);
+    SetGad(GID_AUTO, GA_Selected, cur.autodetect);
+    SetGad(GID_OFFSCREEN, GA_Selected, cur.offscreen);
+    SetGad(GID_CACHE, INTEGER_Number, cur.cachekb);
+    SetGad(GID_CHARSET, CHOOSER_Selected,
+           cur.charset == AA_CHARSET_LATIN5 ? 1 : 0);
+    ShowBlacklist();
+    LiveApply();
+}
+
+/* Read a prefs file into the window. */
+static void LoadPrefs(const char *path)
+{
+    struct AAPrefs p;
+
+    if (aa_ReadPrefs(&p, path, FALSE))
+    {
+        CopyMem(&p, &cur, sizeof(cur));
+        ShowPrefs();
+    }
+    else
+    {
+        char msg[160];
+
+        snprintf(msg, sizeof(msg), GetString(MSG_READ_ERROR), path);
+        SetStatus(msg);
+    }
+}
+
+/* ASL requester for Open / Save As; TRUE with the full path in buf. */
+static BOOL AskFile(LONG title, BOOL save, char *buf, LONG len)
+{
+    struct FileRequester *fr;
+    const char *drawer = "SYS:Prefs/Presets";
+    BPTR lock = Lock((CONST_STRPTR)drawer, ACCESS_READ);
+    BOOL ok = FALSE;
+
+    if (lock)
+        UnLock(lock);
+    else
+        drawer = "SYS:";
+    fr = AllocAslRequestTags(ASL_FileRequest,
+                             ASLFR_Window, (ULONG)win,
+                             ASLFR_TitleText, (ULONG)GetString(title),
+                             ASLFR_InitialDrawer, (ULONG)drawer,
+                             ASLFR_InitialFile, (ULONG)"AAText.prefs",
+                             ASLFR_DoSaveMode, save,
+                             ASLFR_RejectIcons, TRUE,
+                             ASLFR_SleepWindow, TRUE,
+                             TAG_DONE);
+    if (!fr)
+        return FALSE;
+    if (AslRequest(fr, NULL) && fr->fr_File && fr->fr_File[0])
+    {
+        snprintf(buf, len, "%s", fr->fr_Drawer ? (char *)fr->fr_Drawer : "");
+        ok = AddPart((STRPTR)buf, fr->fr_File, len);
+    }
+    FreeAslRequest(fr);
+    return ok;
+}
+
+/* A menu item; TRUE when the window is to close. */
+static BOOL MenuAction(ULONG id)
+{
+    char path[AA_PATH_LEN];
+
+    switch (id)
+    {
+        case MENU_OPEN:
+            if (AskFile(MSG_OPEN_TITLE, FALSE, path, sizeof(path)))
+                LoadPrefs(path);
+            break;
+
+        case MENU_SAVEAS:
+            ReadGadgets();
+            /* comments and font mappings come from the file in use */
+            if (AskFile(MSG_SAVEAS_TITLE, TRUE, path, sizeof(path)))
+                WritePrefsFile(path, ENV_PREFS);
+            break;
+
+        case MENU_QUIT:
+            return Action(GID_CANCEL);
+
+        case MENU_DEFAULTS:
+            aa_DefaultPrefs(&cur);
+            ShowPrefs();
+            break;
+
+        case MENU_LASTSAVED:
+            LoadPrefs(ENVARC_PREFS);
+            break;
+
+        case MENU_RESTORE:
+            CopyMem(&orig, &cur, sizeof(cur));
+            ShowPrefs();
+            break;
+    }
+    return FALSE;
+}
+
 int main(int argc, char **argv)
 {
-    char language[AA_NAME_LEN] = "";
+    char language[AA_NAME_LEN] = "", pubname[MAXPUBSCREENNAME + 1] = "";
     struct Screen *scr = NULL;
     ULONG sigmask = 0, keys[3];
     BOOL done = FALSE;
@@ -1164,13 +1370,16 @@ int main(int argc, char **argv)
 
     if (argc)
     {
-        LONG args[1] = { 0 };
-        struct RDArgs *rda = ReadArgs((CONST_STRPTR)"LANGUAGE/K", args, NULL);
+        LONG args[2] = { 0, 0 };
+        struct RDArgs *rda = ReadArgs((CONST_STRPTR)"LANGUAGE/K,PUBSCREEN/K",
+                                      args, NULL);
 
         if (rda)
         {
             if (args[0])
                 strncpy(language, (const char *)args[0], sizeof(language) - 1);
+            if (args[1])
+                strncpy(pubname, (const char *)args[1], sizeof(pubname) - 1);
             FreeArgs(rda);
         }
     }
@@ -1181,11 +1390,16 @@ int main(int argc, char **argv)
 
     aa_ReadPrefs(&cur, NULL, FALSE);   /* defaults if there is no file */
     CopyMem(&cur, &before, sizeof(before));
+    CopyMem(&cur, &orig, sizeof(orig));
     UpdateGammaText();
     QueryAAText();
     UpdateCacheUsed();
 
-    scr = LockPubScreen(NULL);
+    /* the named screen, else the default one (as Prefs programs do) */
+    if (pubname[0])
+        scr = LockPubScreen((CONST_STRPTR)pubname);
+    if (!scr)
+        scr = LockPubScreen(NULL);
     if (!scr)
         goto out;
     previewfont = OpenDiskFont(scr->Font);
@@ -1222,6 +1436,22 @@ int main(int argc, char **argv)
                 case WMHI_GADGETUP:
                     done |= Action(result & WMHI_GADGETMASK);
                     break;
+
+                case WMHI_MENUPICK:
+                {
+                    UWORD mc = result & WMHI_MENUMASK;
+
+                    while (mc != MENUNULL && !done)
+                    {
+                        struct MenuItem *item = ItemAddress(win->MenuStrip,
+                                                            mc);
+                        if (!item)
+                            break;
+                        done |= MenuAction((ULONG)GTMENUITEM_USERDATA(item));
+                        mc = item->NextSelect;
+                    }
+                    break;
+                }
 
                 case WMHI_VANILLAKEY:
                     key = ToLower(result & WMHI_KEYMASK);

@@ -12,7 +12,7 @@
 struct LocaleBase *LocaleBase;
 static struct Catalog *catalog;
 
-#define S(id, n, s) s,
+#define S(id, n, s) [n] = s,     /* retired IDs leave gaps (NULL) */
 static const char *const builtin[] = { AA_STRINGS };
 #undef S
 
@@ -41,7 +41,8 @@ void FreeStrings(void)
 
 const char *GetString(LONG id)
 {
-    const char *s = (id >= 0 && id < AA_NUM_STRINGS) ? builtin[id] : "";
+    const char *s = (id >= 0 && id < AA_NUM_STRINGS && builtin[id]) ?
+                    builtin[id] : "";
 
     if (catalog)
         s = (const char *)GetCatalogStr(catalog, id, (CONST_STRPTR)s);
