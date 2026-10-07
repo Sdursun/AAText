@@ -20,7 +20,8 @@ Requirements
 ------------
 
 - AmigaOS 3.2 or newer (developed and tested on 3.2.3)
-- 68020 or better
+- 68020 or better; a 68030, 68040, 68060 or PiStorm is recommended
+  (see "Speed")
 - An RTG graphics system with cybergraphics.library, e.g. Picasso96
   (P96). Tested with WinUAE (UAEGFX) and PiStorm (Emu68).
 - TrueType or OpenType fonts installed with a font manager (e.g.
@@ -223,6 +224,27 @@ Limitations
   first line of text may appear unsmoothed.
 - Text drawn into hidden bitmaps is left alone unless "offscreen on" is
   set.
+
+
+Speed
+-----
+
+Smooth text costs processor time: every edge pixel of every letter is
+mixed with the background, which the system's own Text() never does.
+How much this matters depends on the CPU. Time to draw one line of 43
+characters:
+
+                                without AAText   with AAText
+  68020 at 14 MHz, Arial 13         2.4 ms          23 ms
+  68020 at 14 MHz, Arial 19         3.0 ms          42 ms
+  68040 (WinUAE JIT), Arial 13      0.03 ms         0.04 ms
+
+On a plain 68020 at 14 MHz with an RTG card, text appears noticeably
+slower (a window full of text takes about a second to redraw). This is
+the price of antialiasing on that CPU; such systems are rare today. On
+a 68030 or faster, and on PiStorm (Emu68), the difference is small to
+invisible. Bitmap fonts such as topaz are not drawn by AAText and keep
+their speed.
 
 
 Bug reports

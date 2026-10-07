@@ -21,7 +21,8 @@ Gereksinimler
 -------------
 
 - AmigaOS 3.2 veya üstü (3.2.3 üzerinde geliştirildi ve denendi)
-- 68020 veya üstü işlemci
+- 68020 veya üstü işlemci; 68030, 68040, 68060 ya da PiStorm önerilir
+  ("Hız" bölümüne bakın)
 - cybergraphics.library sunan bir RTG sistemi, örneğin Picasso96 (P96).
   WinUAE (UAEGFX) ve PiStorm (Emu68) ile denendi.
 - Bir font yöneticisiyle (ör. ttf.library ya da FTManager ile
@@ -233,6 +234,27 @@ Sınırlamalar
   yumuşatılmamış görünebilir.
 - Gizli bitmap'lere çizilen yazılara, "offscreen on" ayarlanmadıkça
   dokunulmaz.
+
+
+Hız
+---
+
+Yumuşak yazı işlemci zamanı ister: her harfin her kenar pikseli arka
+planla karıştırılır; sistemin kendi Text() fonksiyonu bunu hiç yapmaz.
+Bunun ne kadar hissedildiği işlemciye bağlıdır. 43 karakterlik bir
+satırı çizme süresi:
+
+                                AAText olmadan   AAText ile
+  14 MHz 68020, Arial 13            2,4 ms          23 ms
+  14 MHz 68020, Arial 19            3,0 ms          42 ms
+  68040 (WinUAE JIT), Arial 13      0,03 ms         0,04 ms
+
+RTG kartlı, hızlandırıcısız 14 MHz bir 68020'de yazılar belirgin
+şekilde yavaş çizilir (yazıyla dolu bir pencerenin yeniden çizilmesi
+yaklaşık bir saniye sürer). Bu, o işlemcide yumuşatmanın bedelidir;
+böyle sistemler bugün nadirdir. 68030 ve üstünde, PiStorm'da (Emu68)
+fark küçüktür ya da hiç hissedilmez. topaz gibi bitmap fontları AAText
+çizmez, onların hızı değişmez.
 
 
 Hata bildirimi

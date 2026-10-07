@@ -69,28 +69,30 @@ hiçbir şey çalıştırılmadı.
       satırındaki `<EMAIL>` doldurulmalı.
 - [ ] Sosyal medya ve GitHub Issues'tan gelen geri bildirimleri toplamak.
 
-### 3. Performans — ölçüm sürüyor
-`tests/textbench.c` bir satırı 2000 kez çizip süreyi ölçer.
+### 3. Performans — 68020 ölçüldü, karar verildi
+`tests/textbench.c` bir satırı (43 karakter) defalarca çizip süreyi ölçer;
+debug sürümü bir çağrının süresini hazırlık / okuma / karışım / yazma
+olarak ayırır.
 
-İlk sonuçlar, WinUAE (68040 JIT, UAEGFX, 1024×768×32):
-
-| Font | AAText kapalı | AAText açık |
+| Sistem, font | AAText kapalı | AAText açık |
 |---|---|---|
-| Arial 13 | 32 µs/satır | 40 µs/satır |
-| Arial 19 | 38 µs/satır | 63 µs/satır |
-| topaz 8 (bitmap) | 7 µs/satır | 8 µs/satır |
+| WinUAE 68040 JIT, Arial 13 | 0,03 ms | 0,04 ms |
+| 14 MHz 68020 (WinUAE, JIT yok), Arial 13 | 2,4 ms | 23 ms (önce 26,4) |
+| 14 MHz 68020, Arial 19 | 3,0 ms | 42 ms (önce 48) |
+| 14 MHz 68020, topaz 8 (çizilmiyor) | 0,95 ms | 1,19 ms (önce 1,29) |
 
-WinUAE'de işlemci ve ekran kartı PC hızında çalıştığı için bu sonuç
-gerçek donanım için belirleyici değil. Eksik ölçümler:
-- [ ] PiStorm/Emu68 (A1200).
-- [ ] Gerçek 68020 hızı: test WinUAE'si JIT kapalı, 68020 ayarıyla
-      (kullanıcı izni bekleniyor).
+Yapılanlar (0.12): renk başına karışım tabloları (çarpmasız), font arama
+önbelleği, harf satırlarında çarpmasız adresleme. 68020'de bir çağrının
+kalan süresi: karışım ~14 ms (piksel sayısının kendisi), okuma+yazma
+~11 ms.
 
-Olası iyileştirmeler (ölçüm gerektirirse):
-- `ReadPixelArray`/`WritePixelArray` yerine `LockBitMapTagList()` ile
-  ekran belleğine doğrudan erişim: kopyalamalar ortadan kalkar.
-- Kopyalanan alanı küçültmek: sadece harflerin gerçekten kapladığı
-  dikey aralık.
+**Karar:** Hızlandırıcısız 14 MHz 68020 + RTG artık çok nadir; oradaki
+yavaşlık yumuşatmanın bedeli olarak kabul edildi ve belgelere ("Hız"
+bölümü) yazıldı. 68030+ ve PiStorm öneriliyor.
+- [ ] PiStorm/Emu68 ölçümü (A1200) — sonuç kötü çıkarsa aşağıdaki iş.
+- Gerekirse: `LockBitMapTagList()` ile ekran belleğine doğrudan erişim
+  (sadece örtülmemiş pencerelerde, bilinen piksel biçimlerinde); okuma ve
+  yazmanın çoğunu kaldırır, 68020'de Arial 13 için tahminen 23 → 12–14 ms.
 
 **Ayrı 68040 sürümü gerekmiyor.** Emu68 komutları JIT ile ARM'a çeviriyor;
 AAText FPU'yu sadece açılışta kullanıyor.
@@ -132,7 +134,7 @@ AAText FPU'yu sadece açılışta kullanıyor.
 
 ## Önerilen sıra
 
-1. A1200 testleri (madde 1) ve performans ölçümü (madde 3).
+1. A1200 testleri (madde 1), PiStorm ölçümü dahil (madde 3).
 2. Yayın (madde 2).
 3. Geri bildirim toplamak; gerçek hatalar her zaman yeni özelliklerden
    önce gelir.
