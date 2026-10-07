@@ -169,3 +169,14 @@ catalogs: $(CATALOG)
 $(CATALOG): catalogs/turkish.ct src/prefsgui/strings.h tools/mkcatalog.pl
 	@mkdir -p $(dir $@)
 	perl tools/mkcatalog.pl src/prefsgui/strings.h catalogs/turkish.ct $@
+
+# GlowIcon for AATextPrefs, from the PNG art in icons/
+ICON := build/icons/AATextPrefs.info
+
+.PHONY: icons
+icons: $(ICON)
+
+$(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
+	@mkdir -p $(dir $@)
+	python3 -I tools/mkicon.py tool icons/AATextPrefs.png \
+		icons/AATextPrefs_sel.png -o $@
