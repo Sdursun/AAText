@@ -55,6 +55,7 @@ FT_SRCS := $(FT_DIR)/src/base/ftinit.c \
            $(FT_DIR)/src/sfnt/sfnt.c \
            $(FT_DIR)/src/truetype/truetype.c \
            $(FT_DIR)/src/smooth/smooth.c \
+           $(FT_DIR)/src/autofit/autofit.c \
            src/ft/aa_ftsystem.c
 FT_OBJS := $(addprefix $(BUILDDIR)/ft/,$(notdir $(FT_SRCS:.c=.o)))
 FT_LIB  := $(BUILDDIR)/libft.a

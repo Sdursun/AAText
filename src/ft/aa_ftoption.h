@@ -25,4 +25,8 @@
 #undef TT_CONFIG_OPTION_GX_VAR_SUPPORT
 #undef TT_CONFIG_OPTION_BDF
 
+/* autohinter: Amiga code pages are Latin/Greek/Cyrillic only */
+#undef AF_CONFIG_OPTION_CJK
+#undef AF_CONFIG_OPTION_INDIC
+
 #endif

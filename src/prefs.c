@@ -6,6 +6,7 @@
  *   "Some Font"    16  ->  "FONTS:My Fonts/x.ttf"
  *   gamma   0.8
  *   charset latin1 | latin5
+ *   hinting none | light | normal | full
  *   cache 256                (glyph cache size in KB)
  *   blacklist FinalWriter TypeSmith
  *   offscreen on | off
@@ -181,6 +182,20 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
             PrefsError(lineno, "charset must be latin1 or latin5");
         return;
     }
+    if (StrIEq(tok[0], "hinting"))
+    {
+        if (n == 2 && StrIEq(tok[1], "normal"))
+            prefs->hinting = AA_HINT_NORMAL;
+        else if (n == 2 && StrIEq(tok[1], "none"))
+            prefs->hinting = AA_HINT_NONE;
+        else if (n == 2 && StrIEq(tok[1], "light"))
+            prefs->hinting = AA_HINT_LIGHT;
+        else if (n == 2 && StrIEq(tok[1], "full"))
+            prefs->hinting = AA_HINT_FULL;
+        else
+            PrefsError(lineno, "hinting must be none, light, normal or full");
+        return;
+    }
     if (StrIEq(tok[0], "cache"))
     {
         LONG kb = n == 2 ? ParseUInt(tok[1]) : -1;
@@ -305,6 +320,7 @@ BOOL aa_ReadPrefs(struct AAPrefs *prefs, const char *path, BOOL report)
     prefs->nummaps = 0;
     prefs->gamma100 = 80;       /* user tested, looks best at 0.8 */
     prefs->charset = AA_CHARSET_LATIN1;
+    prefs->hinting = AA_HINT_NORMAL;
     prefs->offscreen = FALSE;
     prefs->autodetect = TRUE;
     prefs->autoreal = FALSE;

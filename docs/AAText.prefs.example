@@ -23,6 +23,13 @@
 # Lower values make text thinner and crisper, higher values bolder.
 #gamma 0.8
 
+# How letters are fitted to the pixel grid (default normal):
+#   none    no hinting: smoothest, closest to the font's design
+#   light   vertical alignment only (FreeType autohinter): soft but clean
+#   normal  the font's own TrueType hints (modern interpreter)
+#   full    classic full TrueType hinting: crispest, most "pixel-like"
+#hinting normal
+
 # Glyph cache size in KB (32 - 16384, default 256). Least recently used
 # glyphs are dropped when it is full.
 #cache 256

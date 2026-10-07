@@ -16,6 +16,14 @@ enum
     AA_CHARSET_LATIN5           /* ISO-8859-9, Turkish */
 };
 
+enum
+{
+    AA_HINT_NORMAL = 0,         /* font's own TrueType hints, v40 (default) */
+    AA_HINT_NONE,               /* no hinting: smoothest, true to design */
+    AA_HINT_LIGHT,              /* FreeType autohinter, vertical only */
+    AA_HINT_FULL                /* classic TrueType hinting, v35: crisp */
+};
+
 /* One "bitmapfont size -> ttf [pixelsize]" line. */
 struct AAMapping
 {
@@ -32,6 +40,7 @@ struct AAPrefs
     UWORD nummaps;
     UWORD gamma100;                 /* gamma * 100, default 80 */
     UBYTE charset;
+    UBYTE hinting;                  /* AA_HINT_... */
     BOOL  offscreen;                /* use Workbench colours for bitmaps
                                        that belong to no screen */
     BOOL  autodetect;               /* find TTFs of outline fonts via

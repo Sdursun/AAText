@@ -100,6 +100,14 @@ setting per line; lines starting with # are comments.
                     their character cells, since the Shell and editors
                     position text by them.
 
+  hinting normal    How letters are fitted to the pixel grid:
+                    none   - no hinting: smoothest, closest to the
+                             font's design
+                    light  - vertical alignment only: soft but clean
+                    normal - the font's own hints (default)
+                    full   - classic full hinting: crispest, most
+                             "pixel-like"
+
   blacklist Name    Programs AAText must not touch, e.g.
                     "blacklist FinalWriter TypeSmith". Use the program
                     name as shown by the Workbench or the Shell command

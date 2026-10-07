@@ -31,6 +31,7 @@
 #include FT_MODULE_H
 #include FT_ADVANCES_H
 #include FT_SIZES_H
+#include FT_DRIVER_H
 
 /* src/ft/aa_ftsystem.c (internal FreeType API, not in public headers) */
 FT_Memory FT_New_Memory(void);
@@ -93,6 +94,14 @@ static volatile LONG aa_NumNames;
 static UBYTE aa_Charset;
 static BOOL aa_AutoDetect;
 static BOOL aa_AutoReal;
+static UBYTE aa_Hinting;
+
+/*
+ * FT_Load_Glyph() flags for every glyph load - rendering, real metrics
+ * tables and size selection alike, so measured and drawn widths agree.
+ * Set from the "hinting" preference in aa_GlyphsInit().
+ */
+static FT_Int32 aa_LoadFlags = FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP;
 static struct Task *aa_HelperTask;
 static ULONG aa_HelperSig;
 
@@ -267,9 +276,37 @@ static LONG InitLibraryOnStack(APTR arg)
 {
     FT_Error err = FT_New_Library(aa_FTMemory, &aa_FTLib);
 
-    if (!err)
-        FT_Add_Default_Modules(aa_FTLib);
-    return err;
+    if (err)
+        return err;
+    FT_Add_Default_Modules(aa_FTLib);
+
+    switch (aa_Hinting)
+    {
+        case AA_HINT_NONE:
+            aa_LoadFlags = FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP;
+            break;
+
+        case AA_HINT_LIGHT:
+            /* autofit module: vertical-only hinting, any font */
+            aa_LoadFlags = FT_LOAD_TARGET_LIGHT | FT_LOAD_FORCE_AUTOHINT |
+                           FT_LOAD_NO_BITMAP;
+            break;
+
+        case AA_HINT_FULL:
+        {
+            /* classic TrueType bytecode interpreter: full grid fitting */
+            FT_UInt v35 = TT_INTERPRETER_VERSION_35;
+
+            FT_Property_Set(aa_FTLib, "truetype", "interpreter-version", &v35);
+            aa_LoadFlags = FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP;
+            break;
+        }
+
+        default:    /* AA_HINT_NORMAL: v40 interpreter, FreeType's default */
+            aa_LoadFlags = FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP;
+            break;
+    }
+    return 0;
 }
 
 static LONG OpenFaceOnStack(APTR arg)
@@ -380,6 +417,7 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     aa_Charset = prefs->charset;
     aa_AutoDetect = prefs->autodetect;
     aa_AutoReal = prefs->autoreal;
+    aa_Hinting = prefs->hinting;
 
     for (i = 0; i < 256; i++)
         aa_GammaLUT[i] = (UBYTE)(pow(i / 255.0, 1.0 / gamma) * 255.0 + 0.5);
@@ -855,7 +893,7 @@ static LONG CapPixelSize(FT_Face face, LONG capheight)
         LONG p = px + tries[i], h, err;
 
         if (p < 4 || FT_Set_Pixel_Sizes(face, 0, p) ||
-            FT_Load_Glyph(face, gi, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP) ||
+            FT_Load_Glyph(face, gi, aa_LoadFlags) ||
             FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
             continue;
         h = SolidRows(&face->glyph->bitmap);
@@ -930,7 +968,7 @@ static LONG PrepareOnStack(APTR arg)
             FT_UInt gi = FT_Get_Char_Index(face, ToUnicode(font->face, c));
             FT_Glyph_Metrics *gm = &face->glyph->metrics;
 
-            if (FT_Load_Glyph(face, gi, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP))
+            if (FT_Load_Glyph(face, gi, aa_LoadFlags))
             {
                 font->adv[c] = font->inkl[c] = font->inkr[c] = 0;
                 continue;
@@ -961,7 +999,7 @@ static LONG PrepareOnStack(APTR arg)
             FT_UInt gi = FT_Get_Char_Index(face, 'H');
             LONG ftcap = 0;
 
-            if (gi && !FT_Load_Glyph(face, gi, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP))
+            if (gi && !FT_Load_Glyph(face, gi, aa_LoadFlags))
                 ftcap = (face->glyph->metrics.horiBearingY + 32) >> 6;
             kprintf("AAText: font %s/%ld: baseline=%ld measured=%ld "
                     "(offset %ld), cap height bitmap=%ld TrueType=%ld\n",
@@ -1024,7 +1062,7 @@ static LONG RenderOnStack(APTR arg)
     if (!gi && r->code > ' ')
         stat_missing++;
 #endif
-    if (FT_Load_Glyph(face, gi, FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP) ||
+    if (FT_Load_Glyph(face, gi, aa_LoadFlags) ||
         FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL))
         return FALSE;
 

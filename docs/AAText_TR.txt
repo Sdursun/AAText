@@ -106,6 +106,14 @@ düz bir metin dosyasıdır; # ile başlayan satırlar açıklamadır.
                     hücrelerini korur, çünkü Shell ve editörler yazıyı
                     bu hücrelere göre yerleştirir.
 
+  hinting normal    Harflerin piksel ızgarasına nasıl oturtulacağı:
+                    none   - hinting yok: en yumuşak, fontun
+                             tasarımına en sadık
+                    light  - sadece dikey hizalama: yumuşak ama net
+                    normal - fontun kendi hinting bilgisi (varsayılan)
+                    full   - klasik tam hinting: en keskin, en
+                             "piksel gibi"
+
   blacklist Ad      AAText'in dokunmayacağı programlar, ör.
                     "blacklist FinalWriter TypeSmith". Workbench'te
                     görünen program adını ya da Shell komut adını
