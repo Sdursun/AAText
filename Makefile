@@ -122,9 +122,16 @@ dist:
 	$(MAKE) CPU=68020 DEBUG=0
 	$(MAKE) CPU=68060 DEBUG=0
 	$(MAKE) CPU=68020 DEBUG=1
+	$(MAKE) CPU=68020 DEBUG=0 gui catalogs icons
 	rm -rf $(DISTDIR)
 	mkdir -p $(DISTDIR)/AAText
 	cp build/68020/AAText $(DISTDIR)/AAText/AAText
+	cp build/68020/AATextPrefs $(ICON) $(DISTDIR)/AAText/
+	# catalog directory "türkçe": UTF-8 here, lha stores it as Latin-1,
+	# where ü and ç have the same codes as in ISO-8859-9 on the Amiga
+	d="$(DISTDIR)/AAText/Catalogs/türkçe"; \
+		mkdir -p "$$d" && cp $(CATALOG) "$$d/" && chmod 644 "$$d/aatextprefs.catalog"
+	chmod 644 $(DISTDIR)/AAText/AATextPrefs.info
 	cp build/68060/AAText $(DISTDIR)/AAText/AAText.060
 	cp build/68020-debug/AAText $(DISTDIR)/AAText/AAText.debug
 	cp docs/AAText_EN.txt docs/AAText.prefs.example $(DISTDIR)/AAText/
@@ -135,8 +142,10 @@ dist:
 	iconv -f UTF-8 -t ISO-8859-9 docs/AAText_TR.txt > $(DISTDIR)/AAText/AAText_TR.txt
 	cp docs/AAText.readme $(DISTDIR)/AAText.readme
 	chmod 644 $(DISTDIR)/AAText/*.txt $(DISTDIR)/AAText/*.example $(DISTDIR)/AAText.readme
-	chmod 755 $(DISTDIR)/AAText/AAText $(DISTDIR)/AAText/AAText.060 $(DISTDIR)/AAText/AAText.debug
-	cd $(DISTDIR) && lha ao5 AAText.lha AAText
+	chmod 755 $(DISTDIR)/AAText/AAText $(DISTDIR)/AAText/AAText.060 $(DISTDIR)/AAText/AAText.debug \
+		$(DISTDIR)/AAText/AATextPrefs
+	cd $(DISTDIR) && lha ao5 --system-kanji-code=utf8 --archive-kanji-code=latin1 \
+		AAText.lha AAText
 	@ls -l $(DISTDIR)
 
 # Preferences program (ReAction); objects in their own directory because
