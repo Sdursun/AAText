@@ -99,6 +99,30 @@ static UBYTE aa_Charset;
 static BOOL aa_AutoDetect;
 static BOOL aa_AutoReal;
 static BOOL aa_Kerning = TRUE;        /* fixed while AAText runs, like real */
+
+/*
+ * aa_FindFont() runs for every Text() call, also for fonts AAText leaves
+ * alone, and compares names against all fonts and detected names. This
+ * cache remembers recent answers. aa_FontGen changes whenever an answer
+ * could change (font added, name resolved, settings, font failed); an
+ * entry from another generation is ignored. The full font name is
+ * compared, since a closed TextFont's memory may be reused for another
+ * font. Entries are read and written inside Forbid(), Text() runs on
+ * any task.
+ */
+#define AA_LOOKUP_SLOTS 8
+#define AA_LOOKUP_NAME  64
+
+static volatile ULONG aa_FontGen = 1;
+
+static struct
+{
+    struct TextFont *tf;
+    ULONG  gen;
+    UWORD  ysize;
+    struct AAFont *font;        /* NULL: AAText leaves this font alone */
+    char   name[AA_LOOKUP_NAME];
+} aa_Lookup[AA_LOOKUP_SLOTS];
 static UBYTE aa_Hinting;
 
 /*
@@ -447,6 +471,7 @@ static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
     f->kern = NULL;
     f->yoffset = 0;
     aa_NumFonts++;          /* publish after the entry is complete */
+    aa_FontGen++;
     return f;
 }
 
@@ -549,6 +574,7 @@ static LONG ResetFontsOnStack(APTR arg)
         f->ftsize = NULL;
         f->failed = FALSE;
     }
+    aa_FontGen++;
     return 0;
 }
 
@@ -575,6 +601,7 @@ void aa_GlyphsReconfigure(const struct AAPrefs *prefs)
     aa_Charset = prefs->charset;
     aa_AutoDetect = prefs->autodetect;
     aa_CacheLimit = prefs->cachekb * 1024;
+    aa_FontGen++;
     aa_Hinting = prefs->hinting;
     if (aa_FTLib)
     {
@@ -787,6 +814,7 @@ LONG aa_ResolvePending(BOOL report)
             continue;
         n->face = ResolveName(n, report);
         n->state = n->face ? NAME_READY : NAME_NONE;
+        aa_FontGen++;
         done++;
     }
     return done;
@@ -796,15 +824,89 @@ LONG aa_ResolvePending(BOOL report)
 /* Text() path                                                         */
 /* ------------------------------------------------------------------ */
 
+static LONG LookupSlot(const struct TextFont *tf)
+{
+    return ((ULONG)tf >> 4) & (AA_LOOKUP_SLOTS - 1);
+}
+
+/* TRUE with *font set if the cache knows the answer for tf. */
+static BOOL LookupCached(struct TextFont *tf, const char *fontname,
+                         struct AAFont **font)
+{
+    LONG s = LookupSlot(tf), i;
+    BOOL hit = FALSE;
+
+    Forbid();
+    if (aa_Lookup[s].tf == tf && aa_Lookup[s].gen == aa_FontGen &&
+        aa_Lookup[s].ysize == tf->tf_YSize)
+    {
+        const char *a = aa_Lookup[s].name;
+
+        for (i = 0; a[i] && a[i] == fontname[i]; i++)
+            ;
+        if (!a[i] && !fontname[i])
+        {
+            *font = aa_Lookup[s].font;
+            hit = TRUE;
+        }
+    }
+    Permit();
+    if (hit && *font && (*font)->failed)
+        *font = NULL;
+    return hit;
+}
+
+static void LookupStore(struct TextFont *tf, const char *fontname, ULONG gen,
+                        struct AAFont *font)
+{
+    LONG s = LookupSlot(tf), i;
+
+    for (i = 0; fontname[i]; i++)
+        if (i == AA_LOOKUP_NAME - 1)
+            return;                 /* too long to remember */
+    Forbid();
+    aa_Lookup[s].tf = tf;
+    aa_Lookup[s].gen = gen;
+    aa_Lookup[s].ysize = tf->tf_YSize;
+    aa_Lookup[s].font = font;
+    for (i = 0; (aa_Lookup[s].name[i] = fontname[i]); i++)
+        ;
+    Permit();
+}
+
+static struct AAFont *FindFontUncached(struct TextFont *tf,
+                                       const char *fontname, BOOL *final);
+
 struct AAFont *aa_FindFont(struct TextFont *tf)
 {
     const char *fontname = tf->tf_Message.mn_Node.ln_Name;
+    struct AAFont *font;
+    ULONG gen;
+    BOOL final;
+
+    if (!fontname)
+        return NULL;
+    if (LookupCached(tf, fontname, &font))
+        return font;
+    gen = aa_FontGen;               /* before looking: a change voids it */
+    font = FindFontUncached(tf, fontname, &final);
+    if (final)
+        LookupStore(tf, fontname, gen, font);
+    return font;
+}
+
+/*
+ * The real lookup. *final is FALSE while the answer may still change
+ * without aa_FontGen changing, i.e. while the name is being detected.
+ */
+static struct AAFont *FindFontUncached(struct TextFont *tf,
+                                       const char *fontname, BOOL *final)
+{
     char base[AA_NAME_LEN];
     struct AAFont *font = NULL;
     LONG i, n;
 
-    if (!fontname)
-        return NULL;
+    *final = TRUE;
     BaseName(fontname, base);
 
     n = aa_NumFonts;
@@ -823,10 +925,14 @@ struct AAFont *aa_FindFont(struct TextFont *tf)
     if (i < 0)
     {
         aa_RequestFont(fontname);
+        *final = FALSE;
         return NULL;
     }
     if (aa_Names[i].state != NAME_READY)
+    {
+        *final = aa_Names[i].state == NAME_NONE;
         return NULL;
+    }
 
     /* detected face, first time in this size: add an entry */
     ObtainSemaphore(&aa_GlyphSem);
@@ -1344,7 +1450,10 @@ BOOL aa_PrepareFont(struct AAFont *font, struct TextFont *tf)
     if (RunOnRenderStack(PrepareOnStack, &r))
         font->prepared = TRUE;
     else
+    {
         font->failed = TRUE;
+        aa_FontGen++;           /* aa_FindFont() answers change */
+    }
     return font->prepared;
 }
 
@@ -1455,11 +1564,18 @@ struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code)
 #ifdef DEBUG
             stat_hits++;
 #endif
-            /* most recently used goes to the front */
+            /* most recently used goes to the front (inline: this runs
+               for every character drawn, library calls cost too much) */
             if ((struct MinNode *)g != aa_LRU.mlh_Head)
             {
-                Remove((struct Node *)&g->lru);
-                AddHead((struct List *)&aa_LRU, (struct Node *)&g->lru);
+                struct MinNode *n = &g->lru;
+
+                n->mln_Pred->mln_Succ = n->mln_Succ;
+                n->mln_Succ->mln_Pred = n->mln_Pred;
+                n->mln_Succ = aa_LRU.mlh_Head;
+                n->mln_Pred = (struct MinNode *)&aa_LRU.mlh_Head;
+                aa_LRU.mlh_Head->mln_Pred = n;
+                aa_LRU.mlh_Head = n;
             }
             return g;
         }

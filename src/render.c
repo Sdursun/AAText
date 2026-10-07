@@ -103,6 +103,35 @@ static ULONG stat_declined, stat_declinedticks;
 #endif
 
 /*
+ * Blending without multiplications (they are slow on a 68020): for one
+ * text colour, t[c][l][v] is background value v of channel c covered
+ * to level l of AA_LEVELS by the colour. Coverage is quantised to
+ * AA_LEVELS steps (aa_Level[]). The last AA_BLEND_SLOTS colours are
+ * kept; a new colour costs one table (built with additions only).
+ * Used with the glyph lock held.
+ */
+#define AA_LEVELS       32
+#define AA_BLEND_SLOTS  4
+
+struct AABlend
+{
+    ULONG key;                              /* 0x00RRGGBB, ~0 = unused */
+    UBYTE t[3][AA_LEVELS + 1][256];
+};
+
+static struct AABlend *aa_Blend[AA_BLEND_SLOTS];
+static LONG aa_BlendNext;
+static UBYTE aa_Level[256];
+
+static void InitLevels(void)
+{
+    LONG a;
+
+    for (a = 0; a < 256; a++)
+        aa_Level[a] = (a * AA_LEVELS + 127) / 255;
+}
+
+/*
  * Blacklist and offscreen option. Text() reads them without a lock, so
  * they are replaced inside Forbid(): no task can run halfway through.
  */
@@ -126,6 +155,7 @@ BOOL aa_RenderInit(const struct AAPrefs *prefs)
     LONG i;
 
     aa_RenderReconfigure(prefs);
+    InitLevels();
 
 #ifdef DEBUG
     if (!OpenDevice((CONST_STRPTR)TIMERNAME, UNIT_ECLOCK,
@@ -166,6 +196,12 @@ void aa_RenderCleanup(void)
         if (aa_ChipBuffers[i])
             FreeVec(aa_ChipBuffers[i]);
         aa_ChipBuffers[i] = NULL;
+    }
+    for (i = 0; i < AA_BLEND_SLOTS; i++)
+    {
+        if (aa_Blend[i])
+            FreeVec(aa_Blend[i]);
+        aa_Blend[i] = NULL;
     }
 #ifdef DEBUG
     if (aa_TimerOpen)
@@ -445,12 +481,87 @@ static inline LONG ItalicShift(LONG row, LONG italicbase)
  * the glyph bitmap relative to the buffer; pixels outside are clipped.
  * italicbase is the baseline row for italic shearing, or -1.
  */
+/* Blend table for colour fg, or NULL (no memory: blend directly). */
+static const struct AABlend *BlendFor(const UBYTE *fg)
+{
+    ULONG key = ((ULONG)fg[0] << 16) | ((ULONG)fg[1] << 8) | fg[2];
+    struct AABlend *b;
+    LONG i, c, v, l;
+
+    for (i = 0; i < AA_BLEND_SLOTS; i++)
+        if (aa_Blend[i] && aa_Blend[i]->key == key)
+            return aa_Blend[i];
+
+    i = aa_BlendNext;
+    aa_BlendNext = (aa_BlendNext + 1) % AA_BLEND_SLOTS;
+    if (!aa_Blend[i])
+        aa_Blend[i] = AllocVec(sizeof(struct AABlend), MEMF_ANY);
+    b = aa_Blend[i];
+    if (!b)
+        return NULL;
+
+    for (c = 0; c < 3; c++)
+    {
+        for (v = 0; v < 256; v++)
+        {
+            LONG diff = fg[c] - v, acc = 0;
+
+            /* v + diff * l / AA_LEVELS, as a running sum */
+            for (l = 0; l <= AA_LEVELS; l++, acc += diff)
+                b->t[c][l][v] = v + (acc >> 5);
+        }
+    }
+    b->key = key;
+    return b;
+}
+
 static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
-                       LONG gx, LONG gy, const UBYTE *fg, LONG italicbase)
+                       LONG gx, LONG gy, const UBYTE *fg,
+                       const struct AABlend *bt, LONG italicbase)
 {
     LONG y0 = 0, y1 = g->rows;
     LONG x, y;
     LONG fr = fg[0], fgc = fg[1], fb = fg[2];
+
+    if (bt)
+    {
+        const UBYTE (*tr)[256] = bt->t[0];
+        const UBYTE (*tg)[256] = bt->t[1];
+        const UBYTE (*tb)[256] = bt->t[2];
+        LONG stride = w * 3, gw = g->width;
+        const UBYTE *srow;
+        UBYTE *drow;
+
+        if (gy < 0)
+            y0 = -gy;
+        if (gy + y1 > h)
+            y1 = h - gy;
+        if (y0 >= y1)
+            return;
+        /* rows advance by additions: multiplications are slow on 68020 */
+        srow = g->data + y0 * gw;
+        drow = buf + (gy + y0) * stride;
+        for (y = y0; y < y1; y++, srow += gw, drow += stride)
+        {
+            LONG rx = gx + ItalicShift(gy + y, italicbase);
+            LONG x0 = rx < 0 ? -rx : 0;
+            LONG x1 = rx + gw > w ? w - rx : gw;
+            const UBYTE *src = srow + x0;
+            UBYTE *dst = drow + (rx + x0) * 3;
+
+            for (x = x0; x < x1; x++, dst += 3)
+            {
+                LONG l = aa_Level[*src++];
+
+                if (l == 0)
+                    continue;
+                dst[0] = tr[l][dst[0]];
+                dst[1] = tg[l][dst[1]];
+                dst[2] = tb[l][dst[2]];
+            }
+        }
+        return;
+    }
 
     if (gy < 0)
         y0 = -gy;
@@ -493,7 +604,7 @@ static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
  */
 static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
                        struct AAFont *font, CONST_STRPTR s, LONG count,
-                       const UBYTE *fg)
+                       const UBYTE *fg, const struct AABlend *bt)
 {
     struct TextFont *tf = rp->Font;
     WORD *kern = (WORD *)tf->tf_CharKern;
@@ -517,7 +628,7 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
             LONG gx = pen + g->left + (cell - g->advance) / 2;
             LONG gy = baseline + 1 - g->top;  /* see AAGlyph.top */
 
-            BlendGlyph(buf, w, h, g, gx, gy, fg, -1);
+            BlendGlyph(buf, w, h, g, gx, gy, fg, bt, -1);
         }
         pen += cell + rp->TxSpacing;
     }
@@ -598,7 +709,8 @@ static void LineBits(UBYTE *tmpl, LONG bpr, LONG w, LONG y, LONG x0, LONG x1)
  */
 static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
                      struct RastPort *rp, struct AAFont *font,
-                     CONST_STRPTR s, LONG count, LONG ox, const UBYTE *fg)
+                     CONST_STRPTR s, LONG count, LONG ox, const UBYTE *fg,
+                     const struct AABlend *bt)
 {
     struct TextFont *tf = rp->Font;
     UBYTE style = rp->AlgoStyle;
@@ -624,9 +736,10 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
 
             if (rgb)
             {
-                BlendGlyph(rgb, w, h, g, gx, gy, fg, italicbase);
+                BlendGlyph(rgb, w, h, g, gx, gy, fg, bt, italicbase);
                 if (smear)
-                    BlendGlyph(rgb, w, h, g, gx + smear, gy, fg, italicbase);
+                    BlendGlyph(rgb, w, h, g, gx + smear, gy, fg, bt,
+                               italicbase);
             }
             else
             {
@@ -881,7 +994,8 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
                                    x, y, w, h, RECTFMT_RGB);
 
             aa_LockGlyphs();
-            DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, fg);
+            DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, fg,
+                     BlendFor(fg));
             aa_UnlockGlyphs();
 
             cgx_WritePixelArray(CyberGfxBase, buf, 0, 0, w * 3, rp,
@@ -903,7 +1017,8 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
         memset(tmpl, 0, bpr * h);
 
         aa_LockGlyphs();
-        DrawReal(NULL, tmpl, bpr, w, h, rp, font, string, count, ox, NULL);
+        DrawReal(NULL, tmpl, bpr, w, h, rp, font, string, count, ox, NULL,
+                 NULL);
         aa_UnlockGlyphs();
 
         BltTemplate((PLANEPTR)tmpl, 0, bpr, rp, x, y, w, h);
@@ -1021,7 +1136,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     if (font)
     {
         aa_LockGlyphs();
-        DrawString(buf, w, h, rp, font, string, count, fg);
+        DrawString(buf, w, h, rp, font, string, count, fg, BlendFor(fg));
         aa_UnlockGlyphs();
     }
     else
