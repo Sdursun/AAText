@@ -17,8 +17,8 @@
 
 static const char *const managed[] =
 {
-    "gamma", "hinting", "real", "cache", "offscreen", "auto", "charset",
-    "blacklist", NULL
+    "gamma", "hinting", "real", "kerning", "cache", "offscreen", "auto",
+    "charset", "blacklist", NULL
 };
 
 static int ToLower(int c)
@@ -139,6 +139,8 @@ BOOL aa_WritePrefs(const struct AAPrefs *prefs, const char *path,
     sprintf(line, "hinting %s\n", hint[prefs->hinting < 4 ? prefs->hinting : 0]);
     ok &= Put(out, line);
     sprintf(line, "real %s\n", prefs->autoreal ? "on" : "off");
+    ok &= Put(out, line);
+    sprintf(line, "kerning %s\n", prefs->kerning ? "on" : "off");
     ok &= Put(out, line);
     sprintf(line, "cache %ld\n", (long)prefs->cachekb);
     ok &= Put(out, line);

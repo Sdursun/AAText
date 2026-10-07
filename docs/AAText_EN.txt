@@ -100,7 +100,7 @@ while you try it out.
   Use     keeps them until the next reboot (ENV: only)
   Cancel  returns AAText to the settings it had before
 
-  Appearance  gamma, hinting, real character widths, preview
+  Appearance  gamma, hinting, real character widths, kerning, preview
   Programs    the programs AAText leaves alone (blacklist): type a
               name, choose the program file with "Choose...", or pick
               one from "Add a running program...". The program need
@@ -112,8 +112,8 @@ while you try it out.
 The menus offer Open..., Save As..., Reset To Defaults, Last Saved and
 Restore, like the system's Prefs programs.
 
-"Real character widths" takes effect when AAText is restarted; all
-other settings change at once. Comments and font mappings in the
+"Real character widths" and "Kerning" take effect when AAText is
+restarted; all other settings change at once. Comments and font mappings in the
 settings file are kept when AATextPrefs saves it (mappings are edited
 in the file only).
 
@@ -142,6 +142,13 @@ It is a plain text file with one setting per line; lines starting with
                     Fixed-width fonts (e.g. the Shell font) always keep
                     their character cells, since the Shell and editors
                     position text by them.
+
+  kerning on        With "real on": move letter pairs such as AV, To or
+                    Ye closer together, as the font specifies (default
+                    on). Uses the font's "kern" table; fonts that keep
+                    their kerning only in a GPOS table (e.g. Tahoma) are
+                    not kerned. Applies within one piece of text drawn at
+                    once. Like "real", it changes when AAText restarts.
 
   hinting normal    How letters are fitted to the pixel grid:
                     none   - no hinting: smoothest, closest to the
@@ -238,6 +245,8 @@ History
       settings from it while running.
       ENV:ftcodepage is read again when the settings change, so a new
       code page works without restarting AAText.
+      Pair kerning with real metrics ("kerning on", default): letter
+      pairs such as AV or To move closer, as the font's kern table says.
 
 0.11  OpenType fonts with PostScript (CFF) outlines, e.g. installed
       with freetype2.library and FTManager. ENV:ftcodepage is honoured

@@ -92,7 +92,7 @@ enum
     GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
     GID_AUTO, GID_OFFSCREEN, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
-    GID_FTCODEPAGE, GID_PICKFILE,
+    GID_FTCODEPAGE, GID_PICKFILE, GID_KERNING,
     GID_COUNT
 };
 
@@ -186,7 +186,7 @@ static void CloseLibs(void)
 /* Tab page of a gadget (0-2), -1 for the gadgets outside the pages. */
 static LONG PageOf(LONG gid)
 {
-    if (gid >= GID_GAMMA && gid <= GID_FONTINFO)
+    if ((gid >= GID_GAMMA && gid <= GID_FONTINFO) || gid == GID_KERNING)
         return 0;
     if ((gid >= GID_BLACKLIST && gid <= GID_RUNNING) || gid == GID_PICKFILE)
         return 1;
@@ -228,7 +228,8 @@ static void SetGad2(LONG gid, Tag tag1, ULONG data1, Tag tag2, ULONG data2)
         return;
     }
     SetGadgetAttrsA(gads[gid], win, NULL, tags);
-    if (gid == GID_REAL || gid == GID_AUTO || gid == GID_OFFSCREEN)
+    if (gid == GID_REAL || gid == GID_KERNING || gid == GID_AUTO ||
+        gid == GID_OFFSCREEN)
     {
         /* checkbox.gadget does not redraw itself on GA_Selected; erase
            first, or its (antialiased) label is drawn over itself */
@@ -395,6 +396,8 @@ static void ReadGadgets(void)
         cur.hinting = hint_order[v & 3];
     if (GetAttr(GA_Selected, (Object *)gads[GID_REAL], &v))
         cur.autoreal = v != 0;
+    if (GetAttr(GA_Selected, (Object *)gads[GID_KERNING], &v))
+        cur.kerning = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_AUTO], &v))
         cur.autodetect = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_OFFSCREEN], &v))
@@ -445,6 +448,7 @@ static void LiveApply(void)
         return;
     CopyMem(&cur, &p, sizeof(p));
     p.autoreal = before.autoreal;
+    p.kerning = before.kerning;
     Send(AACMD_APPLY, &p);
     if (!running)
     {
@@ -1011,6 +1015,12 @@ static Object *AppearancePage(void)
             GA_Text, (ULONG)GetString(MSG_REAL),
             GA_Selected, cur.autoreal,
         End,
+        LAYOUT_AddChild, gads[GID_KERNING] = (struct Gadget *)CheckBoxObject,
+            GA_ID, GID_KERNING,
+            GA_RelVerify, TRUE,
+            GA_Text, (ULONG)GetString(MSG_KERNING),
+            GA_Selected, cur.kerning,
+        End,
         LAYOUT_AddImage, LabelObject,
             LABEL_Text, (ULONG)GetString(MSG_REAL_NOTE),
         End,
@@ -1166,6 +1176,7 @@ static BOOL Action(ULONG id)
             break;
 
         case GID_REAL:
+        case GID_KERNING:
             ReadGadgets();
             break;
 
@@ -1255,6 +1266,7 @@ static void ShowPrefs(void)
     SetGad(GID_GAMMA, SLIDER_Level, GammaLevel(cur.gamma100));
     SetGad(GID_HINTING, CHOOSER_Selected, HintIndex(cur.hinting));
     SetGad(GID_REAL, GA_Selected, cur.autoreal);
+    SetGad(GID_KERNING, GA_Selected, cur.kerning);
     SetGad(GID_AUTO, GA_Selected, cur.autodetect);
     SetGad(GID_OFFSCREEN, GA_Selected, cur.offscreen);
     SetGad(GID_CACHE, INTEGER_Number, cur.cachekb);

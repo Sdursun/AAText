@@ -34,7 +34,7 @@
     S(MSG_STATUS_RUNNING,   20, "%s is running.") \
     S(MSG_STATUS_STOPPED,   21, "AAText is not running: settings are only saved.") \
     S(MSG_RESTART_TITLE,    23, "AAText Preferences") \
-    S(MSG_RESTART_TEXT,     24, "Real character widths change when AAText\nis restarted (e.g. at the next reboot).") \
+    S(MSG_RESTART_TEXT,     24, "Real character widths and kerning change when\nAAText is restarted (e.g. at the next reboot).") \
     S(MSG_OK,               25, "OK") \
     S(MSG_WRITE_ERROR,      26, "Cannot write %s.") \
     S(MSG_STATUS_TESTED,    27, "Changes are shown live - Save or Use keeps them.") \
@@ -72,7 +72,8 @@
     S(MSG_MENU_RESTORE,     59, "Restore") \
     S(MSG_OPEN_TITLE,       60, "Open AAText preferences") \
     S(MSG_SAVEAS_TITLE,     61, "Save AAText preferences as") \
-    S(MSG_READ_ERROR,       62, "Cannot read %s.")
+    S(MSG_READ_ERROR,       62, "Cannot read %s.") \
+    S(MSG_KERNING,          63, "Kerning (with real widths)")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

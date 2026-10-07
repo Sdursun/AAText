@@ -46,6 +46,7 @@ struct AAPrefs
     BOOL  autodetect;               /* find TTFs of outline fonts via
                                        their .otag files (default on) */
     BOOL  autoreal;                 /* real metrics for detected fonts */
+    BOOL  kerning;                  /* pair kerning in real metrics mode */
     ULONG cachekb;                  /* glyph cache size in KB */
     char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];
     UWORD numblack;

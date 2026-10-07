@@ -65,7 +65,40 @@ struct AAFont
     WORD  *adv;
     WORD  *inkl;
     WORD  *inkr;
+    /*
+     * Pair kerning in real metrics mode, from the font's 'kern' table;
+     * NULL without kerning. Same rules as adv: filled by aa_PrepareFont(),
+     * read without a lock.
+     */
+    struct AAKern *kern;
 };
+
+#define AA_MAX_KERN 4096        /* kerning pairs per font and size */
+
+/* Kerning pairs between character codes, in pixels (non-zero only). */
+struct AAKern
+{
+    UWORD first[257];           /* pairs of left code c: first[c]..first[c+1] */
+    struct { UBYTE right; BYTE px; } pair[AA_MAX_KERN];  /* sorted by right */
+};
+
+/* Kerning between character codes a and b, in pixels. */
+static inline LONG aa_KernPair(const struct AAFont *font, UBYTE a, UBYTE b)
+{
+    const struct AAKern *k = font->kern;
+    LONG i, end;
+
+    if (!k)
+        return 0;
+    for (i = k->first[a], end = k->first[a + 1]; i < end; i++)
+    {
+        if (k->pair[i].right == b)
+            return k->pair[i].px;
+        if (k->pair[i].right > b)
+            break;
+    }
+    return 0;
+}
 
 /*
  * Does this font use real metrics? Only proportional fonts do: programs

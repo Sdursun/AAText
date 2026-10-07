@@ -18,7 +18,7 @@
 
 #define AA_PORTNAME     "AAText"
 #define AAMSG_MAGIC     0x41415458UL        /* 'AATX' */
-#define AAMSG_VERSION   1
+#define AAMSG_VERSION   2       /* 2: AAPrefs.kerning (0.12) */
 
 enum
 {

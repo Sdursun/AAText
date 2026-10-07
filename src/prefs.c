@@ -12,6 +12,7 @@
  *   offscreen on | off
  *   auto on | off            (detect TrueType fonts via .otag, default on)
  *   real on | off            (real metrics for detected fonts, default off)
+ *   kerning on | off         (pair kerning in real metrics mode, default on)
  */
 
 #include <exec/types.h>
@@ -206,10 +207,12 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
             prefs->cachekb = kb;
         return;
     }
-    if (StrIEq(tok[0], "auto") || StrIEq(tok[0], "real"))
+    if (StrIEq(tok[0], "auto") || StrIEq(tok[0], "real") ||
+        StrIEq(tok[0], "kerning"))
     {
-        BOOL *flag = StrIEq(tok[0], "auto") ? &prefs->autodetect
-                                            : &prefs->autoreal;
+        BOOL *flag = StrIEq(tok[0], "auto") ? &prefs->autodetect :
+                     StrIEq(tok[0], "real") ? &prefs->autoreal :
+                                              &prefs->kerning;
 
         if (n == 2 && StrIEq(tok[1], "on"))
             *flag = TRUE;
@@ -319,6 +322,7 @@ void aa_DefaultPrefs(struct AAPrefs *prefs)
     prefs->offscreen = FALSE;
     prefs->autodetect = TRUE;
     prefs->autoreal = FALSE;
+    prefs->kerning = TRUE;
     prefs->cachekb = AA_DEFAULT_CACHE_KB;
     prefs->numblack = 0;
 }

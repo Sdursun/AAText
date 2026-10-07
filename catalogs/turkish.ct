@@ -50,7 +50,7 @@ AAText çalışmıyor: ayarlar sadece kaydedilir.
 MSG_RESTART_TITLE
 AAText Tercihleri
 MSG_RESTART_TEXT
-Gerçek harf genişlikleri AAText yeniden\nbaşlatılınca (ör. sonraki açılışta) değişir.
+Gerçek harf genişlikleri ve kerning AAText yeniden\nbaşlatılınca (ör. sonraki açılışta) değişir.
 MSG_OK
 Tamam
 MSG_WRITE_ERROR
@@ -127,3 +127,5 @@ MSG_SAVEAS_TITLE
 AAText ayarlarını farklı kaydet
 MSG_READ_ERROR
 %s okunamadı.
+MSG_KERNING
+Kerning (gerçek genişliklerle)

@@ -33,6 +33,8 @@
 #include FT_ADVANCES_H
 #include FT_SIZES_H
 #include FT_DRIVER_H
+#include FT_TRUETYPE_TABLES_H
+#include FT_TRUETYPE_TAGS_H
 
 /* src/ft/aa_ftsystem.c (internal FreeType API, not in public headers) */
 FT_Memory FT_New_Memory(void);
@@ -96,6 +98,7 @@ static volatile LONG aa_NumNames;
 static UBYTE aa_Charset;
 static BOOL aa_AutoDetect;
 static BOOL aa_AutoReal;
+static BOOL aa_Kerning = TRUE;        /* fixed while AAText runs, like real */
 static UBYTE aa_Hinting;
 
 /*
@@ -441,6 +444,7 @@ static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
     f->prepared = FALSE;
     f->failed = FALSE;
     f->adv = f->inkl = f->inkr = NULL;
+    f->kern = NULL;
     f->yoffset = 0;
     aa_NumFonts++;          /* publish after the entry is complete */
     return f;
@@ -469,6 +473,7 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     aa_Charset = prefs->charset;
     aa_AutoDetect = prefs->autodetect;
     aa_AutoReal = prefs->autoreal;
+    aa_Kerning = prefs->kerning;
     aa_Hinting = prefs->hinting;
 
     aa_HaveEnvCodePage = ReadEnvCodePage(aa_EnvCodePage);
@@ -625,6 +630,9 @@ void aa_GlyphsCleanup(void)
         if (aa_Fonts[i].adv)
             FreeVec(aa_Fonts[i].adv);       /* inkl/inkr share it */
         aa_Fonts[i].adv = NULL;
+        if (aa_Fonts[i].kern)
+            FreeVec(aa_Fonts[i].kern);
+        aa_Fonts[i].kern = NULL;
     }
     aa_NumFaces = aa_NumFonts = aa_NumNames = 0;
 
@@ -1037,6 +1045,174 @@ static LONG CapPixelSize(FT_Face face, LONG capheight)
     return best;
 }
 
+#define KU16(p) ((UWORD)(((p)[0] << 8) | (p)[1]))
+
+/* The codes whose glyph is gi: [*lo, *hi) in the (glyph, code) list. */
+static void CodesOfGlyph(const ULONG *map, LONG n, UWORD gi,
+                         LONG *lo, LONG *hi)
+{
+    LONG a = 0, b = n;
+
+    while (a < b)               /* first entry with glyph >= gi */
+    {
+        LONG m = (a + b) >> 1;
+
+        if ((map[m] >> 8) < gi)
+            a = m + 1;
+        else
+            b = m;
+    }
+    *lo = a;
+    while (a < n && (map[a] >> 8) == gi)
+        a++;
+    *hi = a;
+}
+
+/*
+ * One pass over the format 0 subtables of the 'kern' table: count
+ * (fill == FALSE) or store (fill == TRUE) every pair between our
+ * character codes whose kerning is not 0 pixels at this size.
+ */
+static void KernPass(struct AAKern *k, const UBYTE *t, ULONG len,
+                     const ULONG *map, LONG nmap, FT_Fixed scale,
+                     UWORD *count, BOOL fill)
+{
+    ULONG off = 4;
+    LONG nt = len >= 4 ? KU16(t + 2) : 0;
+
+    while (nt-- > 0 && off + 14 <= len)
+    {
+        const UBYTE *st = t + off;
+        ULONG stlen = KU16(st + 2);
+        UWORD cov = KU16(st + 4);
+        LONG npairs, i;
+
+        if (stlen < 14 || off + stlen > len)
+            break;
+        off += stlen;
+        /* format 0, horizontal, no minimum or cross-stream values */
+        if ((cov >> 8) != 0 || (cov & 7) != 1)
+            continue;
+        npairs = KU16(st + 6);
+        if ((ULONG)(14 + npairs * 6) > stlen)
+            npairs = (stlen - 14) / 6;
+
+        for (i = 0; i < npairs; i++)
+        {
+            const UBYTE *p = st + 14 + i * 6;
+            LONG v = (WORD)KU16(p + 4);
+            LONG px = (FT_MulFix(v, scale) + 32) >> 6;
+            LONG l0, l1, r0, r1, l, r;
+
+            if (px == 0)
+                continue;
+            if (px < -128)
+                px = -128;
+            if (px > 127)
+                px = 127;
+            CodesOfGlyph(map, nmap, KU16(p), &l0, &l1);
+            if (l0 == l1)
+                continue;
+            CodesOfGlyph(map, nmap, KU16(p + 2), &r0, &r1);
+            for (l = l0; l < l1; l++)
+            {
+                UBYTE lc = map[l] & 0xFF;
+
+                for (r = r0; r < r1; r++)
+                {
+                    if (!fill)
+                        count[lc]++;
+                    else if (count[lc] < k->first[lc + 1])
+                    {
+                        k->pair[count[lc]].right = map[r] & 0xFF;
+                        k->pair[count[lc]].px = px;
+                        count[lc]++;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*
+ * Pair kerning for real metrics mode from the 'kern' table (GPOS
+ * kerning would need a shaping engine). gidx: glyph of each code.
+ * Measuring may read font->kern meanwhile, so the table is filled in
+ * place and every index stays within AA_MAX_KERN. Render stack.
+ */
+static void BuildKerning(struct AAFont *font, FT_Face face,
+                         const UWORD *gidx)
+{
+    struct AAKern *k = font->kern;
+    UWORD count[256];
+    ULONG map[256];
+    FT_ULong len = 0;
+    UBYTE *t;
+    LONG n = 0, i, j, total;
+
+    if (FT_Load_Sfnt_Table(face, TTAG_kern, 0, NULL, &len) || len < 4)
+        return;
+    t = AllocVec(len, MEMF_ANY);
+    if (!t)
+        return;
+    if (FT_Load_Sfnt_Table(face, TTAG_kern, 0, t, &len) || KU16(t) != 0)
+        goto out;               /* only the version 0 (Microsoft) table */
+    if (!k && !(k = AllocVec(sizeof(*k), MEMF_ANY | MEMF_CLEAR)))
+        goto out;
+
+    /* (glyph << 8 | code), sorted by glyph, for the glyph -> codes lookup */
+    for (i = 0; i < 256; i++)
+    {
+        ULONG e;
+
+        if (!gidx[i])
+            continue;
+        e = ((ULONG)gidx[i] << 8) | i;
+        for (j = n; j > 0 && map[j - 1] > e; j--)
+            map[j] = map[j - 1];
+        map[j] = e;
+        n++;
+    }
+
+    /* count the pairs per left code, then lay out the table */
+    memset(count, 0, sizeof(count));
+    KernPass(k, t, len, map, n, face->size->metrics.x_scale, count, FALSE);
+    for (i = 0, total = 0; i < 256; i++)
+    {
+        LONG c = count[i];
+
+        if (total + c > AA_MAX_KERN)
+            c = AA_MAX_KERN - total;        /* the rest is dropped */
+        k->first[i] = total;
+        count[i] = total;                   /* fill position */
+        total += c;
+    }
+    k->first[256] = total;
+    KernPass(k, t, len, map, n, face->size->metrics.x_scale, count, TRUE);
+
+    /* sort each left code's pairs by right code for aa_KernPair() */
+    for (i = 0; i < 256; i++)
+    {
+        LONG a, b;
+
+        for (a = k->first[i] + 1; a < k->first[i + 1]; a++)
+        {
+            UBYTE r = k->pair[a].right;
+            BYTE px = k->pair[a].px;
+
+            for (b = a; b > k->first[i] && k->pair[b - 1].right > r; b--)
+                k->pair[b] = k->pair[b - 1];
+            k->pair[b].right = r;
+            k->pair[b].px = px;
+        }
+    }
+    font->kern = k;
+    D(("AAText: %s %ld: %ld kerning pairs\n", (ULONG)font->name,
+       (LONG)font->ysize, total));
+out:
+    FreeVec(t);
+}
+
 static LONG PrepareOnStack(APTR arg)
 {
     struct PrepareReq *r = arg;
@@ -1093,11 +1269,14 @@ static LONG PrepareOnStack(APTR arg)
             font->inkl = font->adv + 256;
             font->inkr = font->adv + 512;
         }
+        UWORD gidx[256];
+
         for (c = 0; c < 256; c++)
         {
             FT_UInt gi = FT_Get_Char_Index(face, ToUnicode(font->face, c));
             FT_Glyph_Metrics *gm = &face->glyph->metrics;
 
+            gidx[c] = gi;
             if (FT_Load_Glyph(face, gi, aa_LoadFlags))
             {
                 font->adv[c] = font->inkl[c] = font->inkr[c] = 0;
@@ -1107,6 +1286,8 @@ static LONG PrepareOnStack(APTR arg)
             font->inkl[c] = gm->horiBearingX >> 6;
             font->inkr[c] = (gm->horiBearingX + gm->width + 63) >> 6;
         }
+        if (aa_Kerning && FT_HAS_KERNING(face))
+            BuildKerning(font, face, gidx);
     }
 
     /*

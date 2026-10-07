@@ -291,7 +291,8 @@ int main(int argc, char **argv)
         m.algostyle = 0;
 
         for (k = 0; k < len; k++)
-            sum += font->adv[text[k]];
+            sum += font->adv[text[k]] +
+                   (k > 0 ? aa_KernPair(font, text[k - 1], text[k]) : 0);
         aa_MExtent(&m, text, len, &te);
         printf("length %ld, sum %ld, extent w=%d h=%d x %d..%d y %d..%d -> %s\n",
                (long)aa_MLength(&m, text, len), (long)sum, te.te_Width,
@@ -329,6 +330,68 @@ int main(int argc, char **argv)
             printf("fit, too low: %lu -> %s\n", (unsigned long)n,
                    n == 0 ? "OK" : "FAIL");
             fails += n != 0;
+        }
+
+        /*
+         * Kerning: pairs that kern in most fonts. Length, extent and both
+         * fit directions must all include it; with "kerning off" there
+         * are no pairs at all.
+         */
+        {
+            static const char *const pairs[] = { "AV", "To", "Ye", "Wa", "LT" };
+            LONG kerned = 0, total = font->kern ? font->kern->first[256] : 0;
+            int i;
+
+            printf("kerning: %ld pairs, setting %s\n", (long)total,
+                   prefs.kerning ? "on" : "off");
+            if (!prefs.kerning && total)
+            {
+                printf("kerning off but pairs loaded -> FAIL\n");
+                fails++;
+            }
+            for (i = 0; i < 5; i++)
+            {
+                const UBYTE *p = (const UBYTE *)pairs[i];
+                LONG kp = aa_KernPair(font, p[0], p[1]);
+                LONG want = font->adv[p[0]] + font->adv[p[1]] + kp;
+                LONG l = aa_MLength(&m, p, 2);
+                ULONG nf, nb;
+                struct TextExtent pe, ff, bf;
+
+                aa_MExtent(&m, p, 2, &pe);
+                nf = aa_MFit(&m, p, 2, &ff, NULL, 1, 10000, m.ysize);
+                nb = aa_MFit(&m, p + 1, 2, &bf, NULL, -1, 10000, m.ysize);
+                kerned += kp != 0;
+                printf("  %s: kern %ld, length %ld, extent w %d, fit %d/%d "
+                       "-> %s\n", pairs[i], (long)kp, (long)l, pe.te_Width,
+                       ff.te_Width, bf.te_Width,
+                       (l == want && pe.te_Width == want && nf == 2 &&
+                        nb == 2 && ff.te_Width == want &&
+                        bf.te_Width == want) ? "OK" : "FAIL");
+                fails += !(l == want && pe.te_Width == want && nf == 2 &&
+                           nb == 2 && ff.te_Width == want &&
+                           bf.te_Width == want);
+            }
+            if (prefs.kerning && !kerned)
+            {
+                printf("kerning on but none of the pairs kerns -> FAIL\n");
+                fails++;
+            }
+        }
+
+        /* whole text, both directions: fit width == length */
+        {
+            ULONG nf = aa_MFit(&m, text, len, &fe, NULL, 1, 10000, m.ysize);
+            LONG fw = fe.te_Width;
+            ULONG nb = aa_MFit(&m, text + len - 1, len, &fe, NULL, -1,
+                               10000, m.ysize);
+
+            printf("fit both ways: %ld / %d, length %ld -> %s\n", (long)fw,
+                   fe.te_Width, (long)sum,
+                   (nf == (ULONG)len && nb == (ULONG)len && fw == sum &&
+                    fe.te_Width == sum) ? "OK" : "FAIL");
+            fails += !(nf == (ULONG)len && nb == (ULONG)len && fw == sum &&
+                       fe.te_Width == sum);
         }
 
         m.algostyle = FSF_BOLD | FSF_ITALIC;

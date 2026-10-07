@@ -108,15 +108,15 @@ static int Controller(BOOL reload, BOOL status)
         if (m->result == AARES_NOFILE)
             Msg("AAText: cannot read the prefs file.\n");
         else if (m->result == AARES_RESTART)
-            Msg("AAText: settings applied; real metrics and font mappings "
-                "change when AAText is restarted.\n");
+            Msg("AAText: settings applied; real metrics, kerning and font "
+                "mappings change when AAText is restarted.\n");
         else
             Msg("AAText: settings applied.\n");
         aa_FreeReply(m);
     }
     if (status)
     {
-        LONG args[12];
+        LONG args[13];
 
         m = aa_SendCommand(AACMD_STATUS, NULL, NULL, 250);
         if (!ReplyOk(m))
@@ -132,12 +132,13 @@ static int Controller(BOOL reload, BOOL status)
                          m->active.hinting == AA_HINT_LIGHT ? "light" :
                          m->active.hinting == AA_HINT_FULL ? "full" : "normal");
         args[8] = (LONG)((m->flags & AASTAT_MEASURING) ? "on" : "off");
-        args[9] = m->cacheglyphs;
-        args[10] = m->cachebytes / 1024;
-        args[11] = m->active.cachekb;
+        args[9] = (LONG)(m->active.kerning ? "on" : "off");
+        args[10] = m->cacheglyphs;
+        args[11] = m->cachebytes / 1024;
+        args[12] = m->active.cachekb;
         MsgFmt("%s%s\n"
                "  fonts: %ld file(s), %ld font size(s), auto detection %s\n"
-               "  gamma %ld.%02ld, hinting %s, real metrics %s\n"
+               "  gamma %ld.%02ld, hinting %s, real metrics %s, kerning %s\n"
                "  glyph cache: %ld glyphs, %ld of %ld KB\n", args);
         aa_FreeReply(m);
     }
@@ -167,22 +168,25 @@ static BOOL MappingsDiffer(const struct AAPrefs *a, const struct AAPrefs *b)
 }
 
 /*
- * Apply new settings. Real metrics and font mappings are fixed while
- * AAText runs (the measuring patches and font tables depend on them);
- * they keep their values and AARES_RESTART tells the caller.
+ * Apply new settings. Real metrics, kerning and font mappings are fixed
+ * while AAText runs (the measuring patches, text widths and font tables
+ * depend on them); they keep their values and AARES_RESTART tells the
+ * caller.
  */
 static LONG ApplyPrefs(const struct AAPrefs *np)
 {
-    LONG result = (np->autoreal != prefs.autoreal || MappingsDiffer(np, &prefs))
-                  ? AARES_RESTART : AARES_OK;
+    LONG result = (np->autoreal != prefs.autoreal ||
+                   np->kerning != prefs.kerning ||
+                   MappingsDiffer(np, &prefs)) ? AARES_RESTART : AARES_OK;
     UWORD nummaps = prefs.nummaps;
-    BOOL autoreal = prefs.autoreal;
+    BOOL autoreal = prefs.autoreal, kerning = prefs.kerning;
 
     if (np != &newprefs)
         CopyMem((APTR)np, &newprefs, sizeof(newprefs));
     CopyMem(prefs.map, newprefs.map, sizeof(prefs.map));
     newprefs.nummaps = nummaps;
     newprefs.autoreal = autoreal;
+    newprefs.kerning = kerning;
     CopyMem(&newprefs, &prefs, sizeof(prefs));
 
     aa_GlyphsReconfigure(&prefs);

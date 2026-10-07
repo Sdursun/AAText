@@ -21,7 +21,7 @@ sadece yerel commit'lerde. Yayın kararı verilmedi.
 | 0.9 | Yazının dikey konumu bitmap fontla aynı; `real on` boyutu büyük harf yüksekliğine göre |
 | 0.10 | Sabit genişlikli fontlar her zaman hücrelerini korur (Shell sorunu) |
 | 0.11 | OpenType/CFF (`.otf`) desteği; `ENV:ftcodepage`; `hinting none \| light \| normal \| full` |
-| 0.12 | Ayar programı **AATextPrefs** (aşağıda); `ENV:ftcodepage` canlı yeniden okunur; `RELOAD`/`STATUS` |
+| 0.12 | Ayar programı **AATextPrefs** (aşağıda); real modda kerning; `ENV:ftcodepage` canlı yeniden okunur; `RELOAD`/`STATUS` |
 
 ### AATextPrefs (0.12)
 - ReAction, üç sekme: Görünüm, Programlar, Gelişmiş.
@@ -71,13 +71,13 @@ Olası iyileştirmeler (ölçüm gerektirirse):
 AAText FPU'yu sadece açılışta kullanıyor; asıl zaman büyük olasılıkla ekran
 belleği kopyalamasında geçiyor.
 
-### 3. Gerçek ölçü modunda kerning — orta
-- TTF'in harf çifti aralıklarının (ör. "AV", "To", "Ye") uygulanması.
-- `TextLength`/`TextExtent`/`TextFit` de aynı aralıkları hesaba katmalı,
-  yoksa ölçüm ve çizim uyuşmaz.
-- Sadece `real on` modunda; güvenli modda harfler bitmap fontun
-  hücrelerinde kalmak zorunda.
-- Karar verilmedi: fark küçük fontlarda az görünür.
+### 3. Gerçek ölçü modunda kerning — **yapıldı (0.12)**
+- `kerning on|off` (real modda varsayılan açık), fontun `kern` tablosundan;
+  çizim ve `TextLength`/`TextExtent`/`TextFit` aynı değerleri kullanır.
+- Kalan sınır: kerning bilgisini sadece `GPOS` tablosunda tutan fontlar
+  (ör. Tahoma) kerning almaz; bunun için bir shaping motoru (HarfBuzz)
+  gerekirdi. Talep gelirse `GPOS` çift ayarlamaları (PairPos format 1/2)
+  elle okunabilir — orta iş.
 
 ### 4. Dock/gösterge yazıları — orta, sonucu belirsiz
 - Gizli (ekran dışı) bitmap'e yazan programlar `offscreen on` olmadan

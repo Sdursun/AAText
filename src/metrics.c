@@ -37,6 +37,10 @@
  *       aa_MLength(), aa_MExtent(), aa_MFit(); TextFit() measures each
  *       character with aa_MExtent() instead of calling TextExtent().
  *     - Ink extent only counted for characters with ink.
+ *
+ *   2026-10-07  Serkan Dursun
+ *     - Pair kerning (aa_KernPair()) between neighbouring characters in
+ *       all three functions, so they agree with what Text() draws.
  */
 
 #include <exec/types.h>
@@ -48,10 +52,14 @@
 LONG aa_MLength(const struct AAMetricsCtx *m, CONST_STRPTR s, LONG count)
 {
     const struct AAFont *f = m->font;
-    LONG w = 0;
+    LONG w = 0, i;
 
-    while (count-- > 0)
-        w += f->adv[*s++] + m->txspacing;
+    for (i = 0; i < count; i++)
+    {
+        if (i > 0)
+            w += aa_KernPair(f, s[i - 1], s[i]);
+        w += f->adv[s[i]] + m->txspacing;
+    }
     return w;
 }
 
@@ -60,6 +68,7 @@ void aa_MExtent(const struct AAMetricsCtx *m, CONST_STRPTR s, LONG count,
 {
     const struct AAFont *f = m->font;
     LONG x = 0, minx = 0, maxx = 0, n = count;
+    UBYTE prev = 0;
 
 #define CHECK_MINMAX(v) \
     do { if ((v) < minx) minx = (v); if ((v) > maxx) maxx = (v); } while (0)
@@ -67,6 +76,10 @@ void aa_MExtent(const struct AAMetricsCtx *m, CONST_STRPTR s, LONG count,
     while (count-- > 0)
     {
         UBYTE c = *s++;
+
+        if (count < n - 1)          /* not the first character */
+            x += aa_KernPair(f, prev, c);
+        prev = c;
 
         /* ink only counts if the glyph has any */
         if (f->inkr[c] > f->inkl[c])
@@ -105,6 +118,7 @@ ULONG aa_MFit(const struct AAMetricsCtx *m, CONST_STRPTR s, LONG len,
               LONG direction, LONG bitwidth, LONG bitheight)
 {
     ULONG fit = 0;
+    UBYTE prev = 0;
 
     if (len > 0 && bitheight >= m->ysize)
     {
@@ -125,14 +139,25 @@ ULONG aa_MFit(const struct AAMetricsCtx *m, CONST_STRPTR s, LONG len,
         while (ok && len-- > 0)
         {
             struct TextExtent ce;
-            LONG newwidth, minx, maxx, newminx, newmaxx;
+            LONG newwidth, minx, maxx, newminx, newmaxx, pos;
+            UBYTE c = *s;
 
             aa_MExtent(m, s, 1, &ce);
             s += direction;
 
-            newwidth = te->te_Width + ce.te_Width;
-            minx = te->te_Width + ce.te_Extent.MinX;
-            maxx = te->te_Width + ce.te_Extent.MaxX;
+            /*
+             * Kerning with the character measured before: it stands to
+             * the left of c going forward, to the right going backward.
+             */
+            pos = te->te_Width;
+            if (fit > 0)
+                pos += direction > 0 ? aa_KernPair(m->font, prev, c)
+                                     : aa_KernPair(m->font, c, prev);
+            prev = c;
+
+            newwidth = pos + ce.te_Width;
+            minx = pos + ce.te_Extent.MinX;
+            maxx = pos + ce.te_Extent.MaxX;
             newminx = minx < te->te_Extent.MinX ? minx : te->te_Extent.MinX;
             newmaxx = maxx > te->te_Extent.MaxX ? maxx : te->te_Extent.MaxX;
 

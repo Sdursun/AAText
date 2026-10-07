@@ -105,7 +105,8 @@ satırında görürsünüz.
   Kullan    ayarları bir sonraki açılışa kadar kullanır (sadece ENV:)
   İptal     AAText'i önceki ayarlarına döndürür
 
-  Görünüm     gamma, hinting, gerçek harf genişlikleri, önizleme
+  Görünüm     gamma, hinting, gerçek harf genişlikleri, kerning,
+              önizleme
   Programlar  AAText'in dokunmayacağı programlar (kara liste): adı
               yazın, program dosyasını "Seç..." ile seçin ya da
               "Çalışan bir program ekle..." listesinden alın. Programın
@@ -117,8 +118,8 @@ satırında görürsünüz.
 Menülerde, sistemin Prefs programlarındaki gibi Aç..., Farklı
 Kaydet..., Varsayılan Ayarlar, Son Kaydedilen ve Geri Al bulunur.
 
-"Gerçek harf genişlikleri" AAText yeniden başlatılınca geçerli olur;
-diğer bütün ayarlar hemen değişir. AATextPrefs ayar dosyasını
+"Gerçek harf genişlikleri" ve "Kerning" AAText yeniden başlatılınca
+geçerli olur; diğer bütün ayarlar hemen değişir. AATextPrefs ayar dosyasını
 kaydederken dosyadaki açıklamaları ve font eşlemelerini korur
 (eşlemeler sadece dosyada düzenlenir).
 
@@ -148,6 +149,14 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                     fontlar (ör. Shell fontu) her zaman karakter
                     hücrelerini korur, çünkü Shell ve editörler yazıyı
                     bu hücrelere göre yerleştirir.
+
+  kerning on        "real on" ile: AV, To, Ye gibi harf çiftlerini fontun
+                    belirttiği kadar birbirine yaklaştırır (varsayılan
+                    açık). Fontun "kern" tablosunu kullanır; kerning
+                    bilgisini sadece GPOS tablosunda tutan fontlar (ör.
+                    Tahoma) etkilenmez. Tek seferde çizilen bir yazı
+                    parçasının içinde uygulanır. "real" gibi, AAText
+                    yeniden başlatılınca değişir.
 
   hinting normal    Harflerin piksel ızgarasına nasıl oturtulacağı:
                     none   - hinting yok: en yumuşak, fontun
@@ -247,6 +256,9 @@ Geçmiş
       çalışırken ondan alır.
       ENV:ftcodepage ayarlar değişince yeniden okunur; yeni bir kod
       sayfası AAText yeniden başlatılmadan geçerli olur.
+      Gerçek ölçü modunda harf çifti kerning'i ("kerning on",
+      varsayılan): AV, To gibi çiftler fontun kern tablosuna göre
+      yaklaşır.
 
 0.11  PostScript (CFF) anahatlı OpenType fontlar, ör. freetype2.library
       ve FTManager ile kurulanlar. ENV:ftcodepage, freetype2.library'deki

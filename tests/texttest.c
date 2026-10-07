@@ -3,11 +3,13 @@
  * lines with Text() in the given font, for testing AAText with any font
  * without changing the system's font preferences.
  *
- *   texttest <name.font> <size> [seconds] [style]
+ *   texttest <name.font> <size> [seconds] [style] [text]
  *
  * style: optional letters b (bold), i (italic), u (underlined), applied
  * to the last line with SetSoftStyle(). The window closes after the
- * given number of seconds (default 10) or with its close gadget.
+ * given number of seconds (default 10) or with its close gadget. "text"
+ * replaces the first line. After each line, cp_x is checked against
+ * TextLength() and marked with a short line (pen 3).
  */
 
 #include <stdio.h>
@@ -93,14 +95,23 @@ int main(int argc, char **argv)
     y = win->BorderTop + 4 + tf->tf_Baseline;
     for (i = 0; i < 3; i++)
     {
-        const char *s = lines[i];
+        const char *s = (i == 0 && argc > 5) ? argv[5] : lines[i];
+        LONG x0 = win->BorderLeft + 8, tl;
 
         if (i == 2 && style)
             SetSoftStyle(rp, style, AskSoftStyle(rp));
-        Move(rp, win->BorderLeft + 8, y);
+        Move(rp, x0, y);
         Text(rp, (CONST_STRPTR)s, strlen(s));
-        if (TextLength(rp, (CONST_STRPTR)s, strlen(s)) > w)
-            w = TextLength(rp, (CONST_STRPTR)s, strlen(s));
+        tl = TextLength(rp, (CONST_STRPTR)s, strlen(s));
+        if (rp->cp_x != x0 + tl)
+            printf("line %d: cp_x moved %d, TextLength %ld\n", i + 1,
+                   rp->cp_x - (int)x0, (long)tl);
+        SetAPen(rp, 3);
+        Move(rp, rp->cp_x, y + 2);
+        Draw(rp, rp->cp_x, y + 4);
+        SetAPen(rp, 1);
+        if (tl > w)
+            w = tl;
         y += tf->tf_YSize + 6;
     }
     printf("%s %d: drawn, widest line %d pixels\n", argv[1], tf->tf_YSize, w);

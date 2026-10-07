@@ -599,12 +599,16 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
     LONG italicbase = (style & FSF_ITALIC) ? baseline : -1;
     LONG smear = (style & FSF_BOLD) ? (tf->tf_BoldSmear ? tf->tf_BoldSmear : 1)
                                     : 0;
-    LONG pen = ox;
+    LONG pen = ox, i;
 
-    while (count--)
+    for (i = 0; i < count; i++)
     {
-        UBYTE c = *s++;
-        struct AAGlyph *g = aa_GetGlyph(font, c);
+        UBYTE c = s[i];
+        struct AAGlyph *g;
+
+        if (i > 0)                  /* as aa_MExtent() measures it */
+            pen += aa_KernPair(font, s[i - 1], c);
+        g = aa_GetGlyph(font, c);
 
         if (g && g->width)
         {

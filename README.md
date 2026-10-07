@@ -19,7 +19,8 @@ and MUI programs — everything that draws text through `graphics.library`.
   patches cleanly when it quits.
 - **Safe metrics by default.** Letters keep the cells of the system's bitmap
   font, so no window layout changes. Optional real metrics mode (`real on`)
-  uses the TrueType widths and keeps all measuring functions consistent.
+  uses the TrueType widths and pair kerning and keeps all measuring functions
+  consistent.
 - **Preferences program.** AATextPrefs (English and Turkish) changes gamma,
   hinting, the program blacklist and the other settings with a live preview:
   a running AAText takes every change at once.

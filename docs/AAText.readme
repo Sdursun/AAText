@@ -28,8 +28,8 @@ Features
 - "Safe" metrics by default: letters keep the cells of the system's
   bitmap font, so no window layout changes
 - Optional real metrics mode ("real on"): the TrueType font's own
-  character widths, with TextLength/TextExtent/TextFit kept consistent;
-  bold, italic and underline styles supported
+  character widths and pair kerning, with TextLength/TextExtent/TextFit
+  kept consistent; bold, italic and underline styles supported
 - Does not replace any library: patches Text(), TextLength(),
   TextExtent() and TextFit() at run time and removes them cleanly;
   start it a second time (or "AAText QUIT") to switch it off

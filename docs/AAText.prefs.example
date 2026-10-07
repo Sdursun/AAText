@@ -19,6 +19,11 @@
 # Fixed-width fonts (Shell, editors) always keep their cells.
 #real on
 
+# Pair kerning with real metrics (default on): letter pairs such as AV,
+# To or Ye move closer, as the font's "kern" table says. Changes when
+# AAText is restarted.
+#kerning off
+
 # Gamma for the antialiasing edge (0.5 - 4.0, default 0.8).
 # Lower values make text thinner and crisper, higher values bolder.
 #gamma 0.8
