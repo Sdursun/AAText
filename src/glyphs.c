@@ -55,6 +55,7 @@ struct AAFace
     FT_Face face;
     LONG    facenum;
     BOOL    hascodepage;
+    BOOL    envpage;            /* .otag without one: ENV:ftcodepage */
     UWORD   codepage[256];      /* from the .otag: character -> Unicode */
 };
 
@@ -340,6 +341,28 @@ static LONG DoneLibraryOnStack(APTR arg)
  * Find or load a TrueType face. ot (may be NULL) supplies the code page.
  * Takes the glyph lock only around FreeType, never around file I/O.
  */
+/*
+ * Like freetype2.library: a detected font whose .otag has no code page
+ * uses ENV:ftcodepage when it is set. Called with aa_GlyphSem held.
+ */
+static void SetEnvCodePage(struct AAFace *f)
+{
+    if (!f->envpage)
+        return;
+    f->hascodepage = aa_HaveEnvCodePage;
+    if (aa_HaveEnvCodePage)
+        CopyMem(aa_EnvCodePage, f->codepage, sizeof(f->codepage));
+}
+
+/* Read ENV:ftcodepage into buf; TRUE if it is set and complete. */
+static BOOL ReadEnvCodePage(UWORD *buf)
+{
+    return GetVar((CONST_STRPTR)"ftcodepage", (STRPTR)buf,
+                  256 * sizeof(UWORD),
+                  LV_VAR | GVF_BINARY_VAR | GVF_DONT_NULL_TERM) ==
+           (LONG)(256 * sizeof(UWORD));
+}
+
 static struct AAFace *GetFace(const char *path, LONG facenum,
                               const struct AAOTagInfo *ot, BOOL report)
 {
@@ -361,15 +384,15 @@ static struct AAFace *GetFace(const char *path, LONG facenum,
     StrCopy(f->path, path, AA_PATH_LEN);
     f->facenum = facenum;
     f->face = NULL;
+    /* the semaphore: aa_GlyphsReconfigure() may replace the ENV table */
+    ObtainSemaphore(&aa_GlyphSem);
     f->hascodepage = ot && ot->hascodepage;
+    f->envpage = ot && !ot->hascodepage;
     if (f->hascodepage)
         CopyMem((APTR)ot->codepage, f->codepage, sizeof(f->codepage));
-    else if (ot && aa_HaveEnvCodePage)
-    {
-        /* like freetype2.library: no code page in the .otag -> ENV var */
-        CopyMem(aa_EnvCodePage, f->codepage, sizeof(f->codepage));
-        f->hascodepage = TRUE;
-    }
+    else
+        SetEnvCodePage(f);
+    ReleaseSemaphore(&aa_GlyphSem);
     f->data = ReadFile(path, AA_MAX_FONTFILE, &f->size);
     aa_NumFaces++;          /* failed loads are remembered too */
 
@@ -448,11 +471,7 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     aa_AutoReal = prefs->autoreal;
     aa_Hinting = prefs->hinting;
 
-    aa_HaveEnvCodePage =
-        GetVar((CONST_STRPTR)"ftcodepage", (STRPTR)aa_EnvCodePage,
-               sizeof(aa_EnvCodePage),
-               LV_VAR | GVF_BINARY_VAR | GVF_DONT_NULL_TERM) ==
-        (LONG)sizeof(aa_EnvCodePage);
+    aa_HaveEnvCodePage = ReadEnvCodePage(aa_EnvCodePage);
     D(("AAText: ENV:ftcodepage %s\n",
        (ULONG)(aa_HaveEnvCodePage ? "found" : "not set")));
 
@@ -531,11 +550,23 @@ static LONG ResetFontsOnStack(APTR arg)
 void aa_GlyphsReconfigure(const struct AAPrefs *prefs)
 {
     UBYTE lut[256];
+    UWORD *page = AllocVec(256 * sizeof(UWORD), MEMF_ANY);
+    BOOL havepage = page && ReadEnvCodePage(page);
+    LONG i;
 
     MakeGammaLUT(prefs->gamma100, lut);
 
     ObtainSemaphore(&aa_GlyphSem);
     CopyMem(lut, aa_GammaLUT, sizeof(lut));
+    /* ENV:ftcodepage may have been written since (AATextPrefs) */
+    if (page)
+    {
+        aa_HaveEnvCodePage = havepage;
+        if (havepage)
+            CopyMem(page, aa_EnvCodePage, sizeof(aa_EnvCodePage));
+        for (i = 0; i < aa_NumFaces; i++)
+            SetEnvCodePage(&aa_Faces[i]);
+    }
     aa_Charset = prefs->charset;
     aa_AutoDetect = prefs->autodetect;
     aa_CacheLimit = prefs->cachekb * 1024;
@@ -547,6 +578,8 @@ void aa_GlyphsReconfigure(const struct AAPrefs *prefs)
         RunOnRenderStack(ResetFontsOnStack, NULL);
     }
     ReleaseSemaphore(&aa_GlyphSem);
+    if (page)
+        FreeVec(page);
     D(("AAText: reconfigured: gamma %ld, hinting %ld, cache %ld KB\n",
        (LONG)prefs->gamma100, (LONG)prefs->hinting, prefs->cachekb));
 }

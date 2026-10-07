@@ -69,3 +69,41 @@ MSG_PREVIEW_FONT
 Ekran fontu: %s %ld
 MSG_PREVIEW_PLAIN
 Ekran fontu: %s %ld (AAText kapalı: düz yazı)
+MSG_PROGRAMS_INFO
+AAText bu programların yazılarına dokunmaz:
+MSG_PROGRAM
+Program
+MSG_ADD
+Ekle
+MSG_REMOVE
+Sil
+MSG_RUNNING
+Çalışan bir program ekle...
+MSG_LIST_FULL
+Liste dolu (%ld program).
+MSG_AUTODETECT
+TrueType fontlarını otomatik bul (.otag)
+MSG_CACHE
+Harf önbelleği (KB)
+MSG_CACHE_USED
+Kullanılan: %ld KB, %ld karakter
+MSG_OFFSCREEN
+Ekran dışı bitmap'lerde Workbench renkleri
+MSG_CHARSET
+Karakter seti
+MSG_CHARSET_LATIN1
+ISO-8859-1 (Batı Avrupa)
+MSG_CHARSET_LATIN5
+ISO-8859-9 (Türkçe)
+MSG_CHARSET_NOTE
+.otag'da ve ENV:ftcodepage'de kod sayfası olmayan fontlar için.
+MSG_FTCODEPAGE
+Türkçe ENV:ftcodepage yaz
+MSG_FTCODEPAGE_ASK
+ENV:ftcodepage zaten var.\nTürkçe kod sayfasıyla değiştirilsin mi?\n(freetype2.library de bunu kullanır.)
+MSG_REPLACE_CANCEL
+Değiştir|İptal
+MSG_FTCODEPAGE_DONE
+ENV:ftcodepage yazıldı (ENVARC: dahil).
+MSG_FTCODEPAGE_FAIL
+ENV:ftcodepage yazılamadı.

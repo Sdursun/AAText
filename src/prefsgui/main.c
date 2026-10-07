@@ -15,6 +15,9 @@
 #include <exec/types.h>
 #include <exec/memory.h>
 #include <dos/dos.h>
+#include <dos/dosextens.h>
+#include <dos/var.h>
+#include <exec/execbase.h>
 #include <intuition/intuition.h>
 #include <intuition/classusr.h>
 #include <intuition/gadgetclass.h>
@@ -37,6 +40,9 @@
 #include <proto/label.h>
 #include <proto/button.h>
 #include <proto/space.h>
+#include <proto/listbrowser.h>
+#include <proto/string.h>
+#include <proto/integer.h>
 
 #include <classes/window.h>
 #include <gadgets/layout.h>
@@ -46,6 +52,9 @@
 #include <gadgets/checkbox.h>
 #include <gadgets/button.h>
 #include <gadgets/space.h>
+#include <gadgets/listbrowser.h>
+#include <gadgets/string.h>
+#include <gadgets/integer.h>
 #include <images/label.h>
 #include <reaction/reaction_macros.h>
 #include <clib/alib_protos.h>
@@ -70,12 +79,15 @@ struct GfxBase *GfxBase;
 struct Library *UtilityBase, *DiskfontBase;
 struct Library *WindowBase, *LayoutBase, *ClickTabBase, *ChooserBase,
                *SliderBase, *CheckBoxBase, *LabelBase, *ButtonBase,
-               *SpaceBase;
+               *SpaceBase, *ListBrowserBase, *StringBase, *IntegerBase;
 
 enum
 {
     GID_TABS = 1, GID_GAMMA, GID_GAMMAVAL, GID_HINTING, GID_REAL,
     GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
+    GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
+    GID_AUTO, GID_OFFSCREEN, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
+    GID_FTCODEPAGE,
     GID_COUNT
 };
 
@@ -88,7 +100,7 @@ static const UBYTE hint_order[4] =
 static struct Gadget *gads[GID_COUNT];
 static Object *winobj;
 static struct Window *win;
-static struct List tablist, hintlist;
+static struct List tablist, hintlist, blacklb, runlist, charsetlist;
 
 static struct AAPrefs cur;      /* what the window shows */
 static struct AAPrefs before;   /* AAText's settings when we started */
@@ -97,6 +109,11 @@ static BOOL tested;             /* new settings were APPLYed to AAText */
 static char statustext[160];
 static char gammatext[8];
 static char fontinfo[80];
+static char cacheused[64];
+
+#define MAX_RUNNING 64
+static char runnames[MAX_RUNNING][AA_NAME_LEN];
+static LONG numrunning;
 
 static struct TextFont *previewfont;
 static struct Hook previewhook;
@@ -120,6 +137,9 @@ static BOOL OpenLibs(void)
         { &LabelBase,    "images/label.image" },
         { &ButtonBase,   "gadgets/button.gadget" },
         { &SpaceBase,    "gadgets/space.gadget" },
+        { &ListBrowserBase, "gadgets/listbrowser.gadget" },
+        { &StringBase,   "gadgets/string.gadget" },
+        { &IntegerBase,  "gadgets/integer.gadget" },
     };
     ULONG i;
 
@@ -140,7 +160,8 @@ static void CloseLibs(void)
 {
     struct Library **bases[] =
     {
-        &SpaceBase, &ButtonBase, &LabelBase, &CheckBoxBase, &SliderBase,
+        &IntegerBase, &StringBase, &ListBrowserBase, &SpaceBase,
+        &ButtonBase, &LabelBase, &CheckBoxBase, &SliderBase,
         &ChooserBase, &ClickTabBase, &LayoutBase, &WindowBase, &DiskfontBase,
         &UtilityBase, (struct Library **)&GfxBase,
         (struct Library **)&IntuitionBase
@@ -301,6 +322,33 @@ static void ReadGadgets(void)
         cur.hinting = hint_order[v & 3];
     if (GetAttr(GA_Selected, (Object *)gads[GID_REAL], &v))
         cur.autoreal = v != 0;
+    if (GetAttr(GA_Selected, (Object *)gads[GID_AUTO], &v))
+        cur.autodetect = v != 0;
+    if (GetAttr(GA_Selected, (Object *)gads[GID_OFFSCREEN], &v))
+        cur.offscreen = v != 0;
+    if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
+        cur.cachekb = v;
+    if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_CHARSET], &v))
+        cur.charset = v ? AA_CHARSET_LATIN5 : AA_CHARSET_LATIN1;
+}
+
+/* "In use: 5 KB, 52 characters" from AAText's STATUS */
+static void UpdateCacheUsed(void)
+{
+    struct AAMessage *m = NULL;
+
+    cacheused[0] = 0;
+    if (running)
+        m = aa_SendCommand(AACMD_STATUS, NULL, NULL, REPLY_TICKS);
+    if (m != AACLIENT_NOTRUNNING && m != AACLIENT_TIMEOUT)
+    {
+        snprintf(cacheused, sizeof(cacheused), GetString(MSG_CACHE_USED),
+                 (long)((m->cachebytes + 1023) / 1024), (long)m->cacheglyphs);
+        aa_FreeReply(m);
+    }
+    if (win)
+        SetGadgetAttrs(gads[GID_CACHEUSED], win, NULL,
+                       GA_Text, (ULONG)cacheused, TAG_DONE);
 }
 
 static void UpdateGammaText(void)
@@ -313,8 +361,8 @@ static void UpdateGammaText(void)
 }
 
 /*
- * Gamma or hinting changed: let AAText use it at once and redraw the
- * preview. Real widths need a restart, so AAText keeps its own value.
+ * A setting changed: let AAText use it at once and redraw the preview.
+ * Real widths need a restart, so AAText keeps its own value.
  */
 static void LiveApply(void)
 {
@@ -335,6 +383,295 @@ static void LiveApply(void)
     tested = TRUE;
     SetStatus(GetString(MSG_STATUS_TESTED));
     RefreshPreview();
+    UpdateCacheUsed();
+}
+
+/* ------------------------------------------------------------------ */
+/* Programs tab                                                        */
+/* ------------------------------------------------------------------ */
+
+/* Show cur.blacklist in the list browser. */
+static void ShowBlacklist(void)
+{
+    LONG i;
+
+    if (win)
+        SetGadgetAttrs(gads[GID_BLACKLIST], win, NULL,
+                       LISTBROWSER_Labels, ~0UL, TAG_DONE);
+    FreeListBrowserList(&blacklb);
+    for (i = 0; i < cur.numblack; i++)
+    {
+        struct Node *n = AllocListBrowserNode(1,
+                             LBNCA_Text, (ULONG)cur.blacklist[i], TAG_DONE);
+        if (n)
+            AddTail(&blacklb, n);
+    }
+    if (win)
+        SetGadgetAttrs(gads[GID_BLACKLIST], win, NULL,
+                       LISTBROWSER_Labels, (ULONG)&blacklb,
+                       LISTBROWSER_Selected, -1, TAG_DONE);
+}
+
+static void AddProgram(const char *name)
+{
+    char buf[AA_NAME_LEN];
+    LONG i, len;
+
+    /* trim blanks; names are compared without case, as AAText does */
+    while (*name == ' ' || *name == '\t')
+        name++;
+    snprintf(buf, sizeof(buf), "%s", name);
+    for (len = strlen(buf); len > 0 && (buf[len - 1] == ' ' ||
+                                        buf[len - 1] == '\t'); len--)
+        buf[len - 1] = 0;
+    if (!buf[0])
+        return;
+    for (i = 0; i < cur.numblack; i++)
+        if (!Stricmp((CONST_STRPTR)cur.blacklist[i], (CONST_STRPTR)buf))
+            return;
+    if (cur.numblack == AA_MAX_BLACKLIST)
+    {
+        char msg[80];
+
+        snprintf(msg, sizeof(msg), GetString(MSG_LIST_FULL),
+                 (long)AA_MAX_BLACKLIST);
+        SetStatus(msg);
+        return;
+    }
+    strcpy(cur.blacklist[cur.numblack++], buf);
+    ShowBlacklist();
+    if (win)
+        SetGadgetAttrs(gads[GID_PROGNAME], win, NULL,
+                       STRINGA_TextVal, (ULONG)"", TAG_DONE);
+    LiveApply();
+}
+
+static void RemoveProgram(void)
+{
+    ULONG sel = ~0UL;
+    LONG i;
+
+    GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_BLACKLIST], &sel);
+    if ((LONG)sel < 0 || (LONG)sel >= cur.numblack)
+        return;
+    for (i = sel; i < cur.numblack - 1; i++)
+        strcpy(cur.blacklist[i], cur.blacklist[i + 1]);
+    cur.numblack--;
+    ShowBlacklist();
+    LiveApply();
+}
+
+/* Remember name (len chars) once, sorted, for the running list. */
+static void AddRunning(const char *name, LONG len)
+{
+    char buf[AA_NAME_LEN];
+    LONG i, j;
+
+    if (len <= 0 || numrunning == MAX_RUNNING)
+        return;
+    if (len >= AA_NAME_LEN)
+        len = AA_NAME_LEN - 1;
+    CopyMem((APTR)name, buf, len);
+    buf[len] = 0;
+    for (i = 0; i < numrunning; i++)
+    {
+        LONG c = Stricmp((CONST_STRPTR)buf, (CONST_STRPTR)runnames[i]);
+
+        if (c == 0)
+            return;
+        if (c < 0)
+            break;
+    }
+    for (j = numrunning; j > i; j--)
+        strcpy(runnames[j], runnames[j - 1]);
+    strcpy(runnames[i], buf);
+    numrunning++;
+}
+
+/*
+ * The names AAText's blacklist can match: task names and, for Shell
+ * processes, the running command (without its path).
+ */
+static void AddTaskNames(struct Task *t)
+{
+    const char *name = t->tc_Node.ln_Name;
+
+    if (name)
+        AddRunning(name, strlen(name));
+    if (t->tc_Node.ln_Type == NT_PROCESS)
+    {
+        struct CommandLineInterface *cli =
+            BADDR(((struct Process *)t)->pr_CLI);
+
+        if (cli && cli->cli_Module && cli->cli_CommandName)
+        {
+            const UBYTE *b = BADDR(cli->cli_CommandName);
+            const char *cmd = (const char *)b + 1;
+            LONG len = b[0], i;
+
+            for (i = len - 1; i >= 0; i--)
+                if (cmd[i] == '/' || cmd[i] == ':')
+                {
+                    cmd += i + 1;
+                    len -= i + 1;
+                    break;
+                }
+            AddRunning(cmd, len);
+        }
+    }
+}
+
+/*
+ * Leave out what nobody blacklists: file systems and handlers (DF0,
+ * RAM, CON), library/device tasks and Shell process names.
+ */
+static BOOL IsProgramName(const char *name)
+{
+    static const char *const skip[] =
+    {
+        ".device", ".library", ".resource", ".gadget", ".class", ".image",
+        NULL
+    };
+    static const char *const shells[] =
+    {
+        "Background CLI", "Shell Process", "Initial CLI", "New CLI",
+        "AAText", "AATextPrefs", NULL
+    };
+    struct DosList *dl;
+    LONG len = strlen(name), i;
+    BOOL handler;
+
+    for (i = 0; skip[i]; i++)
+    {
+        LONG n = strlen(skip[i]);
+
+        if (len > n && !Stricmp((CONST_STRPTR)name + len - n,
+                                (CONST_STRPTR)skip[i]))
+            return FALSE;
+    }
+    for (i = 0; shells[i]; i++)
+        if (!Stricmp((CONST_STRPTR)name, (CONST_STRPTR)shells[i]))
+            return FALSE;
+
+    dl = LockDosList(LDF_DEVICES | LDF_READ);
+    handler = FindDosEntry(dl, (CONST_STRPTR)name, LDF_DEVICES) != NULL;
+    UnLockDosList(LDF_DEVICES | LDF_READ);
+    return !handler;
+}
+
+static void FillRunning(void)
+{
+    struct Node *n;
+    LONG i, j;
+
+    if (win)
+        SetGadgetAttrs(gads[GID_RUNNING], win, NULL,
+                       CHOOSER_Labels, ~0UL, TAG_DONE);
+    while ((n = RemHead(&runlist)))
+        FreeChooserNode(n);
+
+    numrunning = 0;
+    Forbid();
+    AddTaskNames(FindTask(NULL));
+    for (n = SysBase->TaskReady.lh_Head; n->ln_Succ; n = n->ln_Succ)
+        AddTaskNames((struct Task *)n);
+    for (n = SysBase->TaskWait.lh_Head; n->ln_Succ; n = n->ln_Succ)
+        AddTaskNames((struct Task *)n);
+    Permit();
+
+    /* DOS calls only now, after Permit() */
+    for (i = j = 0; i < numrunning; i++)
+        if (IsProgramName(runnames[i]))
+        {
+            if (i != j)
+                strcpy(runnames[j], runnames[i]);
+            j++;
+        }
+    numrunning = j;
+
+    for (i = 0; i < numrunning; i++)
+        if ((n = AllocChooserNode(CNA_Text, (ULONG)runnames[i], TAG_DONE)))
+            AddTail(&runlist, n);
+    if (win)
+        SetGadgetAttrs(gads[GID_RUNNING], win, NULL,
+                       CHOOSER_Labels, (ULONG)&runlist, TAG_DONE);
+}
+
+/* ------------------------------------------------------------------ */
+/* Advanced tab                                                        */
+/* ------------------------------------------------------------------ */
+
+/* ISO-8859-9 -> Unicode, the format freetype2.library reads. */
+static void MakeLatin5Page(UWORD *page)
+{
+    LONG i;
+
+    for (i = 0; i < 256; i++)
+        page[i] = i;
+    page[0xD0] = 0x011E;
+    page[0xDD] = 0x0130;
+    page[0xDE] = 0x015E;
+    page[0xF0] = 0x011F;
+    page[0xFD] = 0x0131;
+    page[0xFE] = 0x015F;
+}
+
+static BOOL WriteFile(const char *path, const void *data, LONG len)
+{
+    BPTR fh = Open((CONST_STRPTR)path, MODE_NEWFILE);
+    BOOL ok;
+
+    if (!fh)
+        return FALSE;
+    ok = Write(fh, (APTR)data, len) == len;
+    if (!Close(fh))
+        ok = FALSE;
+    return ok;
+}
+
+/* Write ENV: and ENVARC:ftcodepage, asking before replacing another one. */
+static void WriteFtCodePage(void)
+{
+    UWORD page[256], old[256];
+    LONG len;
+
+    MakeLatin5Page(page);
+    len = GetVar((CONST_STRPTR)"ftcodepage", (STRPTR)old, sizeof(old),
+                 GVF_GLOBAL_ONLY | GVF_BINARY_VAR | GVF_DONT_NULL_TERM);
+    if (len >= 0 && (len != (LONG)sizeof(old) ||
+                     memcmp(old, page, sizeof(page))))
+    {
+        struct EasyStruct es;
+
+        es.es_StructSize = sizeof(es);
+        es.es_Flags = 0;
+        es.es_Title = (UBYTE *)GetString(MSG_WINDOW_TITLE);
+        es.es_TextFormat = (UBYTE *)GetString(MSG_FTCODEPAGE_ASK);
+        es.es_GadgetFormat = (UBYTE *)GetString(MSG_REPLACE_CANCEL);
+        if (EasyRequestArgs(win, &es, NULL, NULL) != 1)
+            return;
+    }
+
+    if (!SetVar((CONST_STRPTR)"ftcodepage", (STRPTR)page, sizeof(page),
+                GVF_GLOBAL_ONLY | GVF_BINARY_VAR))
+    {
+        SetStatus(GetString(MSG_FTCODEPAGE_FAIL));
+        return;
+    }
+    /* AAText reads ENV:ftcodepage again when settings are applied */
+    LiveApply();
+    /* written by hand: SetVar(GVF_SAVE_VAR) reports success even when
+       ENVARC: cannot be written (seen with ENVARC: not assigned) */
+    if (WriteFile("ENVARC:ftcodepage", page, sizeof(page)))
+        SetStatus(GetString(MSG_FTCODEPAGE_DONE));
+    else
+    {
+        char msg[80];
+
+        snprintf(msg, sizeof(msg), GetString(MSG_WRITE_ERROR),
+                 "ENVARC:ftcodepage");
+        SetStatus(msg);
+    }
 }
 
 /* "Screen font: XEN 8", without the ".font" */
@@ -383,16 +720,141 @@ static void FreeLists(void)
         FreeClickTabNode(n);
     while ((n = RemHead(&hintlist)))
         FreeChooserNode(n);
+    while ((n = RemHead(&runlist)))
+        FreeChooserNode(n);
+    while ((n = RemHead(&charsetlist)))
+        FreeChooserNode(n);
+    FreeListBrowserList(&blacklb);
 }
 
-static Object *PlaceholderPage(void)
+static Object *ProgramsPage(void)
+{
+    LONG lineh = previewfont ? previewfont->tf_YSize : 8;
+
+    return VLayoutObject,
+        LAYOUT_SpaceOuter, TRUE,
+        LAYOUT_DeferLayout, TRUE,
+
+        LAYOUT_AddImage, LabelObject,
+            LABEL_Text, (ULONG)GetString(MSG_PROGRAMS_INFO),
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, gads[GID_BLACKLIST] =
+                         (struct Gadget *)ListBrowserObject,
+            GA_ID, GID_BLACKLIST,
+            GA_RelVerify, TRUE,
+            LISTBROWSER_Labels, (ULONG)&blacklb,
+            LISTBROWSER_ShowSelected, TRUE,
+            LISTBROWSER_AutoFit, TRUE,
+        End,
+        CHILD_MinHeight, lineh * 6 + 8,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_PROGNAME] = (struct Gadget *)StringObject,
+                GA_ID, GID_PROGNAME,
+                GA_RelVerify, TRUE,
+                GA_TabCycle, TRUE,
+                STRINGA_MaxChars, AA_NAME_LEN - 1,
+                STRINGA_TextVal, (ULONG)"",
+            End,
+            Label(GetString(MSG_PROGRAM)),
+            LAYOUT_AddChild, gads[GID_ADD] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_ADD, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_ADD),
+            End,
+            CHILD_WeightedWidth, 0,
+            LAYOUT_AddChild, gads[GID_REMOVE] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_REMOVE, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_REMOVE),
+            End,
+            CHILD_WeightedWidth, 0,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, gads[GID_RUNNING] = (struct Gadget *)ChooserObject,
+            GA_ID, GID_RUNNING,
+            GA_RelVerify, TRUE,
+            CHOOSER_DropDown, TRUE,
+            CHOOSER_Title, (ULONG)GetString(MSG_RUNNING),
+            CHOOSER_Labels, (ULONG)&runlist,
+            CHOOSER_MaxLabels, MAX_RUNNING,
+        End,
+        CHILD_WeightedHeight, 0,
+    End;
+}
+
+static Object *AdvancedPage(void)
 {
     return VLayoutObject,
-               LAYOUT_SpaceOuter, TRUE,
-               LAYOUT_AddImage, LabelObject,
-                   LABEL_Text, (ULONG)GetString(MSG_NOT_YET),
-               End,
-           End;
+        LAYOUT_SpaceOuter, TRUE,
+        LAYOUT_DeferLayout, TRUE,
+
+        LAYOUT_AddChild, gads[GID_AUTO] = (struct Gadget *)CheckBoxObject,
+            GA_ID, GID_AUTO,
+            GA_RelVerify, TRUE,
+            GA_Text, (ULONG)GetString(MSG_AUTODETECT),
+            GA_Selected, cur.autodetect,
+        End,
+        CHILD_WeightedHeight, 0,
+        LAYOUT_AddChild, gads[GID_OFFSCREEN] = (struct Gadget *)CheckBoxObject,
+            GA_ID, GID_OFFSCREEN,
+            GA_RelVerify, TRUE,
+            GA_Text, (ULONG)GetString(MSG_OFFSCREEN),
+            GA_Selected, cur.offscreen,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_CACHE] = (struct Gadget *)IntegerObject,
+                GA_ID, GID_CACHE,
+                GA_RelVerify, TRUE,
+                GA_TabCycle, TRUE,
+                INTEGER_Minimum, 32,
+                INTEGER_Maximum, 16384,
+                INTEGER_Number, cur.cachekb,
+                INTEGER_Arrows, TRUE,
+            End,
+            CHILD_WeightedWidth, 0,
+            CHILD_MinWidth, 100,
+            LAYOUT_AddChild, gads[GID_CACHEUSED] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_CACHEUSED,
+                GA_ReadOnly, TRUE,
+                GA_Text, (ULONG)cacheused,
+                BUTTON_BevelStyle, BVS_NONE,
+                BUTTON_Justification, BCJ_LEFT,
+            End,
+        End,
+        CHILD_WeightedHeight, 0,
+        Label(GetString(MSG_CACHE)),
+
+        LAYOUT_AddChild, gads[GID_CHARSET] = (struct Gadget *)ChooserObject,
+            GA_ID, GID_CHARSET,
+            GA_RelVerify, TRUE,
+            CHOOSER_PopUp, TRUE,
+            CHOOSER_Labels, (ULONG)&charsetlist,
+            CHOOSER_Selected, cur.charset == AA_CHARSET_LATIN5 ? 1 : 0,
+        End,
+        CHILD_WeightedHeight, 0,
+        Label(GetString(MSG_CHARSET)),
+        LAYOUT_AddImage, LabelObject,
+            LABEL_Text, (ULONG)GetString(MSG_CHARSET_NOTE),
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_FTCODEPAGE] =
+                             (struct Gadget *)ButtonObject,
+                GA_ID, GID_FTCODEPAGE, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_FTCODEPAGE),
+            End,
+            CHILD_WeightedWidth, 0,
+            LAYOUT_AddChild, SpaceObject, End,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, SpaceObject, End,     /* takes the spare height */
+    End;
 }
 
 static LONG HintIndex(UBYTE hinting)
@@ -482,6 +944,10 @@ static BOOL OpenWin(struct Screen *scr)
     AddChoice(&hintlist, MSG_HINT_LIGHT);
     AddChoice(&hintlist, MSG_HINT_NONE);
     AddChoice(&hintlist, MSG_HINT_FULL);
+    AddChoice(&charsetlist, MSG_CHARSET_LATIN1);
+    AddChoice(&charsetlist, MSG_CHARSET_LATIN5);
+    ShowBlacklist();
+    FillRunning();
 
     previewhook.h_Entry = (HOOKFUNC)(APTR)HookEntry;
     previewhook.h_SubEntry = (HOOKFUNC)(APTR)PreviewRender;
@@ -508,8 +974,8 @@ static BOOL OpenWin(struct Screen *scr)
                 CLICKTAB_Current, 0,
                 CLICKTAB_PageGroup, PageObject,
                     PAGE_Add, AppearancePage(),
-                    PAGE_Add, PlaceholderPage(),
-                    PAGE_Add, PlaceholderPage(),
+                    PAGE_Add, ProgramsPage(),
+                    PAGE_Add, AdvancedPage(),
                 End,
             End,
 
@@ -563,6 +1029,54 @@ static BOOL Action(ULONG id)
             ReadGadgets();
             break;
 
+        case GID_AUTO:
+        case GID_OFFSCREEN:
+        case GID_CACHE:
+        case GID_CHARSET:
+            LiveApply();
+            break;
+
+        case GID_TABS:
+        {
+            ULONG page = 0;
+
+            GetAttr(CLICKTAB_Current, (Object *)gads[GID_TABS], &page);
+            if (page == 1)
+                FillRunning();
+            else if (page == 2)
+                UpdateCacheUsed();
+            break;
+        }
+
+        case GID_ADD:
+        {
+            STRPTR text = NULL;
+
+            GetAttr(STRINGA_TextVal, (Object *)gads[GID_PROGNAME],
+                    (ULONG *)&text);
+            if (text)
+                AddProgram((const char *)text);
+            break;
+        }
+
+        case GID_REMOVE:
+            RemoveProgram();
+            break;
+
+        case GID_RUNNING:
+        {
+            ULONG sel = ~0UL;
+
+            GetAttr(CHOOSER_Selected, (Object *)gads[GID_RUNNING], &sel);
+            if ((LONG)sel >= 0 && (LONG)sel < numrunning)
+                AddProgram(runnames[sel]);
+            break;
+        }
+
+        case GID_FTCODEPAGE:
+            WriteFtCodePage();
+            break;
+
         case GID_USE:
             ReadGadgets();
             if (WritePrefsFile(ENV_PREFS, ENV_PREFS))
@@ -601,6 +1115,9 @@ int main(int argc, char **argv)
 
     NewList(&tablist);      /* FreeLists() must work on every path */
     NewList(&hintlist);
+    NewList(&blacklb);
+    NewList(&runlist);
+    NewList(&charsetlist);
 
     if (argc)
     {
@@ -623,6 +1140,7 @@ int main(int argc, char **argv)
     CopyMem(&cur, &before, sizeof(before));
     UpdateGammaText();
     QueryAAText();
+    UpdateCacheUsed();
 
     scr = LockPubScreen(NULL);
     if (!scr)

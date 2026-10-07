@@ -43,7 +43,26 @@
     S(MSG_STATUS_TESTED,    27, "Changes are shown live - Save or Use keeps them.") \
     S(MSG_STATUS_OLD,       28, "The running AAText is too old for live changes.") \
     S(MSG_PREVIEW_FONT,     29, "Screen font: %s %ld") \
-    S(MSG_PREVIEW_PLAIN,    30, "Screen font: %s %ld (AAText off: plain text)")
+    S(MSG_PREVIEW_PLAIN,    30, "Screen font: %s %ld (AAText off: plain text)") \
+    S(MSG_PROGRAMS_INFO,    31, "AAText leaves the text of these programs alone:") \
+    S(MSG_PROGRAM,          32, "Program") \
+    S(MSG_ADD,              33, "Add") \
+    S(MSG_REMOVE,           34, "Remove") \
+    S(MSG_RUNNING,          35, "Add a running program...") \
+    S(MSG_LIST_FULL,        36, "The list is full (%ld programs).") \
+    S(MSG_AUTODETECT,       37, "Find TrueType fonts automatically (.otag)") \
+    S(MSG_CACHE,            38, "Glyph cache (KB)") \
+    S(MSG_CACHE_USED,       39, "In use: %ld KB, %ld characters") \
+    S(MSG_OFFSCREEN,        40, "Workbench colours for off-screen bitmaps") \
+    S(MSG_CHARSET,          41, "Character set") \
+    S(MSG_CHARSET_LATIN1,   42, "ISO-8859-1 (Western European)") \
+    S(MSG_CHARSET_LATIN5,   43, "ISO-8859-9 (Turkish)") \
+    S(MSG_CHARSET_NOTE,     44, "For fonts without a code page in .otag or ENV:ftcodepage.") \
+    S(MSG_FTCODEPAGE,       45, "Write Turkish ENV:ftcodepage") \
+    S(MSG_FTCODEPAGE_ASK,   46, "ENV:ftcodepage exists already.\nReplace it with the Turkish code page?\n(freetype2.library uses it too.)") \
+    S(MSG_REPLACE_CANCEL,   47, "Replace|Cancel") \
+    S(MSG_FTCODEPAGE_DONE,  48, "ENV:ftcodepage written (ENVARC: too).") \
+    S(MSG_FTCODEPAGE_FAIL,  49, "Cannot write ENV:ftcodepage.")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };
