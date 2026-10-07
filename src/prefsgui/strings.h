@@ -62,7 +62,9 @@
     S(MSG_FTCODEPAGE_ASK,   46, "ENV:ftcodepage exists already.\nReplace it with the Turkish code page?\n(freetype2.library uses it too.)") \
     S(MSG_REPLACE_CANCEL,   47, "Replace|Cancel") \
     S(MSG_FTCODEPAGE_DONE,  48, "ENV:ftcodepage written (ENVARC: too).") \
-    S(MSG_FTCODEPAGE_FAIL,  49, "Cannot write ENV:ftcodepage.")
+    S(MSG_FTCODEPAGE_FAIL,  49, "Cannot write ENV:ftcodepage.") \
+    S(MSG_PICK,             50, "Choose...") \
+    S(MSG_PICK_TITLE,       51, "Program AAText should leave alone")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

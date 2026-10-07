@@ -43,6 +43,8 @@
 #include <proto/listbrowser.h>
 #include <proto/string.h>
 #include <proto/integer.h>
+#include <proto/asl.h>
+#include <libraries/asl.h>
 
 #include <classes/window.h>
 #include <gadgets/layout.h>
@@ -79,7 +81,8 @@ struct GfxBase *GfxBase;
 struct Library *UtilityBase, *DiskfontBase;
 struct Library *WindowBase, *LayoutBase, *ClickTabBase, *ChooserBase,
                *SliderBase, *CheckBoxBase, *LabelBase, *ButtonBase,
-               *SpaceBase, *ListBrowserBase, *StringBase, *IntegerBase;
+               *SpaceBase, *ListBrowserBase, *StringBase, *IntegerBase,
+               *AslBase;
 
 enum
 {
@@ -87,7 +90,7 @@ enum
     GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
     GID_AUTO, GID_OFFSCREEN, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
-    GID_FTCODEPAGE,
+    GID_FTCODEPAGE, GID_PICKFILE,
     GID_COUNT
 };
 
@@ -140,6 +143,7 @@ static BOOL OpenLibs(void)
         { &ListBrowserBase, "gadgets/listbrowser.gadget" },
         { &StringBase,   "gadgets/string.gadget" },
         { &IntegerBase,  "gadgets/integer.gadget" },
+        { &AslBase,      "asl.library" },
     };
     ULONG i;
 
@@ -160,7 +164,7 @@ static void CloseLibs(void)
 {
     struct Library **bases[] =
     {
-        &IntegerBase, &StringBase, &ListBrowserBase, &SpaceBase,
+        &AslBase, &IntegerBase, &StringBase, &ListBrowserBase, &SpaceBase,
         &ButtonBase, &LabelBase, &CheckBoxBase, &SliderBase,
         &ChooserBase, &ClickTabBase, &LayoutBase, &WindowBase, &DiskfontBase,
         &UtilityBase, (struct Library **)&GfxBase,
@@ -444,6 +448,29 @@ static void AddProgram(const char *name)
         SetGadgetAttrs(gads[GID_PROGNAME], win, NULL,
                        STRINGA_TextVal, (ULONG)"", TAG_DONE);
     LiveApply();
+}
+
+/*
+ * Choose a program file. Only its name is kept: AAText matches the
+ * process name (Workbench start) or the command name (Shell) without
+ * a path, so the program need not be running now.
+ */
+static void PickProgram(void)
+{
+    struct FileRequester *fr;
+
+    fr = AllocAslRequestTags(ASL_FileRequest,
+                             ASLFR_Window, (ULONG)win,
+                             ASLFR_TitleText, (ULONG)GetString(MSG_PICK_TITLE),
+                             ASLFR_InitialDrawer, (ULONG)"SYS:",
+                             ASLFR_RejectIcons, TRUE,
+                             ASLFR_SleepWindow, TRUE,
+                             TAG_DONE);
+    if (!fr)
+        return;
+    if (AslRequest(fr, NULL) && fr->fr_File && fr->fr_File[0])
+        AddProgram((const char *)fr->fr_File);
+    FreeAslRequest(fr);
 }
 
 static void RemoveProgram(void)
@@ -759,26 +786,38 @@ static Object *ProgramsPage(void)
                 STRINGA_TextVal, (ULONG)"",
             End,
             Label(GetString(MSG_PROGRAM)),
-            LAYOUT_AddChild, gads[GID_ADD] = (struct Gadget *)ButtonObject,
-                GA_ID, GID_ADD, GA_RelVerify, TRUE,
-                GA_Text, (ULONG)GetString(MSG_ADD),
-            End,
-            CHILD_WeightedWidth, 0,
-            LAYOUT_AddChild, gads[GID_REMOVE] = (struct Gadget *)ButtonObject,
-                GA_ID, GID_REMOVE, GA_RelVerify, TRUE,
-                GA_Text, (ULONG)GetString(MSG_REMOVE),
+            /* even size: a short label like "Add" is not left too
+               tight for fonts that measure narrower than they draw */
+            LAYOUT_AddChild, HLayoutObject,
+                LAYOUT_EvenSize, TRUE,
+                LAYOUT_AddChild, gads[GID_ADD] = (struct Gadget *)ButtonObject,
+                    GA_ID, GID_ADD, GA_RelVerify, TRUE,
+                    GA_Text, (ULONG)GetString(MSG_ADD),
+                End,
+                LAYOUT_AddChild, gads[GID_REMOVE] =
+                                 (struct Gadget *)ButtonObject,
+                    GA_ID, GID_REMOVE, GA_RelVerify, TRUE,
+                    GA_Text, (ULONG)GetString(MSG_REMOVE),
+                End,
             End,
             CHILD_WeightedWidth, 0,
         End,
         CHILD_WeightedHeight, 0,
 
-        LAYOUT_AddChild, gads[GID_RUNNING] = (struct Gadget *)ChooserObject,
-            GA_ID, GID_RUNNING,
-            GA_RelVerify, TRUE,
-            CHOOSER_DropDown, TRUE,
-            CHOOSER_Title, (ULONG)GetString(MSG_RUNNING),
-            CHOOSER_Labels, (ULONG)&runlist,
-            CHOOSER_MaxLabels, MAX_RUNNING,
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_RUNNING] = (struct Gadget *)ChooserObject,
+                GA_ID, GID_RUNNING,
+                GA_RelVerify, TRUE,
+                CHOOSER_DropDown, TRUE,
+                CHOOSER_Title, (ULONG)GetString(MSG_RUNNING),
+                CHOOSER_Labels, (ULONG)&runlist,
+                CHOOSER_MaxLabels, MAX_RUNNING,
+            End,
+            LAYOUT_AddChild, gads[GID_PICKFILE] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_PICKFILE, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_PICK),
+            End,
+            CHILD_WeightedWidth, 0,
         End,
         CHILD_WeightedHeight, 0,
     End;
@@ -1058,6 +1097,10 @@ static BOOL Action(ULONG id)
                 AddProgram((const char *)text);
             break;
         }
+
+        case GID_PICKFILE:
+            PickProgram();
+            break;
 
         case GID_REMOVE:
             RemoveProgram();

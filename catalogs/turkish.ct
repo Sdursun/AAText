@@ -107,3 +107,7 @@ MSG_FTCODEPAGE_DONE
 ENV:ftcodepage yazıldı (ENVARC: dahil).
 MSG_FTCODEPAGE_FAIL
 ENV:ftcodepage yazılamadı.
+MSG_PICK
+Seç...
+MSG_PICK_TITLE
+AAText'in dokunmayacağı program
