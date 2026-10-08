@@ -44,7 +44,9 @@ Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 
 Binary releases are on Aminet (`util/wb/AAText.lha`) and on the
 [Releases](https://github.com/Sdursun/AAText/releases) page. Copy `AAText` to
-`SYS:WBStartup` and reboot; copy `AATextPrefs` (and its icon) to `SYS:Prefs`
+`C:` and add `Run >NIL: C:AAText` to `S:Startup-Sequence`, after the monitor
+drivers are loaded and before `LoadWB` (not to `WBStartup`: AAText must run
+before Workbench opens its windows), then reboot; copy `AATextPrefs` (and its icon) to `SYS:Prefs`
 if you want the preferences program. The full user guide is in
 [docs/AAText_EN.txt](docs/AAText_EN.txt) (Turkish:
 [docs/AAText_TR.txt](docs/AAText_TR.txt)); all settings are described in
@@ -140,7 +142,10 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
 
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
 
-**Kurulum:** `AAText` dosyasını `SYS:WBStartup` içine kopyalayıp sistemi
+**Kurulum:** `AAText` dosyasını `C:` içine kopyalayın,
+`S:Startup-Sequence` dosyasına monitör sürücüleri yüklendikten sonra ve
+`LoadWB`'den önce `Run >NIL: C:AAText` satırını ekleyin (`WBStartup`'a değil:
+AAText, Workbench pencerelerini açmadan önce çalışıyor olmalı) ve sistemi
 yeniden başlatın; ayar programı için `AATextPrefs` dosyasını (ikonuyla)
 `SYS:Prefs` içine kopyalayın. Ayrıntılı kullanım kılavuzu:
 [docs/AAText_TR.txt](docs/AAText_TR.txt).

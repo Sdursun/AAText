@@ -50,14 +50,15 @@ Hangi dosya?
 Kurulum
 -------
 
-1. AAText'i (veya adını AAText olarak değiştirip AAText.060'ı)
-   SYS:WBStartup içine kopyalayın. AAText böylece Workbench ile, RTG
-   sisteminden sonra başlar.
-
-   Alternatif olarak C: içine kopyalayıp S:User-Startup dosyasının
-   sonuna şu satırı ekleyin:
+1. AAText'i (veya adını AAText olarak değiştirip AAText.060'ı) C:
+   içine kopyalayın ve S:Startup-Sequence dosyasına, monitör
+   sürücüleri yüklendikten sonra (RTG sistemi çalışıyor olmalı) ve
+   LoadWB'den önce şu satırı ekleyin:
 
        Run >NIL: C:AAText
+
+   AAText'i WBStartup'a koymayın: Workbench pencerelerini açmadan önce
+   çalışıyor olmalı.
 
 2. İsteğe bağlı: ayar programı. AATextPrefs ve AATextPrefs.info
    dosyalarını SYS:Prefs içine kopyalayın. Türkçe arayüz için katalogu
@@ -144,9 +145,10 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                     (varsayılan kapalı). Yazı, font tasarımcısının
                     öngördüğü harf aralıklarıyla daha doğal görünür,
                     ancak pencere düzenleri biraz değişir. Bu ayarı
-                    kullanıyorsanız AAText'i WBStartup'tan başlatın:
-                    AAText'ten önce açılan pencereler yeniden açılana
-                    kadar eski düzenlerini korur. Sabit genişlikli
+                    kullanıyorsanız AAText'i S:Startup-Sequence'te
+                    LoadWB'den önce başlatın: AAText'ten önce açılan
+                    pencereler yeniden açılana kadar eski düzenlerini
+                    korur. Sabit genişlikli
                     fontlar (ör. Shell fontu) her zaman karakter
                     hücrelerini korur, çünkü Shell ve editörler yazıyı
                     bu hücrelere göre yerleştirir.

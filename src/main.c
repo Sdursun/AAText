@@ -4,7 +4,7 @@
  * Usage (Shell):  Run >NIL: AAText     install the patch
  *                 AAText QUIT          remove it again
  * Starting AAText while it is already running also removes it,
- * which makes it usable as a toggle from Workbench / WBStartup.
+ * which makes it usable as a toggle from the Shell or Workbench.
  *
  * Options:  PREFS=<file>               default ENV:AAText.prefs,
  *                                      then ENVARC:AAText.prefs

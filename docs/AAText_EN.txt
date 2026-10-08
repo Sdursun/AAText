@@ -48,13 +48,14 @@ Which file?
 Installation
 ------------
 
-1. Copy AAText (or AAText.060, renamed to AAText) to SYS:WBStartup.
-   AAText then starts with Workbench, after the RTG system.
-
-   Alternatively copy it to C: and add this line near the end of
-   S:User-Startup:
+1. Copy AAText (or AAText.060, renamed to AAText) to C: and add this
+   line to S:Startup-Sequence, after the monitor drivers are loaded
+   (the RTG system must be running) and before LoadWB:
 
        Run >NIL: C:AAText
+
+   Do not put AAText in WBStartup: it must be running before
+   Workbench opens its windows.
 
 2. Optional: the preferences program. Copy AATextPrefs and
    AATextPrefs.info to SYS:Prefs. For the Turkish user interface also
@@ -137,8 +138,8 @@ It is a plain text file with one setting per line; lines starting with
                     (default off). Text looks more natural, with the
                     letter spacing the font designer intended, but
                     window layouts change slightly. Start AAText from
-                    WBStartup when you use this: windows opened before
-                    AAText keep their old layout until reopened.
+                    S:Startup-Sequence before LoadWB: windows opened
+                    before AAText keep their old layout until reopened.
                     Fixed-width fonts (e.g. the Shell font) always keep
                     their character cells, since the Shell and editors
                     position text by them.

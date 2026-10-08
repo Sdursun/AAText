@@ -44,8 +44,10 @@ Features
 Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68),
 Picasso96.
 
-Installation: copy AAText to SYS:WBStartup and reboot; copy AATextPrefs
-and its icon to SYS:Prefs for the preferences program. See AAText_EN.txt
+Installation: copy AAText to C: and add "Run >NIL: C:AAText" to
+S:Startup-Sequence, after the monitor drivers and before LoadWB (not
+WBStartup); copy AATextPrefs and its icon to SYS:Prefs for the
+preferences program. See AAText_EN.txt
 (English) or AAText_TR.txt (Turkish, ISO-8859-9) for details.
 
 License: MIT (free for any use, commercial or not; keep the copyright
