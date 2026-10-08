@@ -24,6 +24,9 @@ and MUI programs — everything that draws text through `graphics.library`.
 - **Preferences program.** AATextPrefs (English and Turkish) changes gamma,
   hinting, the program blacklist and the other settings with a live preview:
   a running AAText takes every change at once.
+
+  ![AATextPrefs: gamma, hinting, real widths and kerning with a live preview](docs/screenshots/aatextprefs.png)
+
 - Bitmap fonts and palette (AGA) screens are left untouched.
 
 *Türkçe açıklama aşağıda.*
@@ -132,6 +135,9 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
 - **Ayar programı.** AATextPrefs (Türkçe ve İngilizce) gamma, hinting, kara
   liste ve diğer ayarları canlı önizlemeyle değiştirir; çalışan AAText her
   değişikliği hemen uygular.
+
+  ![AATextPrefs: gamma, hinting, gerçek genişlikler ve kerning, canlı önizlemeyle](docs/screenshots/aatextprefs.png)
+
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
 
 **Kurulum:** `AAText` dosyasını `SYS:WBStartup` içine kopyalayıp sistemi
