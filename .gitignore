@@ -3,7 +3,6 @@ build/
 *.map
 *.lnk
 third_party/
-/fonts/
 
 # Local project notes, not published
 CLAUDE.md
