@@ -12,8 +12,17 @@
 
 enum
 {
+    /* same order as aa_CharsetNames in charsets.c */
     AA_CHARSET_LATIN1 = 0,      /* ISO-8859-1, AmigaOS default */
-    AA_CHARSET_LATIN5           /* ISO-8859-9, Turkish */
+    AA_CHARSET_LATIN2,
+    AA_CHARSET_LATIN3,
+    AA_CHARSET_LATIN4,
+    AA_CHARSET_LATIN5,          /* ISO-8859-9, Turkish */
+    AA_CHARSET_LATIN9,
+    AA_CHARSET_LATIN10,
+    AA_CHARSET_CP1250,
+    AA_CHARSET_CYRILLIC,        /* ISO-8859-5 */
+    AA_CHARSET_KOI8R
 };
 
 enum

@@ -41,7 +41,7 @@ CFLAGS  += -DDEBUG
 endif
 
 SRCS_C := src/main.c src/patch.c src/render.c src/metrics.c src/prefs.c \
-          src/glyphs.c src/otag.c src/aaclient.c src/debug.c
+          src/glyphs.c src/otag.c src/aaclient.c src/debug.c src/charsets.c
 SRCS_S := src/stub.s src/cgx.s
 OBJS   := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SRCS_C)) \
           $(patsubst src/%.s,$(BUILDDIR)/%.o,$(SRCS_S))
@@ -103,7 +103,7 @@ clean:
 
 # Host-side smoke test (run under vamos, see test.ps1)
 TEST_OBJS := $(BUILDDIR)/prefs.o $(BUILDDIR)/glyphs.o $(BUILDDIR)/metrics.o \
-             $(BUILDDIR)/otag.o $(BUILDDIR)/debug.o \
+             $(BUILDDIR)/otag.o $(BUILDDIR)/debug.o $(BUILDDIR)/charsets.o \
              $(BUILDDIR)/stub.o
 
 .PHONY: test
@@ -152,7 +152,7 @@ dist:
 # both programs have a main.c
 GUI_TARGET := $(BUILDDIR)/AATextPrefs
 GUI_SRCS   := src/prefsgui/main.c src/prefsgui/strings.c src/prefs.c \
-              src/prefswrite.c src/aaclient.c
+              src/prefswrite.c src/aaclient.c src/charsets.c
 GUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/gui/%.o,$(GUI_SRCS))
 
 .PHONY: gui

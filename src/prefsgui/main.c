@@ -69,6 +69,7 @@
 #include "../prefs.h"
 #include "../prefswrite.h"
 #include "../aaclient.h"
+#include "../charsets.h"
 #include "strings.h"
 
 static const char version[] __attribute__((used)) =
@@ -94,7 +95,7 @@ enum
     GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
     GID_AUTO, GID_OFFSCREEN, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
-    GID_FTCODEPAGE, GID_PICKFILE, GID_KERNING,
+    GID_PICKFILE, GID_KERNING,
     GID_COUNT
 };
 
@@ -192,7 +193,7 @@ static LONG PageOf(LONG gid)
         return 0;
     if ((gid >= GID_BLACKLIST && gid <= GID_RUNNING) || gid == GID_PICKFILE)
         return 1;
-    if (gid >= GID_AUTO && gid <= GID_FTCODEPAGE)
+    if (gid >= GID_AUTO && gid <= GID_CHARSET)
         return 2;
     return -1;
 }
@@ -407,7 +408,7 @@ static void ReadGadgets(void)
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
         cur.cachekb = v;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_CHARSET], &v))
-        cur.charset = v ? AA_CHARSET_LATIN5 : AA_CHARSET_LATIN1;
+        cur.charset = v < AA_NUM_CHARSETS ? v : AA_CHARSET_LATIN1;
 }
 
 /* "In use: 5 KB, 52 characters" from AAText's STATUS */
@@ -696,20 +697,14 @@ static void FillRunning(void)
 /* Advanced tab                                                        */
 /* ------------------------------------------------------------------ */
 
-/* ISO-8859-9 -> Unicode, the format freetype2.library reads. */
-static void MakeLatin5Page(UWORD *page)
+/* Labels of the character set chooser, in AA_CHARSET_* order */
+static const LONG charset_msg[AA_NUM_CHARSETS] =
 {
-    LONG i;
-
-    for (i = 0; i < 256; i++)
-        page[i] = i;
-    page[0xD0] = 0x011E;
-    page[0xDD] = 0x0130;
-    page[0xDE] = 0x015E;
-    page[0xF0] = 0x011F;
-    page[0xFD] = 0x0131;
-    page[0xFE] = 0x015F;
-}
+    MSG_CHARSET_LATIN1, MSG_CHARSET_LATIN2, MSG_CHARSET_LATIN3,
+    MSG_CHARSET_LATIN4, MSG_CHARSET_LATIN5, MSG_CHARSET_LATIN9,
+    MSG_CHARSET_LATIN10, MSG_CHARSET_CP1250, MSG_CHARSET_CYRILLIC,
+    MSG_CHARSET_KOI8R
+};
 
 static BOOL WriteFile(const char *path, const void *data, LONG len)
 {
@@ -724,49 +719,77 @@ static BOOL WriteFile(const char *path, const void *data, LONG len)
     return ok;
 }
 
-/* Write ENV: and ENVARC:ftcodepage, asking before replacing another one. */
-static void WriteFtCodePage(void)
+/* TRUE if page is the table of one of the sets in the chooser. */
+static BOOL KnownCodePage(const UWORD *page)
+{
+    static UWORD known[256];
+    LONG i;
+
+    for (i = 0; i < AA_NUM_CHARSETS; i++)
+    {
+        aa_CharsetPage(i, known);
+        if (!memcmp(known, page, sizeof(known)))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/*
+ * Make ENV:ftcodepage (and with archive ENVARC:ftcodepage) match the
+ * chosen character set, so freetype2.library and AAText agree. Latin-1
+ * is what both use without the variable, so it is deleted then. A code
+ * page that is not one of ours is replaced only when the user agrees.
+ * FALSE if a file could not be written (shown in the status line).
+ */
+static BOOL WriteCodePage(BOOL archive)
 {
     static UWORD page[256], old[256];
+    BOOL latin1 = cur.charset == AA_CHARSET_LATIN1;
+    char msg[80];
     LONG len;
 
-    MakeLatin5Page(page);
+    aa_CharsetPage(cur.charset, page);
     len = GetVar((CONST_STRPTR)"ftcodepage", (STRPTR)old, sizeof(old),
                  GVF_GLOBAL_ONLY | GVF_BINARY_VAR | GVF_DONT_NULL_TERM);
-    if (len >= 0 && (len != (LONG)sizeof(old) ||
-                     memcmp(old, page, sizeof(page))))
+    if (len >= 0 && (len != (LONG)sizeof(old) || !KnownCodePage(old)))
     {
         struct EasyStruct es;
+        ULONG arg = (ULONG)GetString(charset_msg[cur.charset]);
 
         es.es_StructSize = sizeof(es);
         es.es_Flags = 0;
         es.es_Title = (UBYTE *)GetString(MSG_WINDOW_TITLE);
         es.es_TextFormat = (UBYTE *)GetString(MSG_FTCODEPAGE_ASK);
-        es.es_GadgetFormat = (UBYTE *)GetString(MSG_REPLACE_CANCEL);
-        if (EasyRequestArgs(win, &es, NULL, NULL) != 1)
-            return;
+        es.es_GadgetFormat = (UBYTE *)GetString(MSG_REPLACE_KEEP);
+        if (EasyRequestArgs(win, &es, NULL, &arg) != 1)
+            return TRUE;
     }
 
-    if (!SetVar((CONST_STRPTR)"ftcodepage", (STRPTR)page, sizeof(page),
-                GVF_GLOBAL_ONLY | GVF_BINARY_VAR))
+    if (latin1)
+    {
+        if (len >= 0)
+            DeleteVar((CONST_STRPTR)"ftcodepage", GVF_GLOBAL_ONLY);
+    }
+    else if ((len != (LONG)sizeof(old) || memcmp(old, page, sizeof(page))) &&
+             !SetVar((CONST_STRPTR)"ftcodepage", (STRPTR)page, sizeof(page),
+                     GVF_GLOBAL_ONLY | GVF_BINARY_VAR))
     {
         SetStatus(GetString(MSG_FTCODEPAGE_FAIL));
-        return;
+        return FALSE;
     }
-    /* AAText reads ENV:ftcodepage again when settings are applied */
-    LiveApply();
+    if (!archive)
+        return TRUE;
+
     /* written by hand: SetVar(GVF_SAVE_VAR) reports success even when
        ENVARC: cannot be written (seen with ENVARC: not assigned) */
-    if (WriteFile("ENVARC:ftcodepage", page, sizeof(page)))
-        SetStatus(GetString(MSG_FTCODEPAGE_DONE));
-    else
-    {
-        char msg[80];
-
-        snprintf(msg, sizeof(msg), GetString(MSG_WRITE_ERROR),
-                 "ENVARC:ftcodepage");
-        SetStatus(msg);
-    }
+    if (latin1 ? DeleteFile((CONST_STRPTR)"ENVARC:ftcodepage") ||
+                 IoErr() == ERROR_OBJECT_NOT_FOUND
+               : WriteFile("ENVARC:ftcodepage", page, sizeof(page)))
+        return TRUE;
+    snprintf(msg, sizeof(msg), GetString(MSG_WRITE_ERROR),
+             "ENVARC:ftcodepage");
+    SetStatus(msg);
+    return FALSE;
 }
 
 /* "Screen font: XEN 8", without the ".font" */
@@ -940,23 +963,12 @@ static Object *AdvancedPage(void)
             GA_RelVerify, TRUE,
             CHOOSER_PopUp, TRUE,
             CHOOSER_Labels, (ULONG)&charsetlist,
-            CHOOSER_Selected, cur.charset == AA_CHARSET_LATIN5 ? 1 : 0,
+            CHOOSER_Selected, cur.charset,
         End,
         CHILD_WeightedHeight, 0,
         Label(GetString(MSG_CHARSET)),
         LAYOUT_AddImage, LabelObject,
             LABEL_Text, (ULONG)GetString(MSG_CHARSET_NOTE),
-        End,
-        CHILD_WeightedHeight, 0,
-
-        LAYOUT_AddChild, HLayoutObject,
-            LAYOUT_AddChild, gads[GID_FTCODEPAGE] =
-                             (struct Gadget *)ButtonObject,
-                GA_ID, GID_FTCODEPAGE, GA_RelVerify, TRUE,
-                GA_Text, (ULONG)GetString(MSG_FTCODEPAGE),
-            End,
-            CHILD_WeightedWidth, 0,
-            LAYOUT_AddChild, SpaceObject, End,
         End,
         CHILD_WeightedHeight, 0,
 
@@ -1086,6 +1098,8 @@ static void LocalizeMenu(void)
 
 static BOOL OpenWin(struct Screen *scr)
 {
+    LONG i;
+
     LocalizeMenu();
     AddTab(&tablist, MSG_TAB_APPEARANCE, 0);
     AddTab(&tablist, MSG_TAB_PROGRAMS, 1);
@@ -1094,8 +1108,8 @@ static BOOL OpenWin(struct Screen *scr)
     AddChoice(&hintlist, MSG_HINT_LIGHT);
     AddChoice(&hintlist, MSG_HINT_NONE);
     AddChoice(&hintlist, MSG_HINT_FULL);
-    AddChoice(&charsetlist, MSG_CHARSET_LATIN1);
-    AddChoice(&charsetlist, MSG_CHARSET_LATIN5);
+    for (i = 0; i < AA_NUM_CHARSETS; i++)
+        AddChoice(&charsetlist, charset_msg[i]);
     ShowBlacklist();
     FillRunning();
 
@@ -1230,13 +1244,9 @@ static BOOL Action(ULONG id)
             break;
         }
 
-        case GID_FTCODEPAGE:
-            WriteFtCodePage();
-            break;
-
         case GID_USE:
             ReadGadgets();
-            if (WritePrefsFile(ENV_PREFS, ENV_PREFS))
+            if (WritePrefsFile(ENV_PREFS, ENV_PREFS) && WriteCodePage(FALSE))
             {
                 Send(AACMD_RELOAD, NULL);
                 return TRUE;
@@ -1247,7 +1257,8 @@ static BOOL Action(ULONG id)
             ReadGadgets();
             /* ENVARC: keeps its own comments and mappings */
             if (WritePrefsFile(ENVARC_PREFS, ENVARC_PREFS) &&
-                WritePrefsFile(ENV_PREFS, ENVARC_PREFS))
+                WritePrefsFile(ENV_PREFS, ENVARC_PREFS) &&
+                WriteCodePage(TRUE))
             {
                 Send(AACMD_RELOAD, NULL);
                 return TRUE;
@@ -1272,8 +1283,7 @@ static void ShowPrefs(void)
     SetGad(GID_AUTO, GA_Selected, cur.autodetect);
     SetGad(GID_OFFSCREEN, GA_Selected, cur.offscreen);
     SetGad(GID_CACHE, INTEGER_Number, cur.cachekb);
-    SetGad(GID_CHARSET, CHOOSER_Selected,
-           cur.charset == AA_CHARSET_LATIN5 ? 1 : 0);
+    SetGad(GID_CHARSET, CHOOSER_Selected, cur.charset);
     ShowBlacklist();
     LiveApply();
 }

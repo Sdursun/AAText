@@ -5,7 +5,8 @@
  *   Arial          22  ->  FONTS:_TrueType/arial.ttf     [pixelsize] [real]
  *   "Some Font"    16  ->  "FONTS:My Fonts/x.ttf"
  *   gamma   0.8
- *   charset latin1 | latin5
+ *   charset latin1 | latin2 | latin3 | latin4 | latin5 | latin9 | latin10 |
+ *           cp1250 | cyrillic | koi8r
  *   hinting none | light | normal | full
  *   cache 256                (glyph cache size in KB)
  *   blacklist FinalWriter TypeSmith
@@ -22,6 +23,7 @@
 #include <proto/dos.h>
 
 #include "prefs.h"
+#include "charsets.h"
 #include "debug.h"
 
 #define MAX_PREFS_SIZE  (64 * 1024)
@@ -175,12 +177,16 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
     }
     if (StrIEq(tok[0], "charset"))
     {
-        if (n == 2 && StrIEq(tok[1], "latin1"))
-            prefs->charset = AA_CHARSET_LATIN1;
-        else if (n == 2 && StrIEq(tok[1], "latin5"))
-            prefs->charset = AA_CHARSET_LATIN5;
+        LONG i = AA_NUM_CHARSETS;
+
+        if (n == 2)
+            for (i = 0; i < AA_NUM_CHARSETS; i++)
+                if (StrIEq(tok[1], aa_CharsetNames[i]))
+                    break;
+        if (i < AA_NUM_CHARSETS)
+            prefs->charset = i;
         else
-            PrefsError(lineno, "charset must be latin1 or latin5");
+            PrefsError(lineno, "unknown charset");
         return;
     }
     if (StrIEq(tok[0], "hinting"))

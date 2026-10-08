@@ -54,11 +54,9 @@
     S(MSG_CHARSET,          41, "Character set") \
     S(MSG_CHARSET_LATIN1,   42, "ISO-8859-1 (Western European)") \
     S(MSG_CHARSET_LATIN5,   43, "ISO-8859-9 (Turkish)") \
-    S(MSG_CHARSET_NOTE,     44, "For fonts without a code page in .otag or ENV:ftcodepage.") \
-    S(MSG_FTCODEPAGE,       45, "Write Turkish ENV:ftcodepage") \
-    S(MSG_FTCODEPAGE_ASK,   46, "ENV:ftcodepage exists already.\nReplace it with the Turkish code page?\n(freetype2.library uses it too.)") \
-    S(MSG_REPLACE_CANCEL,   47, "Replace|Cancel") \
-    S(MSG_FTCODEPAGE_DONE,  48, "ENV:ftcodepage written (ENVARC: too).") \
+    S(MSG_CHARSET_NOTE,     44, "For fonts without a code page in .otag. Save and Use set ENV:ftcodepage too.") \
+    S(MSG_FTCODEPAGE_ASK,   46, "ENV:ftcodepage holds a code page that is not in the list.\nReplace it with %s?\n(freetype2.library uses it too.)") \
+    S(MSG_REPLACE_KEEP,     47, "Replace|Keep") \
     S(MSG_FTCODEPAGE_FAIL,  49, "Cannot write ENV:ftcodepage.") \
     S(MSG_PICK,             50, "Choose...") \
     S(MSG_PICK_TITLE,       51, "Program AAText should leave alone") \
@@ -73,7 +71,15 @@
     S(MSG_OPEN_TITLE,       60, "Open AAText preferences") \
     S(MSG_SAVEAS_TITLE,     61, "Save AAText preferences as") \
     S(MSG_READ_ERROR,       62, "Cannot read %s.") \
-    S(MSG_KERNING,          63, "Kerning (with real widths)")
+    S(MSG_KERNING,          63, "Kerning (with real widths)") \
+    S(MSG_CHARSET_LATIN2,   64, "ISO-8859-2 (Central European)") \
+    S(MSG_CHARSET_LATIN3,   65, "ISO-8859-3 (South European)") \
+    S(MSG_CHARSET_LATIN4,   66, "ISO-8859-4 (North European)") \
+    S(MSG_CHARSET_LATIN9,   67, "ISO-8859-15 (Western European, euro)") \
+    S(MSG_CHARSET_LATIN10,  68, "ISO-8859-16 (South-Eastern European)") \
+    S(MSG_CHARSET_CP1250,   69, "Windows-1250 (Central European)") \
+    S(MSG_CHARSET_CYRILLIC, 70, "ISO-8859-5 (Cyrillic)") \
+    S(MSG_CHARSET_KOI8R,    71, "KOI8-R (Russian)")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

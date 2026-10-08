@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "prefswrite.h"
+#include "charsets.h"
 
 #define MAX_TEMPLATE (64 * 1024)
 
@@ -148,8 +149,8 @@ BOOL aa_WritePrefs(const struct AAPrefs *prefs, const char *path,
     ok &= Put(out, line);
     sprintf(line, "auto %s\n", prefs->autodetect ? "on" : "off");
     ok &= Put(out, line);
-    sprintf(line, "charset %s\n",
-            prefs->charset == AA_CHARSET_LATIN5 ? "latin5" : "latin1");
+    sprintf(line, "charset %s\n", aa_CharsetNames[prefs->charset <
+            AA_NUM_CHARSETS ? prefs->charset : AA_CHARSET_LATIN1]);
     ok &= Put(out, line);
 
     if (prefs->numblack)

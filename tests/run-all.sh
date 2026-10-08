@@ -31,6 +31,7 @@ run metrics         tests/real.prefs metrics
 run metrics-nokern  tests/realnokern.prefs metrics
 run otag            tests/test.prefs otag tests/data/arial.otag
 run auto            tests/data/empty.prefs auto AutoTest.font
+run charsets        tests/charset.prefs charsets
 
 echo
 if [ $fail -eq 0 ]; then

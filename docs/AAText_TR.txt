@@ -113,8 +113,8 @@ satırında görürsünüz.
               "Çalışan bir program ekle..." listesinden alın. Programın
               o an çalışması gerekmez; AAText onu adından tanır.
   Gelişmiş    otomatik font algılama, ekran dışı bitmap'ler, önbellek
-              boyutu (o anki kullanımıyla), karakter seti ve "Türkçe
-              ENV:ftcodepage yaz" (İpuçları bölümüne bakın)
+              boyutu (o anki kullanımıyla) ve karakter seti (İpuçları
+              bölümüne bakın)
 
 Menülerde, sistemin Prefs programlarındaki gibi Aç..., Farklı
 Kaydet..., Varsayılan Ayarlar, Son Kaydedilen ve Geri Al bulunur.
@@ -194,9 +194,11 @@ bulunmayan bir fontu bir TrueType dosyasıyla çizer:
 Ad (.font olmadan; boşluk içeriyorsa tırnak içinde), boyut, "->",
 TrueType dosyası, ardından isteğe bağlı olarak piksel boyutu ve "real".
 Piksel boyutu verilmezse AAText, genişlikleri bitmap fonta en iyi uyan
-boyutu seçer. "charset latin5" elle eşlemeler ve .otag dosyasında kod
-sayfası olmayan otomatik bulunan fontlar için ISO-8859-9'u seçer
-(İpuçları bölümüne bakın).
+boyutu seçer. "charset", elle eşlemeler ve .otag dosyasında kod sayfası
+olmayan otomatik bulunan fontlar için karakter setini seçer (İpuçları
+bölümüne bakın): latin1 (ISO-8859-1, varsayılan), latin2, latin3,
+latin4, latin5 (ISO-8859-9, Türkçe), latin9 (ISO-8859-15), latin10
+(ISO-8859-16), cp1250 (Windows-1250), cyrillic (ISO-8859-5) ya da koi8r.
 
 Dosyadaki bir hata, AAText Shell'den başlatıldığında satır numarasıyla
 bildirilir.
@@ -214,8 +216,11 @@ bildirilir.
 - freetype2.library ile Türkçe (veya başka bir kod sayfası): FTManager
   .otag dosyasına kod sayfası yazmaz; bu yüzden freetype2.library de
   AAText de ENV:ftcodepage dosyasını, o yoksa ISO-8859-1'i kullanır.
-  Türkçe için AATextPrefs'te (Gelişmiş) "Türkçe ENV:ftcodepage yaz"
-  düğmesine basın ya da paketteki dosyayı kopyalayın:
+  Karakter setinizi AATextPrefs'te (Gelişmiş) seçin: Kaydet ve Kullan
+  ENV:ftcodepage'i buna göre yazar (Latin-1 varsayılan olduğu için onu
+  siler). Listedeki setlerden hiçbiri olmayan bir ENV:ftcodepage ancak
+  sorulduktan sonra değiştirilir. AATextPrefs olmadan, Türkçe için
+  paketteki dosyayı kopyalayın:
       Copy ftcodepage.latin5 ENVARC:ftcodepage
       Copy ftcodepage.latin5 ENV:ftcodepage
   AAText bunu hemen kullanır; diğer programlarda freetype2.library'nin
@@ -278,6 +283,9 @@ Geçmiş
       çalışırken ondan alır.
       ENV:ftcodepage ayarlar değişince yeniden okunur; yeni bir kod
       sayfası AAText yeniden başlatılmadan geçerli olur.
+      Karakter setleri: Latin-1 - Latin-5, Latin-9, Latin-10,
+      Windows-1250, ISO-8859-5 ve KOI8-R; AATextPrefs seçilen sete
+      göre ENV:ftcodepage'i yazar.
       Gerçek ölçü modunda harf çifti kerning'i ("kerning on",
       varsayılan): AV, To gibi çiftler fontun kern tablosuna göre
       yaklaşır.

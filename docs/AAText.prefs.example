@@ -61,6 +61,8 @@
 #
 #topaz  8  ->  FONTS:_ttf/DejaVuSansMono.ttf
 
-# Character set for explicit mappings: latin1 (default) or latin5
-# (Turkish). Detected fonts use the code page of their .otag instead.
+# Character set for explicit mappings: latin1 (default), latin2,
+# latin3, latin4, latin5 (Turkish), latin9, latin10, cp1250, cyrillic
+# (ISO-8859-5) or koi8r. Detected fonts use the code page of their
+# .otag instead, or ENV:ftcodepage when the .otag has none.
 #charset latin5

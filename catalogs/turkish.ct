@@ -90,15 +90,11 @@ ISO-8859-1 (Batı Avrupa)
 MSG_CHARSET_LATIN5
 ISO-8859-9 (Türkçe)
 MSG_CHARSET_NOTE
-.otag'da ve ENV:ftcodepage'de kod sayfası olmayan fontlar için.
-MSG_FTCODEPAGE
-Türkçe ENV:ftcodepage yaz
+.otag'da kod sayfası olmayan fontlar için. Kaydet ve Kullan ENV:ftcodepage'i de ayarlar.
 MSG_FTCODEPAGE_ASK
-ENV:ftcodepage zaten var.\nTürkçe kod sayfasıyla değiştirilsin mi?\n(freetype2.library de bunu kullanır.)
-MSG_REPLACE_CANCEL
-Değiştir|İptal
-MSG_FTCODEPAGE_DONE
-ENV:ftcodepage yazıldı (ENVARC: dahil).
+ENV:ftcodepage listede olmayan bir kod sayfası içeriyor.\n%s ile değiştirilsin mi?\n(freetype2.library de bunu kullanır.)
+MSG_REPLACE_KEEP
+Değiştir|Koru
 MSG_FTCODEPAGE_FAIL
 ENV:ftcodepage yazılamadı.
 MSG_PICK
@@ -129,3 +125,19 @@ MSG_READ_ERROR
 %s okunamadı.
 MSG_KERNING
 Kerning (gerçek genişliklerle)
+MSG_CHARSET_LATIN2
+ISO-8859-2 (Orta Avrupa)
+MSG_CHARSET_LATIN3
+ISO-8859-3 (Güney Avrupa)
+MSG_CHARSET_LATIN4
+ISO-8859-4 (Kuzey Avrupa)
+MSG_CHARSET_LATIN9
+ISO-8859-15 (Batı Avrupa, euro)
+MSG_CHARSET_LATIN10
+ISO-8859-16 (Güneydoğu Avrupa)
+MSG_CHARSET_CP1250
+Windows-1250 (Orta Avrupa)
+MSG_CHARSET_CYRILLIC
+ISO-8859-5 (Kiril)
+MSG_CHARSET_KOI8R
+KOI8-R (Rusça)

@@ -14,6 +14,7 @@
 #include "glyphs.h"
 #include "metrics.h"
 #include "otag.h"
+#include "charsets.h"
 
 /* stub.s references these; the patch itself is not linked here. */
 volatile LONG aa_UseCount;
@@ -42,6 +43,37 @@ int main(int argc, char **argv)
     {
         printf("cannot read %s\n", argv[1]);
         return 10;
+    }
+    /* "charsets": the charset keyword and a few known mappings per set */
+    if (strcmp(argv[2], "charsets") == 0)
+    {
+        static const struct { UBYTE cs, c; UWORD u; } t[] =
+        {
+            { AA_CHARSET_LATIN1,   0xE9, 0x00E9 },  /* e acute */
+            { AA_CHARSET_LATIN2,   0xA3, 0x0141 },  /* L stroke */
+            { AA_CHARSET_LATIN3,   0xA5, 0x0000 },  /* undefined -> code */
+            { AA_CHARSET_LATIN4,   0xA1, 0x0104 },  /* A ogonek */
+            { AA_CHARSET_LATIN5,   0xFD, 0x0131 },  /* dotless i */
+            { AA_CHARSET_LATIN9,   0xA4, 0x20AC },  /* euro */
+            { AA_CHARSET_LATIN10,  0xAA, 0x0218 },  /* S comma */
+            { AA_CHARSET_CP1250,   0x8A, 0x0160 },  /* S caron */
+            { AA_CHARSET_CYRILLIC, 0xB0, 0x0410 },  /* Cyrillic A */
+            { AA_CHARSET_KOI8R,    0xC1, 0x0430 },  /* Cyrillic a */
+            { AA_CHARSET_KOI8R,    0x41, 0x0041 },  /* ASCII */
+        };
+        int bad = prefs.charset != AA_CHARSET_KOI8R;
+
+        printf("charset from prefs: %s\n", aa_CharsetNames[prefs.charset]);
+        for (i = 0; i < (int)(sizeof(t) / sizeof(t[0])); i++)
+        {
+            ULONG want = t[i].u ? t[i].u : t[i].c;
+            ULONG got = aa_CharsetToUnicode(t[i].cs, t[i].c);
+
+            printf("%-8s %02X -> %04lX %s\n", aa_CharsetNames[t[i].cs],
+                   t[i].c, (unsigned long)got, got == want ? "ok" : "FAIL");
+            bad |= got != want;
+        }
+        return bad ? 10 : 0;
     }
     /* "otag": parse a .otag file given as third argument */
     if (strcmp(argv[2], "otag") == 0 && argc > 3)

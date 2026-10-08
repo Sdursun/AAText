@@ -42,6 +42,7 @@ void FT_Done_Memory(FT_Memory memory);
 
 #include "glyphs.h"
 #include "otag.h"
+#include "charsets.h"
 #include "debug.h"
 
 #define AA_STACK_SIZE   (32 * 1024)
@@ -155,26 +156,14 @@ static ULONG stat_hits, stat_misses, stat_evictions, stat_missing;
 /*
  * Character code -> Unicode. Detected fonts carry the code page of
  * their .otag file; mapped fonts use the "charset" preference
- * (ISO-8859-9 differs from ISO-8859-1 in six positions).
+ * (tables in charsets.c).
  */
 static ULONG ToUnicode(const struct AAFace *face, UBYTE c)
 {
     if (face->hascodepage)
         return face->codepage[c] ? face->codepage[c] : c;
 
-    if (aa_Charset == AA_CHARSET_LATIN5)
-    {
-        switch (c)
-        {
-            case 0xD0: return 0x011E;   /* G breve */
-            case 0xDD: return 0x0130;   /* I dot */
-            case 0xDE: return 0x015E;   /* S cedilla */
-            case 0xF0: return 0x011F;   /* g breve */
-            case 0xFD: return 0x0131;   /* dotless i */
-            case 0xFE: return 0x015F;   /* s cedilla */
-        }
-    }
-    return c;
+    return aa_CharsetToUnicode(aa_Charset, c);
 }
 
 static int ToLower(int c)
