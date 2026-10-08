@@ -469,6 +469,9 @@ int main(int argc, char **argv)
     }
     D(("AAText: cybergraphics.library %ld.%ld\n",
        (LONG)CyberGfxBase->lib_Version, (LONG)CyberGfxBase->lib_Revision));
+#ifdef DEBUG
+    aa_TraceInfo();
+#endif
 
     /* The prefs file is optional; without it the defaults apply. */
     if (!aa_ReadPrefs(&prefs, have_prefspath ? prefspath : NULL, from_shell) &&

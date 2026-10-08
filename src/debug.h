@@ -12,6 +12,7 @@
 
 #ifdef DEBUG
 void kprintf(const char *fmt, ...);
+void aa_TraceInfo(void);
 #define D(x) kprintf x
 #else
 #define D(x) ((void)0)

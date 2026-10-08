@@ -188,4 +188,4 @@ icons: $(ICON)
 $(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
 	@mkdir -p $(dir $@)
 	python3 -I tools/mkicon.py tool icons/AATextPrefs.png \
-		icons/AATextPrefs_sel.png -o $@
+		icons/AATextPrefs_sel.png --stack 16384 -o $@

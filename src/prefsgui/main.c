@@ -72,7 +72,9 @@
 #include "strings.h"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AATextPrefs 0.12 (7.10.2026)";
+    "$VER: AATextPrefs 0.12 (8.10.2026)";
+/* stack the Shell gives the program (V47); the icon asks for the same */
+static const char stackcookie[] __attribute__((used)) = "$STACK:16384";
 
 #define ENV_PREFS     "ENV:AAText.prefs"
 #define ENVARC_PREFS  "ENVARC:AAText.prefs"
@@ -440,7 +442,7 @@ static void UpdateGammaText(void)
  */
 static void LiveApply(void)
 {
-    struct AAPrefs p;
+    static struct AAPrefs p;    /* ~6.5 KB: not on the stack */
 
     ReadGadgets();
     UpdateGammaText();
@@ -725,7 +727,7 @@ static BOOL WriteFile(const char *path, const void *data, LONG len)
 /* Write ENV: and ENVARC:ftcodepage, asking before replacing another one. */
 static void WriteFtCodePage(void)
 {
-    UWORD page[256], old[256];
+    static UWORD page[256], old[256];
     LONG len;
 
     MakeLatin5Page(page);
@@ -1279,7 +1281,7 @@ static void ShowPrefs(void)
 /* Read a prefs file into the window. */
 static void LoadPrefs(const char *path)
 {
-    struct AAPrefs p;
+    static struct AAPrefs p;    /* ~6.5 KB: not on the stack */
 
     if (aa_ReadPrefs(&p, path, FALSE))
     {
@@ -1330,7 +1332,7 @@ static BOOL AskFile(LONG title, BOOL save, char *buf, LONG len)
 /* A menu item; TRUE when the window is to close. */
 static BOOL MenuAction(ULONG id)
 {
-    char path[AA_PATH_LEN];
+    static char path[AA_PATH_LEN];
 
     switch (id)
     {
