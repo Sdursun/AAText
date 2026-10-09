@@ -43,4 +43,22 @@ struct AADiagEntry
  */
 LONG aa_ScanFonts(struct AADiagEntry *out, LONG max);
 
+enum
+{
+    AA_FIX_OK = 0,
+    AA_FIX_NOTMOVED,        /* only AA_DIAG_MOVED entries are fixed */
+    AA_FIX_READ,            /* the .otag cannot be read or rebuilt */
+    AA_FIX_BACKUP,          /* the backup cannot be written */
+    AA_FIX_WRITE            /* the .otag cannot be written; backup kept */
+};
+
+/*
+ * Point a moved font's .otag at the file where it was found (e->found,
+ * e.g. FONTS:_ttf/x.ttf). The original is first copied to <otag>.bak,
+ * unless that exists already (the oldest original is kept); its name is
+ * left in backup (AA_FONTFILE_LEN bytes). e is checked again afterwards.
+ * Returns AA_FIX_...
+ */
+LONG aa_FixOTag(struct AADiagEntry *e, char *backup);
+
 #endif

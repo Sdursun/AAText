@@ -117,13 +117,19 @@ while you try it out.
                 Moved         the .otag names another volume (e.g.
                               System: after the disk was renamed);
                               AAText finds the file in FONTS:, other
-                              programs may not: install the font again
+                              programs may not: use "Fix .otag..."
                 Missing       the font file is gone
                 Not a font    the file is no TrueType/OpenType font
                 Bad .otag     the .otag cannot be read
                 Other engine  an outline font for another engine
+              "Fix .otag..." (Moved fonts only) writes the path where
+              the file was found, such as FONTS:_ttf/arial.ttf, into the
+              .otag, after asking. The original is first copied to
+              <name>.otag.bak (an existing .bak is kept, so it always
+              holds the oldest original); to undo, copy it back. Then
+              every program finds the font again, not only AAText.
               "Save report..." writes the list to a text file for bug
-              reports. Nothing is changed by the scan.
+              reports. The scan itself changes nothing.
 
 The menus offer Open..., Save As..., Reset To Defaults, Last Saved and
 Restore, like the system's Prefs programs.
@@ -284,7 +290,8 @@ History
 
 0.14  AATextPrefs: Diagnostics tab. Checks the .otag files in FONTS:
       and the font files they name (moved, missing, not a font) and
-      saves a report for bug reports.
+      saves a report for bug reports. "Fix .otag..." points a moved
+      font's .otag at the file again, keeping the original as .bak.
 
 0.13  Fonts are found when the boot volume has another name than when
       they were installed: .otag files name the font file with the old

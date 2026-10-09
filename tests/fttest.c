@@ -9,6 +9,7 @@
 #include <string.h>
 #include <exec/types.h>
 #include <graphics/text.h>
+#include <proto/dos.h>
 
 #include "prefs.h"
 #include "glyphs.h"
@@ -75,6 +76,40 @@ int main(int argc, char **argv)
             bad |= got != want;
         }
         return bad ? 10 : 0;
+    }
+    /* "fix": fix the moved font argv[3], then scan again: it must be ok,
+       name FONTS:..., and the original must be kept as .bak */
+    if (strcmp(argv[2], "fix") == 0 && argc > 3)
+    {
+        static struct AADiagEntry e[32];
+        static char backup[AA_FONTFILE_LEN];
+        LONG cnt = aa_ScanFonts(e, 32), k, r;
+        BPTR lock;
+
+        for (k = 0; k < cnt && strcmp(e[k].name, argv[3]); k++)
+            ;
+        if (k == cnt)
+        {
+            printf("FAIL: %s not found\n", argv[3]);
+            return 10;
+        }
+        r = aa_FixOTag(&e[k], backup);
+        printf("fix %s: result %ld, backup %s\n  now: %s -> %s (status %d)\n",
+               argv[3], (long)r, backup, e[k].want, e[k].found,
+               (int)e[k].status);
+        cnt = aa_ScanFonts(e, 32);
+        for (k = 0; k < cnt && strcmp(e[k].name, argv[3]); k++)
+            ;
+        lock = Lock((CONST_STRPTR)backup, ACCESS_READ);
+        if (lock)
+            UnLock(lock);
+        if (r != AA_FIX_OK || k == cnt || e[k].status != AA_DIAG_OK ||
+            strncmp(e[k].want, "FONTS:", 6) || !lock)
+        {
+            printf("FAIL: after the fix\n");
+            return 10;
+        }
+        return 0;
     }
     /* "scan": font diagnostics; further arguments are name=status checks */
     if (strcmp(argv[2], "scan") == 0)

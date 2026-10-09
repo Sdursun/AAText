@@ -144,7 +144,7 @@ KOI8-R (Rusça)
 MSG_TAB_DIAG
 Tanılama
 MSG_DIAG_INFO
-FONTS: içindeki .otag dosyalarını ve gösterdikleri font dosyalarını denetler. Hiçbir şey değiştirilmez.
+FONTS: içindeki .otag dosyalarını ve gösterdikleri font dosyalarını denetler. Tarama hiçbir şeyi değiştirmez.
 MSG_DIAG_SCAN
 Fontları tara
 MSG_DIAG_REPORT
@@ -176,7 +176,7 @@ MSG_DIAG_INOTAG
 MSG_DIAG_ADV_OK
 Font dosyası .otag'da yazan yerde.
 MSG_DIAG_ADV_MOVED
-AAText onu orada bulur, diğer programlar bulamayabilir: fontu yeniden kurun.
+AAText onu orada bulur, diğer programlar bulamayabilir: ".otag'ı düzelt"i kullanın.
 MSG_DIAG_ADV_MISSING
 Font dosyası yok. Fontu yeniden kurun ya da .font ve .otag dosyalarını silin.
 MSG_DIAG_ADV_BADFILE
@@ -193,3 +193,19 @@ MSG_DIAG_LISTFULL
 Yalnızca ilk %ld font listelendi.
 MSG_DIAG_FOUND
 Bulunduğu yer: %s
+MSG_DIAG_FIX
+.otag'ı düzelt...
+MSG_DIAG_FIX_ASK
+%s değiştirilsin mi?\n\nŞu anki font dosyası: %s\nyeni hali: %s\n\nOrijinali %s olarak saklanır.
+MSG_DIAG_FIX_GADS
+Değiştir|İptal
+MSG_DIAG_FIXED
+Düzeltildi. Orijinali: %s
+MSG_DIAG_FIX_NOTMOVED
+Yalnızca "Yeri değişmiş" fontlar düzeltilebilir.
+MSG_DIAG_FIX_BACKUP
+%s yedeği yazılamadı; hiçbir şey değiştirilmedi.
+MSG_DIAG_FIX_READ
+%s okunamadı ya da yeniden oluşturulamadı; hiçbir şey değiştirilmedi.
+MSG_DIAG_FIX_WRITE
+%s yazılamadı. Orijinali: %s

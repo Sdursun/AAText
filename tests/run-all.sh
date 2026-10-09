@@ -56,6 +56,7 @@ echo "garbage" > $M/Broken.otag
 V="vamos -C 68020 -m 8192 -V scanfonts:$M -a FONTS:scanfonts:"
 run scan            tests/data/empty.prefs scan Good=ok Moved=moved \
                     Missing=missing NotFont=badfile Broken=badotag
+run fix             tests/data/empty.prefs fix Moved
 rm -rf $M
 
 echo

@@ -98,7 +98,7 @@ enum
     GID_AUTO, GID_OFFSCREEN, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
     GID_PICKFILE, GID_KERNING,
     GID_SCAN, GID_SCANSUM, GID_FONTLIST, GID_DETAIL1, GID_DETAIL2, GID_DETAIL3,
-    GID_REPORT,
+    GID_REPORT, GID_FIX,
     GID_COUNT
 };
 
@@ -202,7 +202,7 @@ static LONG PageOf(LONG gid)
         return 1;
     if (gid >= GID_AUTO && gid <= GID_CHARSET)
         return 2;
-    if (gid >= GID_SCAN && gid <= GID_REPORT)
+    if (gid >= GID_SCAN && gid <= GID_FIX)
         return 3;
     return -1;
 }
@@ -1060,20 +1060,14 @@ static void ShowDetail(void)
     SetGad(GID_DETAIL1, GA_Text, (ULONG)detail1);
     SetGad(GID_DETAIL2, GA_Text, (ULONG)detail2);
     SetGad(GID_DETAIL3, GA_Text, (ULONG)detail3);
+    SetGad(GID_FIX, GA_Disabled, (LONG)sel < 0 || (LONG)sel >= numdiag ||
+           diag[sel].status != AA_DIAG_MOVED);
 }
 
-static void ScanFonts(void)
+/* Show the scan results; sel is the entry to select, or -1. */
+static void ShowScan(LONG sel)
 {
     LONG i, ok = 0;
-
-    if (!diag)
-        diag = AllocVec(MAX_DIAG * sizeof(*diag), MEMF_ANY);
-    if (!diag)
-        return;
-
-    SetAttrs(winobj, WA_BusyPointer, TRUE, TAG_DONE);
-    numdiag = aa_ScanFonts(diag, MAX_DIAG);
-    SetAttrs(winobj, WA_BusyPointer, FALSE, TAG_DONE);
 
     SetGad(GID_FONTLIST, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&fontlb);
@@ -1093,7 +1087,7 @@ static void ScanFonts(void)
             ok++;
     }
     SetGad2(GID_FONTLIST, LISTBROWSER_Labels, (ULONG)&fontlb,
-            LISTBROWSER_Selected, (ULONG)-1);
+            LISTBROWSER_Selected, (ULONG)sel);
 
     if (numdiag < 0)
         snprintf(scansum, sizeof(scansum), "%s", GetString(MSG_DIAG_NOFONTS));
@@ -1105,6 +1099,74 @@ static void ScanFonts(void)
                  (long)numdiag, (long)ok, (long)(numdiag - ok));
     SetGad(GID_SCANSUM, GA_Text, (ULONG)scansum);
     ShowDetail();
+}
+
+static void ScanFonts(void)
+{
+    if (!diag)
+        diag = AllocVec(MAX_DIAG * sizeof(*diag), MEMF_ANY);
+    if (!diag)
+        return;
+
+    SetAttrs(winobj, WA_BusyPointer, TRUE, TAG_DONE);
+    numdiag = aa_ScanFonts(diag, MAX_DIAG);
+    SetAttrs(winobj, WA_BusyPointer, FALSE, TAG_DONE);
+    ShowScan(-1);
+}
+
+/*
+ * Point the selected moved font's .otag at the file where it was
+ * found, after asking; the original is kept as .otag.bak.
+ */
+static void FixSelected(void)
+{
+    static char backup[AA_FONTFILE_LEN + 4], msg[sizeof(statustext)];
+    struct EasyStruct es;
+    struct AADiagEntry *e;
+    ULONG sel = ~0UL, args[4];
+    LONG r;
+
+    GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_FONTLIST], &sel);
+    if ((LONG)sel < 0 || (LONG)sel >= numdiag ||
+        diag[sel].status != AA_DIAG_MOVED)
+    {
+        SetStatus(GetString(MSG_DIAG_FIX_NOTMOVED));
+        return;
+    }
+    e = &diag[sel];
+
+    snprintf(backup, sizeof(backup), "%s.bak", e->otag);
+    args[0] = (ULONG)e->otag;
+    args[1] = (ULONG)e->want;
+    args[2] = (ULONG)e->found;
+    args[3] = (ULONG)backup;
+    es.es_StructSize = sizeof(es);
+    es.es_Flags = 0;
+    es.es_Title = (UBYTE *)GetString(MSG_WINDOW_TITLE);
+    es.es_TextFormat = (UBYTE *)GetString(MSG_DIAG_FIX_ASK);
+    es.es_GadgetFormat = (UBYTE *)GetString(MSG_DIAG_FIX_GADS);
+    if (EasyRequestArgs(win, &es, NULL, args) != 1)
+        return;
+
+    r = aa_FixOTag(e, backup);
+    switch (r)
+    {
+        case AA_FIX_OK:
+            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIXED), backup);
+            break;
+        case AA_FIX_BACKUP:
+            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_BACKUP), backup);
+            break;
+        case AA_FIX_WRITE:
+            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_WRITE),
+                     e->otag, backup);
+            break;
+        default:
+            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_READ), e->otag);
+            break;
+    }
+    ShowScan(sel);
+    SetStatus(msg);
 }
 
 /* Plain text, English: meant to be attached to bug reports. */
@@ -1247,6 +1309,12 @@ static Object *DiagPage(void)
         CHILD_WeightedHeight, 0,
 
         LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_FIX] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_FIX, GA_RelVerify, TRUE,
+                GA_Disabled, TRUE,
+                GA_Text, (ULONG)GetString(MSG_DIAG_FIX),
+            End,
+            CHILD_WeightedWidth, 0,
             LAYOUT_AddChild, SpaceObject, End,
             LAYOUT_AddChild, gads[GID_REPORT] = (struct Gadget *)ButtonObject,
                 GA_ID, GID_REPORT, GA_RelVerify, TRUE,
@@ -1518,6 +1586,10 @@ static BOOL Action(ULONG id)
 
         case GID_REPORT:
             SaveReport();
+            break;
+
+        case GID_FIX:
+            FixSelected();
             break;
 
         case GID_PICKFILE:

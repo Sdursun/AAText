@@ -81,7 +81,7 @@
     S(MSG_CHARSET_CYRILLIC, 70, "ISO-8859-5 (Cyrillic)") \
     S(MSG_CHARSET_KOI8R,    71, "KOI8-R (Russian)") \
     S(MSG_TAB_DIAG,         72, "Diagnostics") \
-    S(MSG_DIAG_INFO,        73, "Checks the .otag files in FONTS: and the font files they name. Nothing is changed.") \
+    S(MSG_DIAG_INFO,        73, "Checks the .otag files in FONTS: and the font files they name. Scanning changes nothing.") \
     S(MSG_DIAG_SCAN,        74, "Scan fonts") \
     S(MSG_DIAG_REPORT,      75, "Save report...") \
     S(MSG_DIAG_SUMMARY,     76, "%ld fonts: %ld OK, %ld with problems") \
@@ -97,7 +97,7 @@
     S(MSG_DIAG_OTHER,       86, "Other engine") \
     S(MSG_DIAG_INOTAG,      87, "In the .otag: %s") \
     S(MSG_DIAG_ADV_OK,      88, "The font file is where the .otag says.") \
-    S(MSG_DIAG_ADV_MOVED,   89, "AAText finds it there, other programs may not: install the font again.") \
+    S(MSG_DIAG_ADV_MOVED,   89, "AAText finds it there, other programs may not: use Fix .otag.") \
     S(MSG_DIAG_ADV_MISSING, 90, "The font file is not there. Install the font again, or delete its .font and .otag.") \
     S(MSG_DIAG_ADV_BADFILE, 91, "This file is not a TrueType or OpenType font.") \
     S(MSG_DIAG_ADV_BADOTAG, 92, "The .otag cannot be read or names no font file.") \
@@ -105,7 +105,15 @@
     S(MSG_DIAG_SAVE_TITLE,  94, "Save font report") \
     S(MSG_DIAG_SAVED,       95, "Report saved: %s") \
     S(MSG_DIAG_LISTFULL,    96, "Only the first %ld fonts are listed.") \
-    S(MSG_DIAG_FOUND,       97, "Found as: %s")
+    S(MSG_DIAG_FOUND,       97, "Found as: %s") \
+    S(MSG_DIAG_FIX,         98, "Fix .otag...") \
+    S(MSG_DIAG_FIX_ASK,     99, "Change %s?\n\nFont file now: %s\nbecomes: %s\n\nThe original is kept as %s.") \
+    S(MSG_DIAG_FIX_GADS,   100, "Change|Cancel") \
+    S(MSG_DIAG_FIXED,      101, "Fixed. The original is in %s.") \
+    S(MSG_DIAG_FIX_NOTMOVED, 102, "Only fonts marked Moved can be fixed.") \
+    S(MSG_DIAG_FIX_BACKUP, 103, "Cannot write the backup %s; nothing was changed.") \
+    S(MSG_DIAG_FIX_READ,   104, "Cannot read or rebuild %s; nothing was changed.") \
+    S(MSG_DIAG_FIX_WRITE,  105, "Cannot write %s. The original is in %s.")
 
 
 #define S(id, n, s) id = n,

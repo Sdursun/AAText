@@ -118,3 +118,53 @@ BOOL aa_ParseOTag(const UBYTE *buf, ULONG len, struct AAOTagInfo *info)
         info->fontfile = fallback;
     return info->fontfile != NULL;
 }
+
+static void PutLong(UBYTE *p, ULONG v)
+{
+    p[0] = v >> 24;
+    p[1] = v >> 16;
+    p[2] = v >> 8;
+    p[3] = v;
+}
+
+ULONG aa_OTagSetFontFile(const UBYTE *buf, ULONG len, const char *fontfile,
+                         UBYTE *out, ULONG outmax)
+{
+    static struct AAOTagInfo info;
+    ULONG pos, off, newoff, newlen, n, i;
+
+    if (!aa_ParseOTag(buf, len, &info))
+        return 0;
+    off = (const UBYTE *)info.fontfile - buf;
+
+    /* the tag whose indirect data is the old path */
+    for (pos = 0; pos + 8 <= len; pos += 8)
+    {
+        ULONG tag = GetLong(buf + pos);
+
+        if (tag == TAG_DONE)
+            return 0;
+        if ((tag & TAG_USER) && (tag & OT_Indirect) &&
+            GetLong(buf + pos + 4) == off)
+            break;
+    }
+    if (pos + 8 > len)
+        return 0;
+
+    for (n = 0; fontfile[n]; n++)
+        ;
+    newoff = (len + 3) & ~3UL;          /* keep indirect data aligned */
+    newlen = newoff + n + 1;
+    if (newlen > outmax)
+        return 0;
+
+    for (i = 0; i < len; i++)
+        out[i] = buf[i];
+    for (; i < newoff; i++)
+        out[i] = 0;
+    for (i = 0; i <= n; i++)
+        out[newoff + i] = fontfile[i];
+    PutLong(out + pos + 4, newoff);
+    PutLong(out + 4, newlen);           /* OT_FileIdent: size of the file */
+    return newlen;
+}

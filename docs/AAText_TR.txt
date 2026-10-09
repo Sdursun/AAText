@@ -126,13 +126,20 @@ satırında görürsünüz.
                                disk yeniden adlandırıldıktan sonra
                                System:); AAText dosyayı FONTS: altında
                                bulur, diğer programlar bulamayabilir:
-                               fontu yeniden kurun
+                               ".otag'ı düzelt..." kullanın
                 Eksik          font dosyası yok
                 Font değil     dosya TrueType/OpenType font değil
                 Bozuk .otag    .otag okunamıyor
                 Başka motor    başka bir font motoru için çizgisel font
+              ".otag'ı düzelt..." (yalnız "Yeri değişmiş" fontlarda),
+              sorduktan sonra dosyanın bulunduğu yolu (ör.
+              FONTS:_ttf/arial.ttf) .otag'a yazar. Önce orijinal
+              <ad>.otag.bak olarak kopyalanır (var olan bir .bak'a
+              dokunulmaz, yani her zaman en eski orijinali tutar); geri
+              almak için onu geri kopyalayın. Bundan sonra fontu yalnız
+              AAText değil, bütün programlar bulur.
               "Raporu kaydet..." listeyi hata bildirimleri için bir metin
-              dosyasına yazar. Tarama hiçbir şeyi değiştirmez.
+              dosyasına yazar. Taramanın kendisi hiçbir şeyi değiştirmez.
 
 Menülerde, sistemin Prefs programlarındaki gibi Aç..., Farklı
 Kaydet..., Varsayılan Ayarlar, Son Kaydedilen ve Geri Al bulunur.
@@ -299,7 +306,9 @@ Geçmiş
 
 0.14  AATextPrefs: Tanılama sekmesi. FONTS: içindeki .otag dosyalarını
       ve gösterdikleri font dosyalarını denetler (yeri değişmiş, eksik,
-      font değil) ve hata bildirimleri için rapor kaydeder.
+      font değil) ve hata bildirimleri için rapor kaydeder. ".otag'ı
+      düzelt...", yeri değişmiş bir fontun .otag'ını yeniden dosyaya
+      yönlendirir; orijinal .bak olarak saklanır.
 
 0.13  Fontlar, açılış diskinin adı kurulum sırasındakinden farklı
       olduğunda da bulunur: .otag dosyaları font dosyasını eski disk

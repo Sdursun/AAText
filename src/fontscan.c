@@ -216,3 +216,61 @@ LONG aa_ScanFonts(struct AADiagEntry *out, LONG max)
         }
     return n;
 }
+
+static BOOL WriteAll(const char *path, const UBYTE *data, LONG len)
+{
+    BPTR fh = Open((CONST_STRPTR)path, MODE_NEWFILE);
+    BOOL ok;
+
+    if (!fh)
+        return FALSE;
+    ok = Write(fh, (APTR)data, len) == len;
+    if (!Close(fh))
+        ok = FALSE;
+    return ok;
+}
+
+LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
+{
+    UBYTE *buf, *out;
+    LONG len = 0, newlen, result = AA_FIX_OK;
+    BPTR fh, lock;
+
+    backup[0] = 0;
+    if (e->status != AA_DIAG_MOVED)
+        return AA_FIX_NOTMOVED;
+    buf = AllocVec(MAX_OTAG * 2, MEMF_ANY);
+    if (!buf)
+        return AA_FIX_READ;
+    out = buf + MAX_OTAG;
+
+    if ((fh = Open((CONST_STRPTR)e->otag, MODE_OLDFILE)))
+    {
+        len = Read(fh, buf, MAX_OTAG);
+        Close(fh);
+    }
+    newlen = len > 0 && len < MAX_OTAG
+             ? aa_OTagSetFontFile(buf, len, e->found, out, MAX_OTAG) : 0;
+    if (!newlen)
+        result = AA_FIX_READ;
+    else
+    {
+        Copy(backup, e->otag, AA_FONTFILE_LEN - 4);
+        strcat(backup, ".bak");
+        lock = Lock((CONST_STRPTR)backup, ACCESS_READ);
+        if (lock)
+            UnLock(lock);       /* keep the oldest original */
+        else if (!WriteAll(backup, buf, len))
+            result = AA_FIX_BACKUP;
+        if (result == AA_FIX_OK && !WriteAll(e->otag, out, newlen))
+            result = AA_FIX_WRITE;
+    }
+    if (result != AA_FIX_BACKUP && result != AA_FIX_READ)
+    {
+        /* check again what is on disk now */
+        e->want[0] = e->found[0] = e->engine[0] = 0;
+        Check(e, buf);
+    }
+    FreeVec(buf);
+    return result;
+}
