@@ -130,29 +130,52 @@ AAText FPU'yu sadece açılışta kullanıyor.
 - AATextPrefs OS 3.2'ye özgü: `WINDOW_NewMenu` (window.class V47) kullanır.
 - Test gerektirir (CLAUDE.md'de de ikincil).
 
-### 9. Font kurucu: `.font` + `.otag` yazmak — orta, aatext.library'ye dayanır
+### 9. Font kurucu `AATextManager` — orta, aatext.library'ye dayanır
 - Sorun: FTManager (freetype2.library 1.3 ile gelen) eski ve `.otag`'a kod
-  sayfası yazmıyor; Türkçe için `ENV:ftcodepage` gerekiyor. `ttf.library`
-  kurulumları da ayrı bir araç istiyor.
-- AATextPrefs'e "Font ekle" bölümü ya da ayrı küçük bir araç (ör.
-  `AATextFonts`): kullanıcı bir ya da birkaç font dosyası seçer (`.ttf`,
-  `.otf`, `.ttc`), araç `FONTS:` içine `.font` + `.otag` yazar.
-- Font bilgisi `aatext.library`'nin FreeType API'siyle dosyadan
-  okunur: aile adı, stil, kalın/italik (`FT_STYLE_FLAG_*`, OS/2 ağırlık
-  sınıfı → `OT_StemWeight`, `OT_SlantStyle`), sabit genişlik
-  (`OT_IsFixed`), `.ttc` içindeki yüzler (`OT_Spec6_FaceNum`), aile
-  bağları (`OT_BName`/`OT_IName`/`OT_BIName`).
-- `.otag`'a seçilen karakter setinin kod sayfası yazılır
-  (`OT_Spec2_CodePage`, `charsets.c`'deki tablolardan, ör. Latin-5); böylece
-  `ENV:ftcodepage` gerekmez.
-- Motor: `OT_Engine "aatext"` (aatext.library; freetype2.library'ye dokunulmaz). Ayrıca mevcut `.otag`
-  dosyalarına kod sayfası ekleyen / motorunu "freetype2"den "aatext"e çeviren bir "onar" işlemi
-  (AATextPrefs'in font tanılama bölümündeki yol düzeltmesine benzer, yedek
-  alarak).
-- Önkoşul: aatext.library kurulu olmalı (AAText ile gelir); ayrıntılar
-  `AATEXT_LIBRARY.md`.
-- Açık soru: `.font` dosyasında hangi boyutlar listelenecek (`OT_AvailSizes`)
-  ve bitmap önbelleği (`DFCTRL_CACHE`) yazılsın mı.
+  sayfası yazmıyor; Türkçe için `ENV:ftcodepage` gerekiyor. Ayrıca `.otag`'a
+  disk adıyla yol yazıyor (System: sorunu).
+- FTManager'ın çıktısı (reference/old-freetype2.library, Verdana): `.font`
+  4 bayt (`0F03 0000`: çizgisel, kayıtlı bitmap boyutu yok); `.otag`:
+  `OT_Engine "freetype2"`, `OT_Family`, `OT_YSizeFactor`, `OT_SpaceWidth`,
+  `OT_IsFixed`, `OT_SerifFlag`, `OT_StemWeight` (0x78), `OT_SlantStyle`,
+  `OT_HorizStyle` (0x90), `OT_SpaceFactor`, `OT_InhibitAlgoStyle`,
+  `OT_SpecCount`, `OT_Spec1_FontFile`, `OT_Spec3` (boş), `OT_Spec6_FaceNum`,
+  `OT_AvailSizes`. Kod sayfası (`OT_Spec2_CodePage`) yok.
+
+**Kararlar (9.10.2026)**
+- Ayrı program: **AATextManager** (ReAction penceresi + Shell argümanları).
+  AATextPrefs'in Tanılama sekmesinden açılabilir; AATextPrefs
+  aatext.library'ye bağımlı olmaz.
+- Dosya adı FTManager gibi: aile + stil, küçük harf (`verdanaregular.font`,
+  `.otag`).
+- Font dosyası `FONTS:_ttf/` altına **kopyalanır**; `.otag`'a
+  `FONTS:_ttf/x.ttf` yazılır (disk adı yok).
+- Motor: varsayılan `"aatext"`, seçenek `"freetype2"` (etiketler aynı).
+- `OT_AvailSizes`: 8–16, 18, 20, 24 (değiştirilebilir); bitmap önbelleği
+  yazılmaz.
+
+**Aşamalar**
+1. `.otag` okuyucu/yazıcı: dosyayı etiket listesine çevirip baştan yazan
+   ortak modül (yeni kurulum ve onarım için). vamos: FTManager örneğini
+   okuyup yazınca aynı etiketler.
+2. Font bilgisi (FreeType): aile/stil adı, kalın/italik, OS/2 ağırlık ve
+   genişlik sınıfı → `OT_StemWeight`/`OT_HorizStyle`, sabit genişlik, `.ttc`
+   yüzleri, boşluk genişliği (`OT_SpaceWidth`; birim doğrulanmadı, iki
+   örnekten ≈ em × 8820). FreeType kodu tek dosyada: programda
+   aatext.library, vamos testinde statik FreeType.
+3. Kurulum: `.font` + `.otag` (kod sayfası `charsets.c`'den), aynı ad varsa
+   sor (varsayılan atla, üzerine yazarken yedek), sonunda `OpenDiskFont`
+   ile denetim.
+4. Onarım (yedekle, onayla): kod sayfası eklemek, motoru
+   `"freetype2"` → `"aatext"` (kütüphane kuruluysa), yer değiştirmiş yol.
+5. Pencere: çoklu dosya seçimi, liste (aile, stil, yüz, dosya), karakter
+   seti ve motor seçicileri, boyutlar, "Kur".
+6. Test (vamos, WinUAE, A1200), belgeler, katalog; pakete `AATextManager` ve
+   `Libs/aatext.library` (madde 10 ile birlikte).
+
+- Riskler: `"aatext"` motoru aatext.library ister (yoksa font açılmaz;
+  Tanılama gösterir); diskfont açık fontları bellekte tutar; Type 1 kapsam
+  dışı.
 
 ### 10. AAText'i aatext.library'ye geçirmek — orta
 - aatext.library 1.0 (FreeType 2.14.3, kaynak `C:\Users\Serkan\Desktop\freetype2`)
