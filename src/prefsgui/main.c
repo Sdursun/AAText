@@ -70,10 +70,11 @@
 #include "../prefswrite.h"
 #include "../aaclient.h"
 #include "../charsets.h"
+#include "../fontscan.h"
 #include "strings.h"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AATextPrefs 0.12 (8.10.2026)";
+    "$VER: AATextPrefs 0.14 (9.10.2026)";
 /* stack the Shell gives the program (V47); the icon asks for the same */
 static const char stackcookie[] __attribute__((used)) = "$STACK:16384";
 
@@ -96,6 +97,8 @@ enum
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
     GID_AUTO, GID_OFFSCREEN, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
     GID_PICKFILE, GID_KERNING,
+    GID_SCAN, GID_SCANSUM, GID_FONTLIST, GID_DETAIL1, GID_DETAIL2, GID_DETAIL3,
+    GID_REPORT,
     GID_COUNT
 };
 
@@ -108,17 +111,21 @@ static const UBYTE hint_order[4] =
 static struct Gadget *gads[GID_COUNT];
 static Object *winobj, *pages;
 static struct Window *win;
-static struct List tablist, hintlist, blacklb, runlist, charsetlist;
+static struct List tablist, hintlist, blacklb, runlist, charsetlist, fontlb;
 
 static struct AAPrefs cur;      /* what the window shows */
 static struct AAPrefs before;   /* AAText's settings when we started */
 static struct AAPrefs orig;     /* the settings read at start (Restore) */
 static BOOL running;            /* AAText answered STATUS */
 static BOOL tested;             /* new settings were APPLYed to AAText */
-static char statustext[160];
+static char statustext[320];
 static char gammatext[8];
 static char fontinfo[80];
 static char cacheused[64];
+
+#define MAX_DIAG 300
+static struct AADiagEntry *diag;        /* last font scan, MAX_DIAG entries */
+static LONG numdiag = -1;               /* -1: not scanned yet */
 
 #define MAX_RUNNING 64
 static char runnames[MAX_RUNNING][AA_NAME_LEN];
@@ -186,7 +193,7 @@ static void CloseLibs(void)
     }
 }
 
-/* Tab page of a gadget (0-2), -1 for the gadgets outside the pages. */
+/* Tab page of a gadget (0-3), -1 for the gadgets outside the pages. */
 static LONG PageOf(LONG gid)
 {
     if ((gid >= GID_GAMMA && gid <= GID_FONTINFO) || gid == GID_KERNING)
@@ -195,6 +202,8 @@ static LONG PageOf(LONG gid)
         return 1;
     if (gid >= GID_AUTO && gid <= GID_CHARSET)
         return 2;
+    if (gid >= GID_SCAN && gid <= GID_REPORT)
+        return 3;
     return -1;
 }
 
@@ -843,6 +852,9 @@ static void FreeLists(void)
     while ((n = RemHead(&charsetlist)))
         FreeChooserNode(n);
     FreeListBrowserList(&blacklb);
+    FreeListBrowserList(&fontlb);
+    FreeVec(diag);
+    diag = NULL;
 }
 
 static Object *ProgramsPage(void)
@@ -950,6 +962,8 @@ static Object *AdvancedPage(void)
             LAYOUT_AddChild, gads[GID_CACHEUSED] = (struct Gadget *)ButtonObject,
                 GA_ID, GID_CACHEUSED,
                 GA_ReadOnly, TRUE,
+                /* no key underscore: texts may contain "_" (Fonts/_ttf) */
+                GA_Underscore, 0,
                 GA_Text, (ULONG)cacheused,
                 BUTTON_BevelStyle, BVS_NONE,
                 BUTTON_Justification, BCJ_LEFT,
@@ -986,6 +1000,264 @@ static LONG HintIndex(UBYTE hinting)
     return 0;
 }
 
+/* ------------------------------------------------------------------ */
+/* Diagnostics tab                                                     */
+/* ------------------------------------------------------------------ */
+
+static char scansum[96];
+static char detail1[AA_FONTFILE_LEN + 32];
+static char detail2[AA_FONTFILE_LEN + 32];
+static char detail3[128];
+
+static const LONG diag_msg[AA_DIAG_NUM] =
+{
+    MSG_DIAG_OK, MSG_DIAG_MOVED, MSG_DIAG_MISSING, MSG_DIAG_BADFILE,
+    MSG_DIAG_BADOTAG, MSG_DIAG_OTHER
+};
+
+static const LONG diag_advice[AA_DIAG_NUM] =
+{
+    MSG_DIAG_ADV_OK, MSG_DIAG_ADV_MOVED, MSG_DIAG_ADV_MISSING,
+    MSG_DIAG_ADV_BADFILE, MSG_DIAG_ADV_BADOTAG, MSG_DIAG_ADV_OTHER
+};
+
+/* English status names for the report, which goes into bug reports */
+static const char *const diag_name[AA_DIAG_NUM] =
+{
+    "ok", "moved", "missing", "not a font", "bad .otag", "other engine"
+};
+
+static struct ColumnInfo fontcols[] =
+{
+    { 30, NULL, 0 },
+    { 20, NULL, 0 },
+    { 50, NULL, 0 },
+    { -1, NULL, 0 }
+};
+
+/* Show the selected font's paths and what to do about it. */
+static void ShowDetail(void)
+{
+    ULONG sel = ~0UL;
+    struct AADiagEntry *e;
+    const char *arg;
+
+    detail1[0] = detail2[0] = detail3[0] = 0;
+    if (gads[GID_FONTLIST])
+        GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_FONTLIST], &sel);
+    if ((LONG)sel >= 0 && (LONG)sel < numdiag)
+    {
+        e = &diag[sel];
+        snprintf(detail1, sizeof(detail1), GetString(MSG_DIAG_INOTAG),
+                 e->want[0] ? e->want : e->otag);
+        if (e->status == AA_DIAG_MOVED || e->status == AA_DIAG_BADFILE)
+            snprintf(detail2, sizeof(detail2), GetString(MSG_DIAG_FOUND),
+                     e->found);
+        arg = e->status == AA_DIAG_OTHER ? e->engine : "";
+        snprintf(detail3, sizeof(detail3), GetString(diag_advice[e->status]),
+                 arg);
+    }
+    SetGad(GID_DETAIL1, GA_Text, (ULONG)detail1);
+    SetGad(GID_DETAIL2, GA_Text, (ULONG)detail2);
+    SetGad(GID_DETAIL3, GA_Text, (ULONG)detail3);
+}
+
+static void ScanFonts(void)
+{
+    LONG i, ok = 0;
+
+    if (!diag)
+        diag = AllocVec(MAX_DIAG * sizeof(*diag), MEMF_ANY);
+    if (!diag)
+        return;
+
+    SetAttrs(winobj, WA_BusyPointer, TRUE, TAG_DONE);
+    numdiag = aa_ScanFonts(diag, MAX_DIAG);
+    SetAttrs(winobj, WA_BusyPointer, FALSE, TAG_DONE);
+
+    SetGad(GID_FONTLIST, LISTBROWSER_Labels, ~0UL);
+    FreeListBrowserList(&fontlb);
+    for (i = 0; i < numdiag; i++)
+    {
+        struct AADiagEntry *e = &diag[i];
+        struct Node *n = AllocListBrowserNode(3,
+            LBNA_Column, 0, LBNCA_Text, (ULONG)e->name,
+            LBNA_Column, 1, LBNCA_Text, (ULONG)GetString(diag_msg[e->status]),
+            LBNA_Column, 2, LBNCA_Text,
+                (ULONG)(e->found[0] ? e->found : e->want),
+            TAG_DONE);
+
+        if (n)
+            AddTail(&fontlb, n);
+        if (e->status == AA_DIAG_OK || e->status == AA_DIAG_OTHER)
+            ok++;
+    }
+    SetGad2(GID_FONTLIST, LISTBROWSER_Labels, (ULONG)&fontlb,
+            LISTBROWSER_Selected, (ULONG)-1);
+
+    if (numdiag < 0)
+        snprintf(scansum, sizeof(scansum), "%s", GetString(MSG_DIAG_NOFONTS));
+    else if (numdiag == MAX_DIAG)
+        snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_LISTFULL),
+                 (long)MAX_DIAG);
+    else
+        snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_SUMMARY),
+                 (long)numdiag, (long)ok, (long)(numdiag - ok));
+    SetGad(GID_SCANSUM, GA_Text, (ULONG)scansum);
+    ShowDetail();
+}
+
+/* Plain text, English: meant to be attached to bug reports. */
+static BOOL WriteReport(const char *path)
+{
+    BPTR fh = Open((CONST_STRPTR)path, MODE_NEWFILE);
+    LONG i;
+    BOOL ok = TRUE;
+
+    if (!fh)
+        return FALSE;
+    FPrintf(fh, (CONST_STRPTR)"AAText font report (%s)\n"
+            "%ld font(s) in FONTS:\n", (ULONG)(version + 6), (ULONG)numdiag);
+    for (i = 0; i < numdiag && ok; i++)
+    {
+        struct AADiagEntry *e = &diag[i];
+
+        FPrintf(fh, (CONST_STRPTR)"\n%s: %s\n  .otag:    %s\n",
+                (ULONG)e->name, (ULONG)diag_name[e->status], (ULONG)e->otag);
+        if (e->want[0])
+            FPrintf(fh, (CONST_STRPTR)"  in .otag: %s\n", (ULONG)e->want);
+        if (e->found[0] && strcmp(e->found, e->want))
+            FPrintf(fh, (CONST_STRPTR)"  found:    %s\n", (ULONG)e->found);
+        ok = FPrintf(fh, (CONST_STRPTR)"  engine:   %s, face %ld, "
+                     "code page %s\n",
+                     (ULONG)(e->engine[0] ? e->engine : "?"),
+                     (ULONG)e->facenum,
+                     (ULONG)(e->codepage ? "in .otag" : "none")) >= 0;
+    }
+    if (!Close(fh))
+        ok = FALSE;
+    return ok;
+}
+
+static void SaveReport(void)
+{
+    static char path[AA_PATH_LEN];
+    struct FileRequester *fr;
+    char msg[AA_PATH_LEN + 40];
+
+    if (numdiag < 0)
+        ScanFonts();
+    if (numdiag < 0)
+        return;
+    fr = AllocAslRequestTags(ASL_FileRequest,
+                             ASLFR_Window, (ULONG)win,
+                             ASLFR_TitleText,
+                                 (ULONG)GetString(MSG_DIAG_SAVE_TITLE),
+                             ASLFR_InitialDrawer, (ULONG)"RAM:",
+                             ASLFR_InitialFile, (ULONG)"AAText-fonts.txt",
+                             ASLFR_DoSaveMode, TRUE,
+                             ASLFR_RejectIcons, TRUE,
+                             ASLFR_SleepWindow, TRUE,
+                             TAG_DONE);
+    if (!fr)
+        return;
+    if (AslRequest(fr, NULL) && fr->fr_File && fr->fr_File[0])
+    {
+        snprintf(path, sizeof(path), "%s", (char *)fr->fr_Drawer);
+        AddPart((STRPTR)path, fr->fr_File, sizeof(path));
+        snprintf(msg, sizeof(msg), GetString(WriteReport(path) ?
+                 MSG_DIAG_SAVED : MSG_WRITE_ERROR), path);
+        SetStatus(msg);
+    }
+    FreeAslRequest(fr);
+}
+
+static Object *DiagPage(void)
+{
+    LONG lineh = previewfont ? previewfont->tf_YSize : 8;
+
+    fontcols[0].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FONT);
+    fontcols[1].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_STATUS);
+    fontcols[2].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FILE);
+
+    return VLayoutObject,
+        LAYOUT_SpaceOuter, TRUE,
+        LAYOUT_DeferLayout, TRUE,
+
+        LAYOUT_AddImage, LabelObject,
+            LABEL_Text, (ULONG)GetString(MSG_DIAG_INFO),
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_SCAN] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_SCAN, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_DIAG_SCAN),
+            End,
+            CHILD_WeightedWidth, 0,
+            LAYOUT_AddChild, gads[GID_SCANSUM] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_SCANSUM,
+                GA_ReadOnly, TRUE,
+                GA_Underscore, 0,
+                GA_Text, (ULONG)scansum,
+                BUTTON_BevelStyle, BVS_NONE,
+                BUTTON_Justification, BCJ_LEFT,
+            End,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, gads[GID_FONTLIST] =
+                         (struct Gadget *)ListBrowserObject,
+            GA_ID, GID_FONTLIST,
+            GA_RelVerify, TRUE,
+            LISTBROWSER_Labels, (ULONG)&fontlb,
+            LISTBROWSER_ColumnInfo, (ULONG)fontcols,
+            LISTBROWSER_ColumnTitles, TRUE,
+            LISTBROWSER_ShowSelected, TRUE,
+            LISTBROWSER_HorizontalProp, TRUE,
+        End,
+        CHILD_MinHeight, lineh * 6 + 8,
+
+        LAYOUT_AddChild, gads[GID_DETAIL1] = (struct Gadget *)ButtonObject,
+            GA_ID, GID_DETAIL1,
+            GA_ReadOnly, TRUE,
+            GA_Underscore, 0,
+            GA_Text, (ULONG)detail1,
+            BUTTON_BevelStyle, BVS_NONE,
+            BUTTON_Justification, BCJ_LEFT,
+        End,
+        CHILD_WeightedHeight, 0,
+        LAYOUT_AddChild, gads[GID_DETAIL2] = (struct Gadget *)ButtonObject,
+            GA_ID, GID_DETAIL2,
+            GA_ReadOnly, TRUE,
+            GA_Underscore, 0,
+            GA_Text, (ULONG)detail2,
+            BUTTON_BevelStyle, BVS_NONE,
+            BUTTON_Justification, BCJ_LEFT,
+        End,
+        CHILD_WeightedHeight, 0,
+        LAYOUT_AddChild, gads[GID_DETAIL3] = (struct Gadget *)ButtonObject,
+            GA_ID, GID_DETAIL3,
+            GA_ReadOnly, TRUE,
+            GA_Underscore, 0,
+            GA_Text, (ULONG)detail3,
+            BUTTON_BevelStyle, BVS_NONE,
+            BUTTON_Justification, BCJ_LEFT,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, SpaceObject, End,
+            LAYOUT_AddChild, gads[GID_REPORT] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_REPORT, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_DIAG_REPORT),
+            End,
+            CHILD_WeightedWidth, 0,
+        End,
+        CHILD_WeightedHeight, 0,
+    End;
+}
+
 static Object *AppearancePage(void)
 {
     LONG previewh = (previewfont ? previewfont->tf_YSize : 8) * 2 + 16;
@@ -1006,6 +1278,7 @@ static Object *AppearancePage(void)
             LAYOUT_AddChild, gads[GID_GAMMAVAL] = (struct Gadget *)ButtonObject,
                 GA_ID, GID_GAMMAVAL,
                 GA_ReadOnly, TRUE,
+                GA_Underscore, 0,
                 GA_Text, (ULONG)gammatext,
                 BUTTON_BevelStyle, BVS_NONE,
             End,
@@ -1051,6 +1324,7 @@ static Object *AppearancePage(void)
             LAYOUT_AddChild, gads[GID_FONTINFO] = (struct Gadget *)ButtonObject,
                 GA_ID, GID_FONTINFO,
                 GA_ReadOnly, TRUE,
+                GA_Underscore, 0,
                 GA_Text, (ULONG)fontinfo,
                 BUTTON_BevelStyle, BVS_NONE,
                 BUTTON_Justification, BCJ_LEFT,
@@ -1104,6 +1378,7 @@ static BOOL OpenWin(struct Screen *scr)
     AddTab(&tablist, MSG_TAB_APPEARANCE, 0);
     AddTab(&tablist, MSG_TAB_PROGRAMS, 1);
     AddTab(&tablist, MSG_TAB_ADVANCED, 2);
+    AddTab(&tablist, MSG_TAB_DIAG, 3);
     AddChoice(&hintlist, MSG_HINT_NORMAL);
     AddChoice(&hintlist, MSG_HINT_LIGHT);
     AddChoice(&hintlist, MSG_HINT_NONE);
@@ -1142,12 +1417,14 @@ static BOOL OpenWin(struct Screen *scr)
                     PAGE_Add, AppearancePage(),
                     PAGE_Add, ProgramsPage(),
                     PAGE_Add, AdvancedPage(),
+                    PAGE_Add, DiagPage(),
                 End,
             End,
 
             LAYOUT_AddChild, gads[GID_STATUS] = (struct Gadget *)ButtonObject,
                 GA_ID, GID_STATUS,
                 GA_ReadOnly, TRUE,
+                GA_Underscore, 0,
                 GA_Text, (ULONG)statustext,
                 BUTTON_BevelStyle, BVS_NONE,
                 BUTTON_Justification, BCJ_LEFT,
@@ -1225,6 +1502,18 @@ static BOOL Action(ULONG id)
                 AddProgram((const char *)text);
             break;
         }
+
+        case GID_SCAN:
+            ScanFonts();
+            break;
+
+        case GID_FONTLIST:
+            ShowDetail();
+            break;
+
+        case GID_REPORT:
+            SaveReport();
+            break;
 
         case GID_PICKFILE:
             PickProgram();
@@ -1391,6 +1680,7 @@ int main(int argc, char **argv)
     NewList(&blacklb);
     NewList(&runlist);
     NewList(&charsetlist);
+    NewList(&fontlb);
 
     if (argc)
     {

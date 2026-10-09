@@ -116,6 +116,23 @@ satırında görürsünüz.
   Gelişmiş    otomatik font algılama, ekran dışı bitmap'ler, önbellek
               boyutu (o anki kullanımıyla) ve karakter seti (İpuçları
               bölümüne bakın)
+  Tanılama    "Fontları tara", FONTS: içindeki her .otag dosyasını ve
+              gösterdiği font dosyasını denetler; sorunlu fontlar
+              listenin başında yer alır. Bir font seçildiğinde .otag'daki
+              yol, dosyanın gerçekte bulunduğu yer ve yapılması gereken
+              gösterilir:
+                Sorunsuz       dosya .otag'da yazan yerde
+                Yeri değişmiş  .otag başka bir disk adı veriyor (ör.
+                               disk yeniden adlandırıldıktan sonra
+                               System:); AAText dosyayı FONTS: altında
+                               bulur, diğer programlar bulamayabilir:
+                               fontu yeniden kurun
+                Eksik          font dosyası yok
+                Font değil     dosya TrueType/OpenType font değil
+                Bozuk .otag    .otag okunamıyor
+                Başka motor    başka bir font motoru için çizgisel font
+              "Raporu kaydet..." listeyi hata bildirimleri için bir metin
+              dosyasına yazar. Tarama hiçbir şeyi değiştirmez.
 
 Menülerde, sistemin Prefs programlarındaki gibi Aç..., Farklı
 Kaydet..., Varsayılan Ayarlar, Son Kaydedilen ve Geri Al bulunur.
@@ -279,6 +296,10 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.14  AATextPrefs: Tanılama sekmesi. FONTS: içindeki .otag dosyalarını
+      ve gösterdikleri font dosyalarını denetler (yeri değişmiş, eksik,
+      font değil) ve hata bildirimleri için rapor kaydeder.
 
 0.13  Fontlar, açılış diskinin adı kurulum sırasındakinden farklı
       olduğunda da bulunur: .otag dosyaları font dosyasını eski disk

@@ -79,7 +79,34 @@
     S(MSG_CHARSET_LATIN10,  68, "ISO-8859-16 (South-Eastern European)") \
     S(MSG_CHARSET_CP1250,   69, "Windows-1250 (Central European)") \
     S(MSG_CHARSET_CYRILLIC, 70, "ISO-8859-5 (Cyrillic)") \
-    S(MSG_CHARSET_KOI8R,    71, "KOI8-R (Russian)")
+    S(MSG_CHARSET_KOI8R,    71, "KOI8-R (Russian)") \
+    S(MSG_TAB_DIAG,         72, "Diagnostics") \
+    S(MSG_DIAG_INFO,        73, "Checks the .otag files in FONTS: and the font files they name. Nothing is changed.") \
+    S(MSG_DIAG_SCAN,        74, "Scan fonts") \
+    S(MSG_DIAG_REPORT,      75, "Save report...") \
+    S(MSG_DIAG_SUMMARY,     76, "%ld fonts: %ld OK, %ld with problems") \
+    S(MSG_DIAG_NOFONTS,     77, "Cannot read FONTS:.") \
+    S(MSG_DIAG_COL_FONT,    78, "Font") \
+    S(MSG_DIAG_COL_STATUS,  79, "Status") \
+    S(MSG_DIAG_COL_FILE,    80, "Font file") \
+    S(MSG_DIAG_OK,          81, "OK") \
+    S(MSG_DIAG_MOVED,       82, "Moved") \
+    S(MSG_DIAG_MISSING,     83, "Missing") \
+    S(MSG_DIAG_BADFILE,     84, "Not a font") \
+    S(MSG_DIAG_BADOTAG,     85, "Bad .otag") \
+    S(MSG_DIAG_OTHER,       86, "Other engine") \
+    S(MSG_DIAG_INOTAG,      87, "In the .otag: %s") \
+    S(MSG_DIAG_ADV_OK,      88, "The font file is where the .otag says.") \
+    S(MSG_DIAG_ADV_MOVED,   89, "AAText finds it there, other programs may not: install the font again.") \
+    S(MSG_DIAG_ADV_MISSING, 90, "The font file is not there. Install the font again, or delete its .font and .otag.") \
+    S(MSG_DIAG_ADV_BADFILE, 91, "This file is not a TrueType or OpenType font.") \
+    S(MSG_DIAG_ADV_BADOTAG, 92, "The .otag cannot be read or names no font file.") \
+    S(MSG_DIAG_ADV_OTHER,   93, "An outline font for another font engine (%s); AAText leaves it alone.") \
+    S(MSG_DIAG_SAVE_TITLE,  94, "Save font report") \
+    S(MSG_DIAG_SAVED,       95, "Report saved: %s") \
+    S(MSG_DIAG_LISTFULL,    96, "Only the first %ld fonts are listed.") \
+    S(MSG_DIAG_FOUND,       97, "Found as: %s")
+
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

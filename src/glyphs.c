@@ -43,6 +43,7 @@ void FT_Done_Memory(FT_Memory memory);
 #include "glyphs.h"
 #include "otag.h"
 #include "charsets.h"
+#include "fontfile.h"
 #include "debug.h"
 
 #define AA_STACK_SIZE   (32 * 1024)
@@ -741,51 +742,6 @@ void aa_RequestFont(const char *fontname)
         Signal(aa_HelperTask, aa_HelperSig);
 }
 
-/* Lock prefix + rest in path; 0 if it does not exist. */
-static BPTR LockJoined(const char *prefix, const char *rest, char *path)
-{
-    LONG n = 0;
-
-    while (prefix[n])
-    {
-        path[n] = prefix[n];
-        n++;
-    }
-    StrCopy(path + n, rest, AA_PATH_LEN - n);
-    return Lock((CONST_STRPTR)path, ACCESS_READ);
-}
-
-/*
- * The font file named in a .otag that is not where it says. Font
- * installers write the full path with the volume name of the time
- * ("System:Fonts/_TrueType/x.ttf"), which breaks when the boot volume
- * has another name. Try the part after "Fonts/" in FONTS:, then the
- * path without its volume in SYS:; a relative name is tried in FONTS:.
- * The path found is left in path.
- */
-static BPTR LockMoved(const char *file, char *path)
-{
-    const char *rest = file, *p;
-    BPTR lock;
-
-    for (p = file; *p; p++)
-        if (*p == ':')
-            rest = p + 1;
-    if (rest == file)
-        return LockJoined("FONTS:", file, path);
-
-    for (p = rest; *p; p++)
-        if ((p == rest || p[-1] == '/') && ToLower(p[0]) == 'f' &&
-            ToLower(p[1]) == 'o' && ToLower(p[2]) == 'n' &&
-            ToLower(p[3]) == 't' && ToLower(p[4]) == 's' && p[5] == '/')
-        {
-            if ((lock = LockJoined("FONTS:", p + 6, path)))
-                return lock;
-            break;
-        }
-    return LockJoined("SYS:", rest, path);
-}
-
 /* Read a .otag file and load the TrueType file it names. */
 static struct AAFace *ResolveName(struct AAName *n, BOOL report)
 {
@@ -807,10 +763,7 @@ static struct AAFace *ResolveName(struct AAName *n, BOOL report)
         const char *file = ot->fontfile;
         BPTR lock;
 
-        StrCopy(path, file, AA_PATH_LEN);
-        lock = Lock((CONST_STRPTR)path, ACCESS_READ);
-        if (!lock)
-            lock = LockMoved(file, path);
+        lock = aa_LockFontFile(file, path);
         if (lock)
         {
             UnLock(lock);

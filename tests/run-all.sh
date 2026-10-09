@@ -43,6 +43,21 @@ V="vamos -C 68020 -m 8192 -V movedfonts:$M -a FONTS:movedfonts:"
 run moved-volume    tests/data/empty.prefs auto MovedTest.font
 rm -rf $M
 
+# font diagnostics: one .otag for each status
+M=$(mktemp -d)
+mkdir -p $M/moved_fonts_test_directory
+cp third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf $M/moved_fonts_test_directory/
+echo "not a font" > $M/moved_fonts_test_directory/NotAFont__.ttf
+cp tests/data/fonts/AutoTest.otag $M/Good.otag
+cp tests/data/MovedTest.otag $M/Moved.otag
+perl -pe 's/DejaVuSans\.ttf/NotThere__.ttf/' tests/data/MovedTest.otag > $M/Missing.otag
+perl -pe 's/DejaVuSans\.ttf/NotAFont__.ttf/' tests/data/MovedTest.otag > $M/NotFont.otag
+echo "garbage" > $M/Broken.otag
+V="vamos -C 68020 -m 8192 -V scanfonts:$M -a FONTS:scanfonts:"
+run scan            tests/data/empty.prefs scan Good=ok Moved=moved \
+                    Missing=missing NotFont=badfile Broken=badotag
+rm -rf $M
+
 echo
 if [ $fail -eq 0 ]; then
     echo "all tests passed"

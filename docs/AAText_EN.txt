@@ -109,6 +109,21 @@ while you try it out.
               not be running; AAText recognises it by its name.
   Advanced    automatic font detection, off-screen bitmaps, cache size
               (with the current use) and character set (see Tips)
+  Diagnostics "Scan fonts" checks every .otag file in FONTS: and the
+              font file it names; fonts with problems are listed first.
+              Select a font to see the path in its .otag, where the
+              file really is, and what to do:
+                OK            the file is where the .otag says
+                Moved         the .otag names another volume (e.g.
+                              System: after the disk was renamed);
+                              AAText finds the file in FONTS:, other
+                              programs may not: install the font again
+                Missing       the font file is gone
+                Not a font    the file is no TrueType/OpenType font
+                Bad .otag     the .otag cannot be read
+                Other engine  an outline font for another engine
+              "Save report..." writes the list to a text file for bug
+              reports. Nothing is changed by the scan.
 
 The menus offer Open..., Save As..., Reset To Defaults, Last Saved and
 Restore, like the system's Prefs programs.
@@ -266,6 +281,10 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.14  AATextPrefs: Diagnostics tab. Checks the .otag files in FONTS:
+      and the font files they name (moved, missing, not a font) and
+      saves a report for bug reports.
 
 0.13  Fonts are found when the boot volume has another name than when
       they were installed: .otag files name the font file with the old

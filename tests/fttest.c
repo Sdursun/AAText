@@ -15,6 +15,7 @@
 #include "metrics.h"
 #include "otag.h"
 #include "charsets.h"
+#include "fontscan.h"
 
 /* stub.s references these; the patch itself is not linked here. */
 volatile LONG aa_UseCount;
@@ -72,6 +73,36 @@ int main(int argc, char **argv)
             printf("%-8s %02X -> %04lX %s\n", aa_CharsetNames[t[i].cs],
                    t[i].c, (unsigned long)got, got == want ? "ok" : "FAIL");
             bad |= got != want;
+        }
+        return bad ? 10 : 0;
+    }
+    /* "scan": font diagnostics; further arguments are name=status checks */
+    if (strcmp(argv[2], "scan") == 0)
+    {
+        static const char *const names[AA_DIAG_NUM] =
+            { "ok", "moved", "missing", "badfile", "badotag", "other" };
+        static struct AADiagEntry e[32];
+        LONG cnt = aa_ScanFonts(e, 32);
+        int bad = cnt < 0;
+
+        printf("scan: %ld font(s)\n", (long)cnt);
+        for (i = 0; i < cnt; i++)
+            printf("  %-12s %-8s %s -> %s\n", e[i].name, names[e[i].status],
+                   e[i].want, e[i].found);
+        for (i = 3; i < argc; i++)
+        {
+            const char *eq = strchr(argv[i], '=');
+            LONG k;
+
+            for (k = 0; eq && k < cnt; k++)
+                if (!strncmp(e[k].name, argv[i], eq - argv[i]) &&
+                    !e[k].name[eq - argv[i]])
+                    break;
+            if (!eq || k == cnt || strcmp(names[e[k].status], eq + 1))
+            {
+                printf("FAIL: %s\n", argv[i]);
+                bad = 1;
+            }
         }
         return bad ? 10 : 0;
     }
