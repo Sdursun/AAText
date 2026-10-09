@@ -116,7 +116,8 @@
     S(MSG_DIAG_FIX_WRITE,  105, "Cannot write %s. The original is in %s.") \
     S(MSG_DIAG_LIB,        106, "; %s %s") \
     S(MSG_DIAG_LIB_NONE,   107, "; no %s") \
-    S(MSG_DIAG_COL_ENGINE, 108, "Engine")
+    S(MSG_DIAG_COL_ENGINE, 108, "Engine") \
+    S(MSG_DIAG_NOENGINE,   109, "%s.library is not installed: no program can open this font.")
 
 
 #define S(id, n, s) id = n,

@@ -161,6 +161,38 @@ static BOOL Before(const struct AADiagEntry *a, const struct AADiagEntry *b)
     return Stricmp((CONST_STRPTR)a->name, (CONST_STRPTR)b->name) < 0;
 }
 
+/*
+ * Version of the library diskfont opens for an engine ("ttf" ->
+ * ttf.library), "" if it is not installed. Few engines, many fonts:
+ * the answers are remembered for one scan.
+ */
+#define MAX_ENGINES 8
+
+static struct { char name[16]; char ver[16]; } engines[MAX_ENGINES];
+static LONG numengines;
+
+static void EngineVersion(const char *engine, char *ver)
+{
+    char lib[32];
+    LONG i;
+
+    for (i = 0; i < numengines; i++)
+        if (!Stricmp((CONST_STRPTR)engines[i].name, (CONST_STRPTR)engine))
+        {
+            strcpy(ver, engines[i].ver);
+            return;
+        }
+    snprintf(lib, sizeof(lib), "%s.library", engine);
+    if (!aa_LibVersion(lib, ver, 16))
+        ver[0] = 0;
+    if (numengines < MAX_ENGINES)
+    {
+        Copy(engines[numengines].name, engine, 16);
+        strcpy(engines[numengines].ver, ver);
+        numengines++;
+    }
+}
+
 LONG aa_ScanFonts(struct AADiagEntry *out, LONG max)
 {
     struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
@@ -207,6 +239,16 @@ LONG aa_ScanFonts(struct AADiagEntry *out, LONG max)
     FreeDosObject(DOS_FIB, fib);
     if (!dirs)
         return -1;
+
+    numengines = 0;
+    for (i = 0; i < n; i++)
+        if (out[i].engine[0])
+        {
+            EngineVersion(out[i].engine, out[i].enginever);
+            snprintf(out[i].enginelabel, sizeof(out[i].enginelabel), "%s %s",
+                     out[i].engine,
+                     out[i].enginever[0] ? out[i].enginever : "?");
+        }
 
     /* problems first, then by name (a few hundred entries at most) */
     for (i = 1; i < n; i++)
@@ -303,7 +345,39 @@ BOOL aa_LibVersion(const char *name, char *buf, LONG len)
     LONG got, keep = 0, i;
     BOOL found = FALSE;
 
+    /* the $VER string of the file first, as "Version LIBS:<name>" shows
+       it: some libraries report another number once loaded (ttf.library
+       0.8.5 says 10.85), and the result should not depend on that. Read
+       4 KB at a time; the last 64 bytes are kept so that a string across
+       two reads is found. */
     buf[0] = 0;
+    snprintf(path, sizeof(path), "LIBS:%s", name);
+    if ((fh = Open((CONST_STRPTR)path, MODE_OLDFILE)))
+    {
+        while (!found && (got = Read(fh, chunk + keep, 4096)) > 0)
+        {
+            got += keep;
+            for (i = 0; i + 6 < got && !found; i++)
+                if (!memcmp(chunk + i, "$VER: ", 6))
+                {
+                    char ver[64];
+                    LONG k;
+
+                    for (k = 0; k < 63 && i + 6 + k < got &&
+                                chunk[i + 6 + k]; k++)
+                        ver[k] = chunk[i + 6 + k];
+                    ver[k] = 0;
+                    found = VersionFromVer(ver, buf, len);
+                }
+            keep = got > 64 ? 64 : got;
+            memmove(chunk, chunk + got - keep, keep);
+        }
+        Close(fh);
+    }
+    if (found)
+        return TRUE;
+
+    /* no file or no $VER (e.g. in ROM): the loaded library's numbers */
     Forbid();
     lib = (struct Library *)FindName(&SysBase->LibList,
                                      (CONST_STRPTR)name);
@@ -311,33 +385,5 @@ BOOL aa_LibVersion(const char *name, char *buf, LONG len)
         snprintf(buf, len, "%ld.%ld", (long)lib->lib_Version,
                  (long)lib->lib_Revision);
     Permit();
-    if (lib)
-        return TRUE;
-
-    /* not loaded: look for $VER in the file, 4 KB at a time; the last
-       64 bytes are kept so that a string across two reads is found */
-    snprintf(path, sizeof(path), "LIBS:%s", name);
-    fh = Open((CONST_STRPTR)path, MODE_OLDFILE);
-    if (!fh)
-        return FALSE;
-    while (!found && (got = Read(fh, chunk + keep, 4096)) > 0)
-    {
-        got += keep;
-        for (i = 0; i + 6 < got && !found; i++)
-            if (!memcmp(chunk + i, "$VER: ", 6))
-            {
-                char ver[64];
-                LONG k;
-
-                for (k = 0; k < 63 && i + 6 + k < got && chunk[i + 6 + k];
-                     k++)
-                    ver[k] = chunk[i + 6 + k];
-                ver[k] = 0;
-                found = VersionFromVer(ver, buf, len);
-            }
-        keep = got > 64 ? 64 : got;
-        memmove(chunk, chunk + got - keep, keep);
-    }
-    Close(fh);
-    return found;
+    return lib != NULL;
 }

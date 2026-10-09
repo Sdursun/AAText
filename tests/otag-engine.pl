@@ -21,7 +21,7 @@ $d .= "$engine\0";
 for (my $p = 0; $p + 8 <= $off; $p += 8) {
     my $tag = unpack('N', substr($d, $p, 4));
     last if $tag == 0;
-    substr($d, $p + 4, 4) = pack('N', $off) if $tag == 0x80001002;
+    substr($d, $p + 4, 4) = pack('N', $off) if $tag == 0x80009002;   # OT_Engine
 }
 substr($d, 4, 4) = pack('N', length $d);
 binmode STDOUT;

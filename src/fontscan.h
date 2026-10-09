@@ -30,6 +30,8 @@ struct AADiagEntry
     char  want[AA_FONTFILE_LEN];        /* font file named in the .otag */
     char  found[AA_FONTFILE_LEN];       /* where it is (MOVED, OK) */
     char  engine[16];
+    char  enginever[16];                /* <engine>.library version or "" */
+    char  enginelabel[32];              /* "ttf 47.3", "ttf ?" if no library */
     LONG  facenum;
     UBYTE status;                       /* AA_DIAG_... */
     UBYTE codepage;                     /* the .otag has a code page */
@@ -45,10 +47,10 @@ LONG aa_ScanFonts(struct AADiagEntry *out, LONG max);
 
 /*
  * Version of a library ("1.3" for name "freetype2.library") into buf
- * (len bytes), without opening it: from the library list if it is
- * loaded, otherwise from the $VER string of LIBS:<name>. FALSE if there
- * is none. Used for the outline engines freetype2.library (FTManager
- * fonts) and aatext.library.
+ * (len bytes), without opening it: from the $VER string of
+ * LIBS:<name>, or if there is none from the library list when it is
+ * loaded. FALSE if neither. Used for the outline engines' libraries
+ * (ttf.library, freetype2.library, aatext.library...).
  */
 BOOL aa_LibVersion(const char *name, char *buf, LONG len);
 

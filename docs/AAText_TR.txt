@@ -140,7 +140,10 @@ satırında görürsünüz.
               AAText değil, bütün programlar bulur.
               Motor sütunu her .otag'daki OT_Engine değerini orada
               yazdığı gibi gösterir, ör. ttf (ttf.library), freetype2
-              (FTManager), ttengine ya da aatext (aatext.library).
+              (FTManager), ttengine ya da aatext (aatext.library); yanında
+              o kütüphanenin sürümü vardır ("Version LIBS:ttf.library"
+              gibi, dosyadaki $VER satırından). "?" kütüphanenin kurulu
+              olmadığı anlamına gelir: o fontu hiçbir program açamaz.
               "Fontları tara"nın yanındaki satır, kurulu
               freetype2.library ve aatext.library sürümlerini gösterir.
               "Raporu kaydet..." listeyi hata bildirimleri için bir metin

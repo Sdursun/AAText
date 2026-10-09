@@ -215,3 +215,5 @@ MSG_DIAG_LIB_NONE
 ; %s yok
 MSG_DIAG_COL_ENGINE
 Motor
+MSG_DIAG_NOENGINE
+%s.library kurulu değil: bu fontu hiçbir program açamaz.

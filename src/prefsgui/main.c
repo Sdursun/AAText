@@ -1036,10 +1036,10 @@ static const char *const diag_name[AA_DIAG_NUM] =
 
 static struct ColumnInfo fontcols[] =
 {
-    { 28, NULL, 0 },
-    { 17, NULL, 0 },
-    { 13, NULL, 0 },
-    { 42, NULL, 0 },
+    { 26, NULL, 0 },
+    { 14, NULL, 0 },
+    { 19, NULL, 0 },
+    { 41, NULL, 0 },
     { -1, NULL, 0 }
 };
 
@@ -1064,6 +1064,11 @@ static void ShowDetail(void)
         arg = e->status == AA_DIAG_OTHER ? e->engine : "";
         snprintf(detail3, sizeof(detail3), GetString(diag_advice[e->status]),
                  arg);
+        /* without the engine's library diskfont cannot make the font
+           for any program, even when the file is fine */
+        if (e->engine[0] && !e->enginever[0])
+            snprintf(detail3, sizeof(detail3), GetString(MSG_DIAG_NOENGINE),
+                     e->engine);
     }
     SetGad(GID_DETAIL1, GA_Text, (ULONG)detail1);
     SetGad(GID_DETAIL2, GA_Text, (ULONG)detail2);
@@ -1085,7 +1090,7 @@ static void ShowScan(LONG sel)
         struct Node *n = AllocListBrowserNode(4,
             LBNA_Column, 0, LBNCA_Text, (ULONG)e->name,
             LBNA_Column, 1, LBNCA_Text, (ULONG)GetString(diag_msg[e->status]),
-            LBNA_Column, 2, LBNCA_Text, (ULONG)e->engine,   /* OT_Engine */
+            LBNA_Column, 2, LBNCA_Text, (ULONG)e->enginelabel, /* OT_Engine */
             LBNA_Column, 3, LBNCA_Text,
                 (ULONG)(e->found[0] ? e->found : e->want),
             TAG_DONE);
@@ -1215,9 +1220,11 @@ static BOOL WriteReport(const char *path)
             FPrintf(fh, (CONST_STRPTR)"  in .otag: %s\n", (ULONG)e->want);
         if (e->found[0] && strcmp(e->found, e->want))
             FPrintf(fh, (CONST_STRPTR)"  found:    %s\n", (ULONG)e->found);
-        ok = FPrintf(fh, (CONST_STRPTR)"  engine:   %s, face %ld, "
-                     "code page %s\n",
+        ok = FPrintf(fh, (CONST_STRPTR)"  engine:   %s (%s.library %s), "
+                     "face %ld, code page %s\n",
                      (ULONG)(e->engine[0] ? e->engine : "?"),
+                     (ULONG)(e->engine[0] ? e->engine : "?"),
+                     (ULONG)(e->enginever[0] ? e->enginever : "not installed"),
                      (ULONG)e->facenum,
                      (ULONG)(e->codepage ? "in .otag" : "none")) >= 0;
     }

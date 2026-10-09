@@ -121,7 +121,8 @@ int main(int argc, char **argv)
         }
         return 0;
     }
-    /* "scan": font diagnostics; further arguments are name=status checks */
+    /* "scan": font diagnostics; further arguments are checks:
+       name=status, or name@label for the engine column ("ttf ?") */
     if (strcmp(argv[2], "scan") == 0)
     {
         static const char *const names[AA_DIAG_NUM] =
@@ -132,18 +133,21 @@ int main(int argc, char **argv)
 
         printf("scan: %ld font(s)\n", (long)cnt);
         for (i = 0; i < cnt; i++)
-            printf("  %-12s %-8s %s -> %s\n", e[i].name, names[e[i].status],
-                   e[i].want, e[i].found);
+            printf("  %-12s %-8s %-12s %s -> %s\n", e[i].name,
+                   names[e[i].status], e[i].enginelabel, e[i].want,
+                   e[i].found);
         for (i = 3; i < argc; i++)
         {
-            const char *eq = strchr(argv[i], '=');
+            const char *eq = strpbrk(argv[i], "=@");
             LONG k;
 
             for (k = 0; eq && k < cnt; k++)
                 if (!strncmp(e[k].name, argv[i], eq - argv[i]) &&
                     !e[k].name[eq - argv[i]])
                     break;
-            if (!eq || k == cnt || strcmp(names[e[k].status], eq + 1))
+            if (!eq || k == cnt ||
+                strcmp(*eq == '=' ? names[e[k].status] : e[k].enginelabel,
+                       eq + 1))
             {
                 printf("FAIL: %s\n", argv[i]);
                 bad = 1;
