@@ -130,6 +130,42 @@ AAText FPU'yu sadece açılışta kullanıyor.
 - AATextPrefs OS 3.2'ye özgü: `WINDOW_NewMenu` (window.class V47) kullanır.
 - Test gerektirir (CLAUDE.md'de de ikincil).
 
+### 9. Font kurucu: `.font` + `.otag` yazmak — orta, aatext.library'ye dayanır
+- Sorun: FTManager (freetype2.library 1.3 ile gelen) eski ve `.otag`'a kod
+  sayfası yazmıyor; Türkçe için `ENV:ftcodepage` gerekiyor. `ttf.library`
+  kurulumları da ayrı bir araç istiyor.
+- AATextPrefs'e "Font ekle" bölümü ya da ayrı küçük bir araç (ör.
+  `AATextFonts`): kullanıcı bir ya da birkaç font dosyası seçer (`.ttf`,
+  `.otf`, `.ttc`), araç `FONTS:` içine `.font` + `.otag` yazar.
+- Font bilgisi `aatext.library`'nin FreeType API'siyle dosyadan
+  okunur: aile adı, stil, kalın/italik (`FT_STYLE_FLAG_*`, OS/2 ağırlık
+  sınıfı → `OT_StemWeight`, `OT_SlantStyle`), sabit genişlik
+  (`OT_IsFixed`), `.ttc` içindeki yüzler (`OT_Spec6_FaceNum`), aile
+  bağları (`OT_BName`/`OT_IName`/`OT_BIName`).
+- `.otag`'a seçilen karakter setinin kod sayfası yazılır
+  (`OT_Spec2_CodePage`, `charsets.c`'deki tablolardan, ör. Latin-5); böylece
+  `ENV:ftcodepage` gerekmez.
+- Motor: `OT_Engine "aatext"` (aatext.library; freetype2.library'ye dokunulmaz). Ayrıca mevcut `.otag`
+  dosyalarına kod sayfası ekleyen / motorunu "freetype2"den "aatext"e çeviren bir "onar" işlemi
+  (AATextPrefs'in font tanılama bölümündeki yol düzeltmesine benzer, yedek
+  alarak).
+- Önkoşul: aatext.library kurulu olmalı (AAText ile gelir); ayrıntılar
+  `AATEXT_LIBRARY.md`.
+- Açık soru: `.font` dosyasında hangi boyutlar listelenecek (`OT_AvailSizes`)
+  ve bitmap önbelleği (`DFCTRL_CACHE`) yazılsın mı.
+
+### 10. AAText'i aatext.library'ye geçirmek — orta
+- aatext.library 1.0 (FreeType 2.14.3, kaynak `C:\Users\Serkan\Desktop\freetype2`)
+  AAText'in kütüphanesi; ayrıntılar `AATEXT_LIBRARY.md`.
+- Gömülü FreeType yerine kütüphaneyi kullanmak: AAText ~350 KB → ~50–60 KB,
+  daha çok font biçimi. AAText'in kullandığı her FreeType fonksiyonu
+  kütüphanede var.
+- Önce `USE_AATEXTLIB=1` derleme seçeneği, boyut/hız karşılaştırması
+  (68020 ve PiStorm), sonra varsayılan yapmak.
+- Dağıtım: `Libs/aatext.library` AAText paketine; kurulum notu
+  (Startup-Sequence değişmez, sadece LIBS:).
+- freetype2.library'ye (sistemdeki 1.3) dokunulmaz.
+
 ---
 
 ## Önerilen sıra
@@ -140,3 +176,4 @@ AAText FPU'yu sadece açılışta kullanıyor.
    önce gelir.
 4. Her değişiklikten sonra `.\test.ps1 -All`.
 5. Diğerleri talebe göre. AGA ancak istek gelirse.
+6. AAText'i aatext.library'ye geçirmek (madde 10), sonra font kurucu (madde 9).
