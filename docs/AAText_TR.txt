@@ -146,8 +146,6 @@ satırında görürsünüz.
               ("Version LIBS:ttf.library" gibi, dosyadaki $VER
               satırından). Kütüphane kurulu değilse o fontu hiçbir
               program açamaz; alttaki satır bunu söyler.
-              "Fontları tara"nın yanındaki satır, kurulu
-              freetype2.library ve aatext.library sürümlerini gösterir.
               "Raporu kaydet..." listeyi hata bildirimleri için bir metin
               dosyasına yazar. Taramanın kendisi hiçbir şeyi değiştirmez.
 

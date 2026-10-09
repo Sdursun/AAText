@@ -205,10 +205,6 @@ MSG_DIAG_FIX_READ
 %s okunamadı ya da yeniden oluşturulamadı; hiçbir şey değiştirilmedi.
 MSG_DIAG_FIX_WRITE
 %s yazılamadı. Orijinali: %s
-MSG_DIAG_LIB
-; %s %s
-MSG_DIAG_LIB_NONE
-; %s yok
 MSG_DIAG_NOENGINE
 %s.library kurulu değil: bu fontu hiçbir program açamaz.
 MSG_DIAG_L_OTAG

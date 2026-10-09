@@ -134,8 +134,7 @@ while you try it out.
               (aatext.library), with the version of that library from
               its $VER string, as "Version LIBS:ttf.library" shows it.
               If the library is not installed, no program can open the
-              font, and the line below says so. The line next to "Scan fonts" shows the installed versions of
-              freetype2.library and aatext.library.
+              font, and the line below says so.
               "Save report..." writes the list to a text file for bug
               reports. The scan itself changes nothing.
 

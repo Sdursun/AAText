@@ -1004,14 +1004,7 @@ static LONG HintIndex(UBYTE hinting)
 /* Diagnostics tab                                                     */
 /* ------------------------------------------------------------------ */
 
-static char scansum[160];
-/* libraries of the outline engines: FTManager fonts, AAText's own */
-#define NUM_ENGINELIBS 2
-static const char *const enginelibs[NUM_ENGINELIBS] =
-{
-    "freetype2.library", "aatext.library"
-};
-static char libver[NUM_ENGINELIBS][16];  /* "" if not installed */
+static char scansum[96];
 /* the read-only fields under the font list */
 static char detail1[AA_FONTFILE_LEN];   /* .otag file */
 static char detail2[AA_FONTFILE_LEN];   /* font file named in the .otag */
@@ -1123,18 +1116,6 @@ static void ShowScan(LONG sel)
     else
         snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_SUMMARY),
                  (long)numdiag, (long)ok, (long)(numdiag - ok));
-    /* the outline engines' libraries, useful in bug reports */
-    for (i = 0; numdiag >= 0 && i < NUM_ENGINELIBS; i++)
-    {
-        LONG n = strlen(scansum);
-
-        if (aa_LibVersion(enginelibs[i], libver[i], sizeof(libver[i])))
-            snprintf(scansum + n, sizeof(scansum) - n,
-                     GetString(MSG_DIAG_LIB), enginelibs[i], libver[i]);
-        else
-            snprintf(scansum + n, sizeof(scansum) - n,
-                     GetString(MSG_DIAG_LIB_NONE), enginelibs[i]);
-    }
     SetGad(GID_SCANSUM, GA_Text, (ULONG)scansum);
     ShowDetail();
 }
@@ -1218,9 +1199,6 @@ static BOOL WriteReport(const char *path)
         return FALSE;
     FPrintf(fh, (CONST_STRPTR)"AAText font report (%s)\n",
             (ULONG)(version + 6));
-    for (i = 0; i < NUM_ENGINELIBS; i++)
-        FPrintf(fh, (CONST_STRPTR)"%s: %s\n", (ULONG)enginelibs[i],
-                (ULONG)(libver[i][0] ? libver[i] : "not installed"));
     FPrintf(fh, (CONST_STRPTR)"%ld font(s) in FONTS:\n", (ULONG)numdiag);
     for (i = 0; i < numdiag && ok; i++)
     {
