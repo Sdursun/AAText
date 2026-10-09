@@ -98,7 +98,7 @@ enum
     GID_AUTO, GID_OFFSCREEN, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
     GID_PICKFILE, GID_KERNING,
     GID_SCAN, GID_SCANSUM, GID_FONTLIST, GID_DETAIL1, GID_DETAIL2, GID_DETAIL3,
-    GID_REPORT, GID_FIX,
+    GID_DETAIL4, GID_ADVICE, GID_REPORT, GID_FIX,
     GID_COUNT
 };
 
@@ -1012,9 +1012,12 @@ static const char *const enginelibs[NUM_ENGINELIBS] =
     "freetype2.library", "aatext.library"
 };
 static char libver[NUM_ENGINELIBS][16];  /* "" if not installed */
-static char detail1[AA_FONTFILE_LEN + 32];
-static char detail2[AA_FONTFILE_LEN + 32];
-static char detail3[128];
+/* the read-only fields under the font list */
+static char detail1[AA_FONTFILE_LEN];   /* .otag file */
+static char detail2[AA_FONTFILE_LEN];   /* font file named in the .otag */
+static char detail3[AA_FONTFILE_LEN];   /* where it was found */
+static char detail4[80];                /* OT_Engine and its library */
+static char advice[128];
 
 static const LONG diag_msg[AA_DIAG_NUM] =
 {
@@ -1036,43 +1039,53 @@ static const char *const diag_name[AA_DIAG_NUM] =
 
 static struct ColumnInfo fontcols[] =
 {
-    { 26, NULL, 0 },
-    { 14, NULL, 0 },
-    { 19, NULL, 0 },
-    { 41, NULL, 0 },
+    { 32, NULL, 0 },
+    { 18, NULL, 0 },
+    { 50, NULL, 0 },
     { -1, NULL, 0 }
 };
 
-/* Show the selected font's paths and what to do about it. */
+/*
+ * Show the selected font in the read-only fields under the list: its
+ * .otag, the font file named there, where it really is, the OT_Engine
+ * with its library, and what to do about it.
+ */
 static void ShowDetail(void)
 {
     ULONG sel = ~0UL;
     struct AADiagEntry *e;
     const char *arg;
 
-    detail1[0] = detail2[0] = detail3[0] = 0;
+    detail1[0] = detail2[0] = detail3[0] = detail4[0] = advice[0] = 0;
     if (gads[GID_FONTLIST])
         GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_FONTLIST], &sel);
     if ((LONG)sel >= 0 && (LONG)sel < numdiag)
     {
         e = &diag[sel];
-        snprintf(detail1, sizeof(detail1), GetString(MSG_DIAG_INOTAG),
-                 e->want[0] ? e->want : e->otag);
-        if (e->status == AA_DIAG_MOVED || e->status == AA_DIAG_BADFILE)
-            snprintf(detail2, sizeof(detail2), GetString(MSG_DIAG_FOUND),
-                     e->found);
+        snprintf(detail1, sizeof(detail1), "%s", e->otag);
+        snprintf(detail2, sizeof(detail2), "%s", e->want);
+        snprintf(detail3, sizeof(detail3), "%s", e->found);
+        if (e->engine[0] && e->enginever[0])
+            snprintf(detail4, sizeof(detail4), GetString(MSG_DIAG_ENGINEFMT),
+                     e->engine, e->engine, e->enginever);
+        else if (e->engine[0])
+            snprintf(detail4, sizeof(detail4),
+                     GetString(MSG_DIAG_ENGINENONE), e->engine, e->engine);
+
         arg = e->status == AA_DIAG_OTHER ? e->engine : "";
-        snprintf(detail3, sizeof(detail3), GetString(diag_advice[e->status]),
+        snprintf(advice, sizeof(advice), GetString(diag_advice[e->status]),
                  arg);
         /* without the engine's library diskfont cannot make the font
            for any program, even when the file is fine */
         if (e->engine[0] && !e->enginever[0])
-            snprintf(detail3, sizeof(detail3), GetString(MSG_DIAG_NOENGINE),
+            snprintf(advice, sizeof(advice), GetString(MSG_DIAG_NOENGINE),
                      e->engine);
     }
-    SetGad(GID_DETAIL1, GA_Text, (ULONG)detail1);
-    SetGad(GID_DETAIL2, GA_Text, (ULONG)detail2);
-    SetGad(GID_DETAIL3, GA_Text, (ULONG)detail3);
+    SetGad(GID_DETAIL1, STRINGA_TextVal, (ULONG)detail1);
+    SetGad(GID_DETAIL2, STRINGA_TextVal, (ULONG)detail2);
+    SetGad(GID_DETAIL3, STRINGA_TextVal, (ULONG)detail3);
+    SetGad(GID_DETAIL4, STRINGA_TextVal, (ULONG)detail4);
+    SetGad(GID_ADVICE, GA_Text, (ULONG)advice);
     SetGad(GID_FIX, GA_Disabled, (LONG)sel < 0 || (LONG)sel >= numdiag ||
            diag[sel].status != AA_DIAG_MOVED);
 }
@@ -1087,11 +1100,10 @@ static void ShowScan(LONG sel)
     for (i = 0; i < numdiag; i++)
     {
         struct AADiagEntry *e = &diag[i];
-        struct Node *n = AllocListBrowserNode(4,
+        struct Node *n = AllocListBrowserNode(3,
             LBNA_Column, 0, LBNCA_Text, (ULONG)e->name,
             LBNA_Column, 1, LBNCA_Text, (ULONG)GetString(diag_msg[e->status]),
-            LBNA_Column, 2, LBNCA_Text, (ULONG)e->enginelabel, /* OT_Engine */
-            LBNA_Column, 3, LBNCA_Text,
+            LBNA_Column, 2, LBNCA_Text,
                 (ULONG)(e->found[0] ? e->found : e->want),
             TAG_DONE);
 
@@ -1266,14 +1278,25 @@ static void SaveReport(void)
     FreeAslRequest(fr);
 }
 
+/* A read-only text field for the font details: long paths can be
+   scrolled in it. */
+static struct Gadget *DetailField(ULONG id, char *text)
+{
+    return (struct Gadget *)StringObject,
+        GA_ID, id,
+        GA_ReadOnly, TRUE,
+        STRINGA_MaxChars, AA_FONTFILE_LEN,
+        STRINGA_TextVal, (ULONG)text,
+    End;
+}
+
 static Object *DiagPage(void)
 {
     LONG lineh = previewfont ? previewfont->tf_YSize : 8;
 
     fontcols[0].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FONT);
     fontcols[1].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_STATUS);
-    fontcols[2].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_ENGINE);
-    fontcols[3].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FILE);
+    fontcols[2].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FILE);
 
     return VLayoutObject,
         LAYOUT_SpaceOuter, TRUE,
@@ -1313,29 +1336,30 @@ static Object *DiagPage(void)
         End,
         CHILD_MinHeight, lineh * 6 + 8,
 
-        LAYOUT_AddChild, gads[GID_DETAIL1] = (struct Gadget *)ButtonObject,
-            GA_ID, GID_DETAIL1,
-            GA_ReadOnly, TRUE,
-            GA_Underscore, 0,
-            GA_Text, (ULONG)detail1,
-            BUTTON_BevelStyle, BVS_NONE,
-            BUTTON_Justification, BCJ_LEFT,
+        LAYOUT_AddChild, VLayoutObject,
+            LAYOUT_AddChild, gads[GID_DETAIL1] = DetailField(GID_DETAIL1,
+                                                             detail1),
+            Label(GetString(MSG_DIAG_L_OTAG)),
+            LAYOUT_AddChild, gads[GID_DETAIL2] = DetailField(GID_DETAIL2,
+                                                             detail2),
+            Label(GetString(MSG_DIAG_L_WANT)),
+            LAYOUT_AddChild, gads[GID_DETAIL3] = DetailField(GID_DETAIL3,
+                                                             detail3),
+            Label(GetString(MSG_DIAG_L_FOUND)),
+            LAYOUT_AddChild, gads[GID_DETAIL4] = DetailField(GID_DETAIL4,
+                                                             detail4),
+            /* "OT_Engine": the "_" is part of the name, not a key */
+            CHILD_Label, LabelObject,
+                LABEL_Text, (ULONG)GetString(MSG_DIAG_L_ENGINE),
+                LABEL_Underscore, 0,
+            End,
         End,
         CHILD_WeightedHeight, 0,
-        LAYOUT_AddChild, gads[GID_DETAIL2] = (struct Gadget *)ButtonObject,
-            GA_ID, GID_DETAIL2,
+        LAYOUT_AddChild, gads[GID_ADVICE] = (struct Gadget *)ButtonObject,
+            GA_ID, GID_ADVICE,
             GA_ReadOnly, TRUE,
             GA_Underscore, 0,
-            GA_Text, (ULONG)detail2,
-            BUTTON_BevelStyle, BVS_NONE,
-            BUTTON_Justification, BCJ_LEFT,
-        End,
-        CHILD_WeightedHeight, 0,
-        LAYOUT_AddChild, gads[GID_DETAIL3] = (struct Gadget *)ButtonObject,
-            GA_ID, GID_DETAIL3,
-            GA_ReadOnly, TRUE,
-            GA_Underscore, 0,
-            GA_Text, (ULONG)detail3,
+            GA_Text, (ULONG)advice,
             BUTTON_BevelStyle, BVS_NONE,
             BUTTON_Justification, BCJ_LEFT,
         End,

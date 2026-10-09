@@ -111,8 +111,9 @@ while you try it out.
               (with the current use) and character set (see Tips)
   Diagnostics "Scan fonts" checks every .otag file in FONTS: and the
               font file it names; fonts with problems are listed first.
-              Select a font to see the path in its .otag, where the
-              file really is, and what to do:
+              Select a font: the fields under the list show its .otag
+              file, the font file named in it, where the file really
+              is, and its OT_Engine; the line below says what to do:
                 OK            the file is where the .otag says
                 Moved         the .otag names another volume (e.g.
                               System: after the disk was renamed);
@@ -128,13 +129,12 @@ while you try it out.
               <name>.otag.bak (an existing .bak is kept, so it always
               holds the oldest original); to undo, copy it back. Then
               every program finds the font again, not only AAText.
-              The Engine column shows the OT_Engine of each .otag as it
-              is written there, e.g. ttf (ttf.library), freetype2
-              (FTManager), ttengine or aatext (aatext.library), with the
-              version of that library from its $VER string, as
-              "Version LIBS:ttf.library" shows it. "?" means the library
-              is not installed: then no program can open the font. The
-              line next to "Scan fonts" shows the installed versions of
+              OT_Engine is the engine named in the .otag, e.g. ttf
+              (ttf.library), freetype2 (FTManager), ttengine or aatext
+              (aatext.library), with the version of that library from
+              its $VER string, as "Version LIBS:ttf.library" shows it.
+              If the library is not installed, no program can open the
+              font, and the line below says so. The line next to "Scan fonts" shows the installed versions of
               freetype2.library and aatext.library.
               "Save report..." writes the list to a text file for bug
               reports. The scan itself changes nothing.

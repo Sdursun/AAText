@@ -95,7 +95,6 @@
     S(MSG_DIAG_BADFILE,     84, "Not a font") \
     S(MSG_DIAG_BADOTAG,     85, "Bad .otag") \
     S(MSG_DIAG_OTHER,       86, "Other engine") \
-    S(MSG_DIAG_INOTAG,      87, "In the .otag: %s") \
     S(MSG_DIAG_ADV_OK,      88, "The font file is where the .otag says.") \
     S(MSG_DIAG_ADV_MOVED,   89, "AAText finds it there, other programs may not: use Fix .otag.") \
     S(MSG_DIAG_ADV_MISSING, 90, "The font file is not there. Install the font again, or delete its .font and .otag.") \
@@ -105,7 +104,6 @@
     S(MSG_DIAG_SAVE_TITLE,  94, "Save font report") \
     S(MSG_DIAG_SAVED,       95, "Report saved: %s") \
     S(MSG_DIAG_LISTFULL,    96, "Only the first %ld fonts are listed.") \
-    S(MSG_DIAG_FOUND,       97, "Found as: %s") \
     S(MSG_DIAG_FIX,         98, "Fix .otag...") \
     S(MSG_DIAG_FIX_ASK,     99, "Change %s?\n\nFont file now: %s\nbecomes: %s\n\nThe original is kept as %s.") \
     S(MSG_DIAG_FIX_GADS,   100, "Change|Cancel") \
@@ -116,8 +114,13 @@
     S(MSG_DIAG_FIX_WRITE,  105, "Cannot write %s. The original is in %s.") \
     S(MSG_DIAG_LIB,        106, "; %s %s") \
     S(MSG_DIAG_LIB_NONE,   107, "; no %s") \
-    S(MSG_DIAG_COL_ENGINE, 108, "Engine") \
-    S(MSG_DIAG_NOENGINE,   109, "%s.library is not installed: no program can open this font.")
+    S(MSG_DIAG_NOENGINE,   109, "%s.library is not installed: no program can open this font.") \
+    S(MSG_DIAG_L_OTAG,     110, ".otag file") \
+    S(MSG_DIAG_L_WANT,     111, "Font file in .otag") \
+    S(MSG_DIAG_L_FOUND,    112, "Found as") \
+    S(MSG_DIAG_L_ENGINE,   113, "OT_Engine") \
+    S(MSG_DIAG_ENGINEFMT,  114, "%s (%s.library %s)") \
+    S(MSG_DIAG_ENGINENONE, 115, "%s (%s.library not installed)")
 
 
 #define S(id, n, s) id = n,

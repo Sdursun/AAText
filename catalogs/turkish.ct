@@ -171,8 +171,6 @@ MSG_DIAG_BADOTAG
 Bozuk .otag
 MSG_DIAG_OTHER
 Başka motor
-MSG_DIAG_INOTAG
-.otag'daki yol: %s
 MSG_DIAG_ADV_OK
 Font dosyası .otag'da yazan yerde.
 MSG_DIAG_ADV_MOVED
@@ -191,8 +189,6 @@ MSG_DIAG_SAVED
 Rapor kaydedildi: %s
 MSG_DIAG_LISTFULL
 Yalnızca ilk %ld font listelendi.
-MSG_DIAG_FOUND
-Bulunduğu yer: %s
 MSG_DIAG_FIX
 .otag'ı düzelt...
 MSG_DIAG_FIX_ASK
@@ -213,7 +209,17 @@ MSG_DIAG_LIB
 ; %s %s
 MSG_DIAG_LIB_NONE
 ; %s yok
-MSG_DIAG_COL_ENGINE
-Motor
 MSG_DIAG_NOENGINE
 %s.library kurulu değil: bu fontu hiçbir program açamaz.
+MSG_DIAG_L_OTAG
+.otag dosyası
+MSG_DIAG_L_WANT
+.otag'daki font dosyası
+MSG_DIAG_L_FOUND
+Bulunduğu yer
+MSG_DIAG_L_ENGINE
+OT_Engine
+MSG_DIAG_ENGINEFMT
+%s (%s.library %s)
+MSG_DIAG_ENGINENONE
+%s (%s.library kurulu değil)

@@ -118,9 +118,11 @@ satırında görürsünüz.
               bölümüne bakın)
   Tanılama    "Fontları tara", FONTS: içindeki her .otag dosyasını ve
               gösterdiği font dosyasını denetler; sorunlu fontlar
-              listenin başında yer alır. Bir font seçildiğinde .otag'daki
-              yol, dosyanın gerçekte bulunduğu yer ve yapılması gereken
-              gösterilir:
+              listenin başında yer alır. Bir font seçildiğinde
+              listenin altındaki kutular onun .otag dosyasını,
+              .otag'daki font dosyasını, dosyanın gerçekte bulunduğu
+              yeri ve OT_Engine'i gösterir; alttaki satır ne
+              yapılacağını söyler:
                 Sorunsuz       dosya .otag'da yazan yerde
                 Yeri değişmiş  .otag başka bir disk adı veriyor (ör.
                                disk yeniden adlandırıldıktan sonra
@@ -138,12 +140,12 @@ satırında görürsünüz.
               dokunulmaz, yani her zaman en eski orijinali tutar); geri
               almak için onu geri kopyalayın. Bundan sonra fontu yalnız
               AAText değil, bütün programlar bulur.
-              Motor sütunu her .otag'daki OT_Engine değerini orada
-              yazdığı gibi gösterir, ör. ttf (ttf.library), freetype2
-              (FTManager), ttengine ya da aatext (aatext.library); yanında
-              o kütüphanenin sürümü vardır ("Version LIBS:ttf.library"
-              gibi, dosyadaki $VER satırından). "?" kütüphanenin kurulu
-              olmadığı anlamına gelir: o fontu hiçbir program açamaz.
+              OT_Engine, .otag'da yazan motordur, ör. ttf (ttf.library),
+              freetype2 (FTManager), ttengine ya da aatext
+              (aatext.library); yanında o kütüphanenin sürümü vardır
+              ("Version LIBS:ttf.library" gibi, dosyadaki $VER
+              satırından). Kütüphane kurulu değilse o fontu hiçbir
+              program açamaz; alttaki satır bunu söyler.
               "Fontları tara"nın yanındaki satır, kurulu
               freetype2.library ve aatext.library sürümlerini gösterir.
               "Raporu kaydet..." listeyi hata bildirimleri için bir metin
