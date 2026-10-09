@@ -1,9 +1,10 @@
 /*
  * AATextManager - installs TrueType/OpenType fonts for diskfont.
  *
- * Shell use (the window comes later):
- *   AATextManager FILES/M/A,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,
- *                 OVERWRITE/S
+ * Started from Workbench, or from the Shell without FILES or REPAIR,
+ * it opens its window (gui.c). Shell use:
+ *   AATextManager FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,
+ *                 OVERWRITE/S,REPAIR/S,APPLY/S
  *
  * FreeType comes from aatext.library.
  */
@@ -18,6 +19,8 @@
 #include <proto/dos.h>
 #include <proto/graphics.h>
 #include <proto/diskfont.h>
+#include <proto/intuition.h>
+#include <intuition/intuition.h>
 #include <string.h>
 
 #include <ft2build.h>
@@ -27,6 +30,7 @@
 #include "../fontinstall.h"
 #include "../charsets.h"
 #include "../fontscan.h"
+#include "manager.h"
 
 #define MAX_FONTS 1024
 
@@ -65,7 +69,7 @@ static LONG Charset(const char *name)
 }
 
 /* "8-16,18,20,24" -> sizes; FALSE if malformed */
-static BOOL ParseSizes(const char *s, struct AAInstall *in)
+BOOL mgr_ParseSizes(const char *s, struct AAInstall *in)
 {
     LONG a, b, n;
 
@@ -99,30 +103,24 @@ static BOOL ParseSizes(const char *s, struct AAInstall *in)
 }
 
 /* Can diskfont open what was installed? (It looks in FONTS:.) */
-static void Check(const struct AAInstall *in)
+BOOL mgr_CheckFont(const struct AAInstall *in)
 {
     struct TextAttr ta;
     struct TextFont *tf;
     char name[40];
 
     if (!DiskfontBase)
-        return;
+        return FALSE;
     strcpy(name, in->name);
     strcat(name, ".font");
     ta.ta_Name = (STRPTR)name;
     ta.ta_YSize = in->sizes[0];
     ta.ta_Style = 0;
     ta.ta_Flags = 0;
-    if ((tf = OpenDiskFont(&ta)))
-    {
-        CloseFont(tf);
-        Printf("  checked: diskfont opens %s %ld\n", (LONG)name,
-               (LONG)in->sizes[0]);
-    }
-    else
-        Printf("  WARNING: diskfont cannot open %s (is %s.library "
-               "installed, is the directory in FONTS:?)\n", (LONG)name,
-               (LONG)in->engine);
+    if (!(tf = OpenDiskFont(&ta)))
+        return FALSE;
+    CloseFont(tf);
+    return TRUE;
 }
 
 /*
@@ -216,17 +214,46 @@ static LONG Repair(STRPTR *names, LONG charset, const char *engine,
     return rc;
 }
 
-int main(void)
+/* Without aatext.library: a requester when started from Workbench */
+static void NoLibrary(BOOL wb)
+{
+    struct EasyStruct es;
+    ULONG args[2];
+
+    args[0] = (ULONG)AATEXTLIBNAME;
+    args[1] = AATEXTLIBVERSION;
+    if (!wb)
+    {
+        VPrintf((CONST_STRPTR)"AATextManager: needs %s %ld or newer "
+                "(LIBS:)\n", (APTR)args);
+        return;
+    }
+    IntuitionBase = (struct IntuitionBase *)
+        OpenLibrary((CONST_STRPTR)"intuition.library", 36);
+    if (!IntuitionBase)
+        return;
+    es.es_StructSize = sizeof(es);
+    es.es_Flags = 0;
+    es.es_Title = (UBYTE *)"AATextManager";
+    es.es_TextFormat = (UBYTE *)"AATextManager needs %s %ld or newer\nin LIBS:.";
+    es.es_GadgetFormat = (UBYTE *)"OK";
+    EasyRequestArgs(NULL, &es, NULL, args);
+    CloseLibrary((struct Library *)IntuitionBase);
+    IntuitionBase = NULL;
+}
+
+int main(int argc, char **argv)
 {
     LONG args[ARG_COUNT] = { 0 };
-    struct RDArgs *rda;
+    struct RDArgs *rda = NULL;
     static struct AAInstall in;
     STRPTR *files;
     LONG rc = RETURN_OK, warn = RETURN_OK;
     LONG cs = 0;                    /* latin1, the Amiga default */
 
     (void)version;
-    if (!(rda = ReadArgs((CONST_STRPTR)TEMPLATE, args, NULL)))
+    (void)argv;
+    if (argc && !(rda = ReadArgs((CONST_STRPTR)TEMPLATE, args, NULL)))
     {
         PrintFault(IoErr(), (CONST_STRPTR)"AATextManager");
         return RETURN_FAIL;
@@ -234,12 +261,19 @@ int main(void)
     AATextBase = OpenLibrary((CONST_STRPTR)AATEXTLIBNAME, AATEXTLIBVERSION);
     if (!AATextBase)
     {
-        Printf("AATextManager: needs %s %ld or newer (LIBS:)\n",
-               (LONG)AATEXTLIBNAME, (LONG)AATEXTLIBVERSION);
-        FreeArgs(rda);
+        NoLibrary(!argc);
+        if (rda)
+            FreeArgs(rda);
         return RETURN_FAIL;
     }
     DiskfontBase = OpenLibrary((CONST_STRPTR)"diskfont.library", 36);
+
+    /* Workbench, or neither files nor REPAIR: the window */
+    if (!argc || (!args[ARG_FILES] && !args[ARG_REPAIR]))
+    {
+        rc = mgr_RunGUI();
+        goto out;
+    }
 
     aa_InstallDefaults(&in);
     if (args[ARG_CHARSET])
@@ -257,7 +291,7 @@ int main(void)
     if (args[ARG_FACE])
         in.face = *(LONG *)args[ARG_FACE];
     in.overwrite = args[ARG_OVERWRITE] != 0;
-    if (args[ARG_SIZES] && !ParseSizes((const char *)args[ARG_SIZES], &in))
+    if (args[ARG_SIZES] && !mgr_ParseSizes((const char *)args[ARG_SIZES], &in))
     {
         Printf("AATextManager: bad SIZES (example: 8-16,18,20,24)\n");
         rc = RETURN_ERROR;
@@ -266,11 +300,6 @@ int main(void)
     if (rc == RETURN_OK && args[ARG_REPAIR])
         rc = Repair((STRPTR *)args[ARG_FILES], args[ARG_CHARSET] ? cs : -1,
                     (const char *)args[ARG_ENGINE], args[ARG_APPLY] != 0);
-    else if (rc == RETURN_OK && !args[ARG_FILES])
-    {
-        Printf("AATextManager: give font files to install, or REPAIR\n");
-        rc = RETURN_ERROR;
-    }
     else
     for (files = (STRPTR *)args[ARG_FILES]; rc == RETURN_OK && *files; files++)
     {
@@ -287,7 +316,13 @@ int main(void)
             if (in.info.numfaces > 1)
                 Printf("  file has %ld faces; this was FACE %ld\n",
                        in.info.numfaces, in.face);
-            Check(&in);
+            if (mgr_CheckFont(&in))
+                Printf("  checked: diskfont opens %s.font %ld\n",
+                       (LONG)in.name, (LONG)in.sizes[0]);
+            else
+                Printf("  WARNING: diskfont cannot open %s.font (is "
+                       "%s.library installed, is the directory in "
+                       "FONTS:?)\n", (LONG)in.name, (LONG)in.engine);
             break;
         case AA_INSTALL_NOTFONT:
             Printf("%s: not a font FreeType can read\n", (LONG)in.source);
@@ -308,9 +343,11 @@ int main(void)
         }
     }
 
+out:
     if (DiskfontBase)
         CloseLibrary(DiskfontBase);
     CloseLibrary(AATextBase);
-    FreeArgs(rda);
+    if (rda)
+        FreeArgs(rda);
     return rc != RETURN_OK ? rc : warn;
 }

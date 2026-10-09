@@ -219,3 +219,7 @@ MSG_DIAG_ENGINEFMT
 %s (%s.library %s)
 MSG_DIAG_ENGINENONE
 %s (%s.library kurulu değil)
+MSG_DIAG_MANAGER
+_Font kur...
+MSG_DIAG_NOMANAGER
+%s başlatılamadı.

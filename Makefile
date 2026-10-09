@@ -206,7 +206,7 @@ $(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
 
 # Font installer; FreeType from aatext.library
 MGR_TARGET := $(BUILDDIR)/AATextManager
-MGR_SRCS   := src/manager/main.c src/fontinstall.c src/fontinfo.c \
+MGR_SRCS   := src/manager/main.c src/manager/gui.c src/manager/strings.c src/prefs.c src/debug.c src/fontinstall.c src/fontinfo.c \
               src/otagfile.c src/otag.c src/charsets.c src/fontscan.c src/fontfile.c
 MGR_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/mgr/%.o,$(MGR_SRCS))
 
@@ -223,3 +223,11 @@ endif
 $(BUILDDIR)/mgr/%.o: src/%.c src/*.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/aatextlib -Wno-pointer-sign -c -o $@ $<
+
+# Turkish catalog for AATextManager
+MGR_CATALOG := build/catalogs/aatextmanager.catalog
+catalogs: $(MGR_CATALOG)
+
+$(MGR_CATALOG): catalogs/manager-turkish.ct src/manager/strings.h tools/mkcatalog.pl
+	@mkdir -p $(dir $@)
+	perl tools/mkcatalog.pl src/manager/strings.h catalogs/manager-turkish.ct $@

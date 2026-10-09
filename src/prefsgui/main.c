@@ -18,6 +18,7 @@
 #include <dos/dos.h>
 #include <dos/dosextens.h>
 #include <dos/var.h>
+#include <dos/dostags.h>
 #include <exec/execbase.h>
 #include <intuition/intuition.h>
 #include <intuition/classusr.h>
@@ -98,7 +99,7 @@ enum
     GID_AUTO, GID_OFFSCREEN, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
     GID_PICKFILE, GID_KERNING,
     GID_SCAN, GID_SCANSUM, GID_FONTLIST, GID_DETAIL1, GID_DETAIL2, GID_DETAIL3,
-    GID_DETAIL4, GID_ADVICE, GID_REPORT, GID_FIX,
+    GID_DETAIL4, GID_ADVICE, GID_REPORT, GID_FIX, GID_MANAGER,
     GID_COUNT
 };
 
@@ -202,7 +203,7 @@ static LONG PageOf(LONG gid)
         return 1;
     if (gid >= GID_AUTO && gid <= GID_CHARSET)
         return 2;
-    if (gid >= GID_SCAN && gid <= GID_FIX)
+    if (gid >= GID_SCAN && gid <= GID_MANAGER)
         return 3;
     return -1;
 }
@@ -1188,6 +1189,29 @@ static void FixSelected(void)
     SetStatus(msg);
 }
 
+/*
+ * The font installer, from the directory of AATextPrefs; it runs on its
+ * own (asynchronously).
+ */
+static void StartManager(void)
+{
+    static const char cmd[] = "PROGDIR:AATextManager";
+    char msg[sizeof(statustext)];
+    BPTR in = Open((CONST_STRPTR)"NIL:", MODE_OLDFILE);
+    BPTR out = Open((CONST_STRPTR)"NIL:", MODE_NEWFILE);
+
+    if (in && out &&
+        SystemTags((CONST_STRPTR)cmd, SYS_Input, in, SYS_Output, out,
+                   SYS_Asynch, TRUE, NP_StackSize, 16384, TAG_DONE) == 0)
+        return;             /* the new process closes in and out */
+    if (in)
+        Close(in);
+    if (out)
+        Close(out);
+    snprintf(msg, sizeof(msg), GetString(MSG_DIAG_NOMANAGER), cmd);
+    SetStatus(msg);
+}
+
 /* Plain text, English: meant to be attached to bug reports. */
 static BOOL WriteReport(const char *path)
 {
@@ -1351,6 +1375,11 @@ static Object *DiagPage(void)
             End,
             CHILD_WeightedWidth, 0,
             LAYOUT_AddChild, SpaceObject, End,
+            LAYOUT_AddChild, gads[GID_MANAGER] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_MANAGER, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_DIAG_MANAGER),
+            End,
+            CHILD_WeightedWidth, 0,
             LAYOUT_AddChild, gads[GID_REPORT] = (struct Gadget *)ButtonObject,
                 GA_ID, GID_REPORT, GA_RelVerify, TRUE,
                 GA_Text, (ULONG)GetString(MSG_DIAG_REPORT),
@@ -1625,6 +1654,10 @@ static BOOL Action(ULONG id)
 
         case GID_FIX:
             FixSelected();
+            break;
+
+        case GID_MANAGER:
+            StartManager();
             break;
 
         case GID_PICKFILE:

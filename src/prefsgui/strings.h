@@ -118,7 +118,9 @@
     S(MSG_DIAG_L_FOUND,    112, "Found as") \
     S(MSG_DIAG_L_ENGINE,   113, "OT_Engine") \
     S(MSG_DIAG_ENGINEFMT,  114, "%s (%s.library %s)") \
-    S(MSG_DIAG_ENGINENONE, 115, "%s (%s.library not installed)")
+    S(MSG_DIAG_ENGINENONE, 115, "%s (%s.library not installed)") \
+    S(MSG_DIAG_MANAGER,    116, "_Install fonts...") \
+    S(MSG_DIAG_NOMANAGER,  117, "Cannot start %s.")
 
 
 #define S(id, n, s) id = n,

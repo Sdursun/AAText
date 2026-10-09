@@ -1,0 +1,105 @@
+; AATextManager - Turkish translation (UTF-8; converted to ISO-8859-9)
+;
+; Format: a line with the string's name (see src/manager/strings.h),
+; then the translation on the next line. "\n" is a line break.
+; Lines starting with ';' are comments.
+;
+## language türkçe
+## version $VER: aatextmanager.catalog 1.0 (10.10.2026)
+
+MSG_TITLE
+AATextManager
+MSG_TAB_INSTALL
+Kur
+MSG_TAB_REPAIR
+Onar
+MSG_CHARSET
+Karakter seti
+MSG_ENGINE
+Motor
+MSG_ENGINE_AATEXT
+aatext (aatext.library)
+MSG_ENGINE_FT2
+freetype2 (freetype2.library)
+MSG_ADD
+_Font ekle...
+MSG_REMOVE
+_Çıkar
+MSG_COL_FAMILY
+Aile
+MSG_COL_STYLE
+Stil
+MSG_COL_FACE
+Yüz
+MSG_COL_FILE
+Dosya
+MSG_SIZES
+Boyutlar
+MSG_OVERWRITE
+Aynı adlı fontların yerine yaz
+MSG_INSTALL
+_Kur
+MSG_ADD_TITLE
+TrueType/OpenType fontları seçin
+MSG_NOTFONT
+%s, FreeType'ın okuyabildiği bir font değil.
+MSG_BADSIZES
+Boyutlar: örneğin 8-16,18,20,24
+MSG_INSTALLED
+%ld kuruldu, %ld atlandı (ad kullanılıyor), %ld başarısız.
+MSG_CHECK
+_Fontları denetle
+MSG_REPAIR
+_Onar...
+MSG_COL_FONT
+Font
+MSG_COL_PROBLEM
+Onarılacak
+MSG_P_MOVED
+font dosyası taşınmış
+MSG_P_CODEPAGE
+kod sayfası yok
+MSG_P_ENGINE
+motor freetype2
+MSG_NOTHING
+Onarılacak bir şey yok.
+MSG_TOREPAIR
+Onarılacak %ld font var.
+MSG_REPAIR_ASK
+%ld font onarılsın mı?\n\nAsıl .otag dosyaları .otag.bak olarak saklanır.
+MSG_REPAIR_GADS
+Onar|Vazgeç
+MSG_REPAIRED
+%ld font onarıldı (toplam %ld).
+MSG_CHANGE_ENGINE
+freetype2 motorunu seçilen motora çevir
+MSG_INFO_INSTALL
+Font dosyaları FONTS:_ttf/ altına kopyalanır, .font ve .otag FONTS:'a yazılır.
+MSG_INFO_REPAIR
+FONTS:'taki .otag dosyalarını denetler. Kod sayfası: yukarıdaki karakter seti.
+MSG_NOTOPEN
+Kuruldu, ama diskfont %s fontunu açamıyor.
+MSG_NOFONTS
+Önce font dosyası ekleyin.
+MSG_FONTSERR
+FONTS: okunamıyor.
+MSG_CHARSET_LATIN1
+ISO-8859-1 (Batı Avrupa)
+MSG_CHARSET_LATIN2
+ISO-8859-2 (Orta Avrupa)
+MSG_CHARSET_LATIN3
+ISO-8859-3 (Güney Avrupa)
+MSG_CHARSET_LATIN4
+ISO-8859-4 (Kuzey Avrupa)
+MSG_CHARSET_LATIN5
+ISO-8859-9 (Türkçe)
+MSG_CHARSET_LATIN9
+ISO-8859-15 (Batı Avrupa, euro)
+MSG_CHARSET_LATIN10
+ISO-8859-16 (Güneydoğu Avrupa)
+MSG_CHARSET_CP1250
+Windows-1250 (Orta Avrupa)
+MSG_CHARSET_CYRILLIC
+ISO-8859-5 (Kiril)
+MSG_CHARSET_KOI8R
+KOI8-R (Rusça)
