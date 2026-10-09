@@ -18,6 +18,7 @@
 #include "fontscan.h"
 #include "otag.h"
 #include "otagfile.h"
+#include "charsets.h"
 
 #define MAX_OTAG (64 * 1024)
 
@@ -277,40 +278,85 @@ static BOOL WriteAll(const char *path, const UBYTE *data, LONG len)
     return ok;
 }
 
+/* engines that read the FreeType .otag tags (FTManager's) */
+static BOOL FreeTypeEngine(const char *engine)
+{
+    return !Stricmp((CONST_STRPTR)engine, (CONST_STRPTR)"freetype2") ||
+           !Stricmp((CONST_STRPTR)engine, (CONST_STRPTR)"aatext");
+}
+
+ULONG aa_RepairNeeded(const struct AADiagEntry *e, const struct AARepair *r)
+{
+    ULONG what = 0;
+
+    if (e->status != AA_DIAG_OK && e->status != AA_DIAG_MOVED)
+        return 0;
+    if ((r->what & AA_REPAIR_PATH) && e->status == AA_DIAG_MOVED)
+        what |= AA_REPAIR_PATH;
+    if ((r->what & AA_REPAIR_CODEPAGE) && !e->codepage &&
+        r->charset >= 0 && r->charset < AA_NUM_CHARSETS &&
+        FreeTypeEngine(e->engine))
+        what |= AA_REPAIR_CODEPAGE;
+    if ((r->what & AA_REPAIR_ENGINE) && r->engine &&
+        !Stricmp((CONST_STRPTR)e->engine, (CONST_STRPTR)"freetype2") &&
+        Stricmp((CONST_STRPTR)r->engine, (CONST_STRPTR)e->engine))
+        what |= AA_REPAIR_ENGINE;
+    return what;
+}
+
 /*
- * A copy of the .otag in buf naming fontfile in out: the tag that held
- * the old path (OT_Spec1_FontFile, or for other engines the string
- * aa_ParseOTag() found) gets the new one; nothing else changes.
- * Returns the new size, 0 on error.
+ * A copy of the .otag in buf with the repairs in what, into out. The
+ * font file goes into the tag that held the old path (OT_Spec1_FontFile,
+ * or for other engines the string aa_ParseOTag() found); nothing else
+ * changes. Returns the new size, 0 on error.
  */
-static ULONG SetFontFile(const UBYTE *buf, ULONG len, const char *fontfile,
-                         UBYTE *out, ULONG max)
+static ULONG Apply(const UBYTE *buf, ULONG len, const struct AADiagEntry *e,
+                   const struct AARepair *r, ULONG what, UBYTE *out, ULONG max)
 {
     static struct AAOTagFile f;
     static struct AAOTagInfo ot;
+    static UWORD page[256];
+    struct AAOTagItem *spec;
     LONG i;
 
     if (!aa_ParseOTag(buf, len, &ot) || !aa_OTagLoad(&f, buf, len))
         return 0;
-    for (i = 0; i < f.count; i++)
-        if (f.items[i].ind && f.items[i].indlen &&
-            !strcmp((const char *)f.items[i].ind, ot.fontfile))
-            break;
-    if (i == f.count ||
-        !aa_OTagSetString(&f, f.items[i].tag, fontfile))
+    if (what & AA_REPAIR_PATH)
+    {
+        for (i = 0; i < f.count; i++)
+            if (f.items[i].ind && f.items[i].indlen &&
+                !strcmp((const char *)f.items[i].ind, ot.fontfile))
+                break;
+        if (i == f.count ||
+            !aa_OTagSetString(&f, f.items[i].tag, e->found))
+            return 0;
+    }
+    if (what & AA_REPAIR_CODEPAGE)
+    {
+        aa_CharsetPage(r->charset, page);
+        if (!aa_OTagFind(&f, OT_Spec2_CodePage) &&
+            (spec = aa_OTagFind(&f, OT_SpecCount)))
+            spec->data++;
+        if (!aa_OTagSetData(&f, OT_Spec2_CodePage, page, sizeof(page)))
+            return 0;
+    }
+    if ((what & AA_REPAIR_ENGINE) &&
+        !aa_OTagSetString(&f, OT_Engine, r->engine))
         return 0;
     return aa_OTagSave(&f, out, max);
 }
 
-LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
+LONG aa_RepairOTag(struct AADiagEntry *e, const struct AARepair *r,
+                   char *backup)
 {
     UBYTE *buf, *out;
     LONG len = 0, newlen, result = AA_FIX_OK;
+    ULONG what = aa_RepairNeeded(e, r);
     BPTR fh, lock;
 
     backup[0] = 0;
-    if (e->status != AA_DIAG_MOVED)
-        return AA_FIX_NOTMOVED;
+    if (!what)
+        return AA_FIX_NOTHING;
     buf = AllocVec(MAX_OTAG * 2, MEMF_ANY);
     if (!buf)
         return AA_FIX_READ;
@@ -322,7 +368,7 @@ LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
         Close(fh);
     }
     newlen = len > 0 && len < MAX_OTAG
-             ? SetFontFile(buf, len, e->found, out, MAX_OTAG) : 0;
+             ? Apply(buf, len, e, r, what, out, MAX_OTAG) : 0;
     if (!newlen)
         result = AA_FIX_READ;
     else
@@ -345,6 +391,13 @@ LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
     }
     FreeVec(buf);
     return result;
+}
+
+LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
+{
+    static const struct AARepair path = { AA_REPAIR_PATH, -1, NULL };
+
+    return aa_RepairOTag(e, &path, backup);
 }
 
 /* "1.0" from "$VER: aatext.library 1.0 (9.10.2026)" */

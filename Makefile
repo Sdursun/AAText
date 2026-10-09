@@ -207,7 +207,7 @@ $(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
 # Font installer; FreeType from aatext.library
 MGR_TARGET := $(BUILDDIR)/AATextManager
 MGR_SRCS   := src/manager/main.c src/fontinstall.c src/fontinfo.c \
-              src/otagfile.c src/otag.c src/charsets.c
+              src/otagfile.c src/otag.c src/charsets.c src/fontscan.c src/fontfile.c
 MGR_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/mgr/%.o,$(MGR_SRCS))
 
 .PHONY: manager

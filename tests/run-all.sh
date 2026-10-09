@@ -66,6 +66,10 @@ perl -pe 's/DejaVuSans\.ttf/NotThere__.ttf/' tests/data/MovedTest.otag > $M/Miss
 perl -pe 's/DejaVuSans\.ttf/NotAFont__.ttf/' tests/data/MovedTest.otag > $M/NotFont.otag
 echo "garbage" > $M/Broken.otag
 perl tests/otag-engine.pl tests/data/fonts/AutoTest.otag aatext > $M/AAEngine.otag
+# FTManager .otag: engine freetype2, no code page, "Fonts:_ttf/verdana.ttf"
+cp tests/data/verdanaregular.otag $M/FT2.otag
+mkdir $M/_ttf
+cp third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf $M/_ttf/verdana.ttf
 # an engine library for the engine column: aatext.library 1.0, no ttf.library
 mkdir $M/libs
 printf '$VER: aatext.library 1.0 (09/10/26)\0' > $M/libs/aatext.library
@@ -74,6 +78,7 @@ run scan            tests/data/empty.prefs scan Good=ok Moved=moved \
                     Missing=missing NotFont=badfile Broken=badotag \
                     AAEngine=ok "AAEngine@aatext 1.0" "Good@ttf ?"
 run fix             tests/data/empty.prefs fix Moved
+run repair          tests/data/empty.prefs repair FT2
 rm -rf $M
 
 # library versions from the $VER string in LIBS: (placed across the 4 KB

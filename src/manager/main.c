@@ -9,6 +9,7 @@
  */
 
 #include <exec/types.h>
+#include <exec/memory.h>
 #include <dos/dos.h>
 #include <dos/rdargs.h>
 #include <graphics/text.h>
@@ -25,6 +26,9 @@
 
 #include "../fontinstall.h"
 #include "../charsets.h"
+#include "../fontscan.h"
+
+#define MAX_FONTS 1024
 
 struct Library *AATextBase;
 struct Library *DiskfontBase;
@@ -36,11 +40,11 @@ static int ToLower(int c)
 
 static const char version[] = "$VER: AATextManager 0.1 (9.10.2026)";
 
-#define TEMPLATE "FILES/M/A,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,OVERWRITE/S"
+#define TEMPLATE "FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,OVERWRITE/S,REPAIR/S,APPLY/S"
 enum { ARG_FILES, ARG_FACE, ARG_CHARSET, ARG_ENGINE, ARG_SIZES, ARG_TO,
-       ARG_OVERWRITE, ARG_COUNT };
+       ARG_OVERWRITE, ARG_REPAIR, ARG_APPLY, ARG_COUNT };
 
-static LONG Stricmp(CONST_STRPTR a, CONST_STRPTR b)
+static LONG Stricmp_(CONST_STRPTR a, CONST_STRPTR b)
 {
     for (; ToLower(*a) == ToLower(*b); a++, b++)
         if (!*a)
@@ -52,10 +56,10 @@ static LONG Charset(const char *name)
 {
     LONG i;
 
-    if (Stricmp((CONST_STRPTR)name, (CONST_STRPTR)"none") == 0)
+    if (Stricmp_((CONST_STRPTR)name, (CONST_STRPTR)"none") == 0)
         return -1;
     for (i = 0; i < AA_NUM_CHARSETS; i++)
-        if (Stricmp((CONST_STRPTR)name, (CONST_STRPTR)aa_CharsetNames[i]) == 0)
+        if (Stricmp_((CONST_STRPTR)name, (CONST_STRPTR)aa_CharsetNames[i]) == 0)
             return i;
     return -2;
 }
@@ -121,6 +125,97 @@ static void Check(const struct AAInstall *in)
                (LONG)in->engine);
 }
 
+/*
+ * REPAIR: check the .otag files in FONTS: and list what would be
+ * repaired (moved font file, code page of CHARSET, engine freetype2 ->
+ * ENGINE); with APPLY, do it (backups as <otag>.bak). FILES, if given,
+ * are the font names to look at.
+ */
+static LONG Repair(STRPTR *names, LONG charset, const char *engine,
+                   BOOL apply)
+{
+    struct AADiagEntry *e;
+    struct AARepair r;
+    char backup[AA_FONTFILE_LEN];
+    LONG n, i, done = 0, todo = 0, rc = RETURN_OK;
+
+    r.what = AA_REPAIR_PATH;
+    r.charset = charset;
+    r.engine = engine;
+    if (charset >= 0)
+        r.what |= AA_REPAIR_CODEPAGE;
+    if (engine)
+        r.what |= AA_REPAIR_ENGINE;
+
+    if (!(e = AllocVec(sizeof(*e) * MAX_FONTS, MEMF_ANY | MEMF_CLEAR)))
+        return RETURN_FAIL;
+    n = aa_ScanFonts(e, MAX_FONTS);
+    if (n < 0)
+    {
+        Printf("AATextManager: cannot read FONTS:\n");
+        FreeVec(e);
+        return RETURN_ERROR;
+    }
+    for (i = 0; i < n; i++)
+    {
+        ULONG what;
+        STRPTR *p;
+
+        if (names && *names)
+        {
+            for (p = names; *p; p++)
+                if (!Stricmp_(*p, (CONST_STRPTR)e[i].name))
+                    break;
+            if (!*p)
+                continue;
+        }
+        what = aa_RepairNeeded(&e[i], &r);
+        if (!what)
+            continue;
+        todo++;
+        Printf("%s:%s%s%s", (LONG)e[i].name,
+               (LONG)((what & AA_REPAIR_PATH) ? " font file moved;" : ""),
+               (LONG)((what & AA_REPAIR_CODEPAGE) ? " no code page;" : ""),
+               (LONG)((what & AA_REPAIR_ENGINE) ?
+                      " engine freetype2 -> " : ""));
+        if (what & AA_REPAIR_ENGINE)
+            Printf("%s\n", (LONG)engine);
+        else
+            Printf("\n");
+        if (!apply)
+            continue;
+        switch (aa_RepairOTag(&e[i], &r, backup))
+        {
+        case AA_FIX_OK:
+            Printf("  repaired (original: %s)\n", (LONG)backup);
+            done++;
+            break;
+        case AA_FIX_BACKUP:
+            Printf("  not repaired: cannot write %s\n", (LONG)backup);
+            rc = RETURN_ERROR;
+            break;
+        case AA_FIX_WRITE:
+            Printf("  cannot write the .otag; original in %s\n",
+                   (LONG)backup);
+            rc = RETURN_ERROR;
+            break;
+        default:
+            Printf("  cannot read or rebuild the .otag\n");
+            rc = RETURN_ERROR;
+            break;
+        }
+    }
+    if (!todo)
+        Printf("Nothing to repair.\n");
+    else if (!apply)
+        Printf("%ld fonts to repair; APPLY repairs them (backups as "
+               ".otag.bak).\n", todo);
+    else
+        Printf("%ld of %ld fonts repaired.\n", done, todo);
+    FreeVec(e);
+    return rc;
+}
+
 int main(void)
 {
     LONG args[ARG_COUNT] = { 0 };
@@ -168,6 +263,15 @@ int main(void)
         rc = RETURN_ERROR;
     }
 
+    if (rc == RETURN_OK && args[ARG_REPAIR])
+        rc = Repair((STRPTR *)args[ARG_FILES], args[ARG_CHARSET] ? cs : -1,
+                    (const char *)args[ARG_ENGINE], args[ARG_APPLY] != 0);
+    else if (rc == RETURN_OK && !args[ARG_FILES])
+    {
+        Printf("AATextManager: give font files to install, or REPAIR\n");
+        rc = RETURN_ERROR;
+    }
+    else
     for (files = (STRPTR *)args[ARG_FILES]; rc == RETURN_OK && *files; files++)
     {
         LONG r;

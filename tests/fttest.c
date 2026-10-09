@@ -109,6 +109,47 @@ int main(int argc, char **argv)
         printf("%s: %s\n", argv[3], have ? v : "none");
         return strcmp(have ? v : "none", argv[4]) ? 10 : 0;
     }
+    /* "repair": add the Latin-5 code page to font argv[3] and set its
+       engine freetype2 -> aatext; scan again: ok, engine aatext, code
+       page, .bak kept; a second repair has nothing to do */
+    if (strcmp(argv[2], "repair") == 0 && argc > 3)
+    {
+        static struct AADiagEntry e[32];
+        static char backup[AA_FONTFILE_LEN];
+        static const struct AARepair rp =
+            { AA_REPAIR_PATH | AA_REPAIR_CODEPAGE | AA_REPAIR_ENGINE,
+              AA_CHARSET_LATIN5, "aatext" };
+        LONG cnt = aa_ScanFonts(e, 32), k, r, r2;
+        ULONG what;
+        BPTR lock;
+
+        for (k = 0; k < cnt && strcmp(e[k].name, argv[3]); k++)
+            ;
+        if (k == cnt)
+        {
+            printf("FAIL: %s not found\n", argv[3]);
+            return 10;
+        }
+        what = aa_RepairNeeded(&e[k], &rp);
+        r = aa_RepairOTag(&e[k], &rp, backup);
+        r2 = aa_RepairOTag(&e[k], &rp, backup);
+        printf("repair %s: needed %lu, result %ld, again %ld; now engine "
+               "%s, code page %d, status %d\n", argv[3],
+               (unsigned long)what, (long)r, (long)r2, e[k].engine,
+               (int)e[k].codepage, (int)e[k].status);
+        lock = Lock((CONST_STRPTR)backup, ACCESS_READ);
+        if (lock)
+            UnLock(lock);
+        if (what != (AA_REPAIR_CODEPAGE | AA_REPAIR_ENGINE) ||
+            r != AA_FIX_OK || r2 != AA_FIX_NOTHING ||
+            strcmp(e[k].engine, "aatext") || !e[k].codepage ||
+            e[k].status != AA_DIAG_OK || !lock)
+        {
+            printf("FAIL: after the repair\n");
+            return 10;
+        }
+        return 0;
+    }
     /* "fix": fix the moved font argv[3], then scan again: it must be ok,
        name FONTS:..., and the original must be kept as .bak */
     if (strcmp(argv[2], "fix") == 0 && argc > 3)

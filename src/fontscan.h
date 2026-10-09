@@ -57,18 +57,44 @@ BOOL aa_LibVersion(const char *name, char *buf, LONG len);
 enum
 {
     AA_FIX_OK = 0,
-    AA_FIX_NOTMOVED,        /* only AA_DIAG_MOVED entries are fixed */
+    AA_FIX_NOTHING,         /* nothing to repair */
     AA_FIX_READ,            /* the .otag cannot be read or rebuilt */
     AA_FIX_BACKUP,          /* the backup cannot be written */
     AA_FIX_WRITE            /* the .otag cannot be written; backup kept */
 };
+#define AA_FIX_NOTMOVED AA_FIX_NOTHING
+
+/* repairs (AARepair.what, aa_RepairNeeded()) */
+#define AA_REPAIR_PATH      1   /* moved font file: point at where it is */
+#define AA_REPAIR_CODEPAGE  2   /* no code page: add the one of charset */
+#define AA_REPAIR_ENGINE    4   /* engine "freetype2" -> engine */
+
+struct AARepair
+{
+    ULONG what;             /* AA_REPAIR_* wanted */
+    LONG  charset;          /* AA_CHARSET_* for AA_REPAIR_CODEPAGE */
+    const char *engine;     /* for AA_REPAIR_ENGINE, e.g. "aatext" */
+};
+
+/*
+ * Which of r->what apply to e: only fonts that are OK or MOVED; code
+ * pages and engine only for the FreeType engines (freetype2, aatext),
+ * whose .otag tags are known; the engine only from "freetype2".
+ */
+ULONG aa_RepairNeeded(const struct AADiagEntry *e, const struct AARepair *r);
+
+/*
+ * Repair e's .otag as aa_RepairNeeded() says. The original is first
+ * copied to <otag>.bak, unless that exists already (the oldest original
+ * is kept); its name is left in backup (AA_FONTFILE_LEN bytes). e is
+ * checked again afterwards. Returns AA_FIX_...
+ */
+LONG aa_RepairOTag(struct AADiagEntry *e, const struct AARepair *r,
+                   char *backup);
 
 /*
  * Point a moved font's .otag at the file where it was found (e->found,
- * e.g. FONTS:_ttf/x.ttf). The original is first copied to <otag>.bak,
- * unless that exists already (the oldest original is kept); its name is
- * left in backup (AA_FONTFILE_LEN bytes). e is checked again afterwards.
- * Returns AA_FIX_...
+ * e.g. FONTS:_ttf/x.ttf): aa_RepairOTag() with AA_REPAIR_PATH only.
  */
 LONG aa_FixOTag(struct AADiagEntry *e, char *backup);
 
