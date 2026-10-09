@@ -280,6 +280,11 @@ Lütfen debug sürümünün çıktısını ekleyin:
 Geçmiş
 ------
 
+0.13  Fontlar, açılış diskinin adı kurulum sırasındakinden farklı
+      olduğunda da bulunur: .otag dosyaları font dosyasını eski disk
+      adıyla verir (ör. System:Fonts/...); AAText artık FONTS: ve SYS:
+      altına da bakar.
+
 0.12  Ayar programı AATextPrefs (Türkçe ve İngilizce): değişiklikler
       hemen görünür, Prefs menüleri, GlowIcon. AAText yeni ayarları
       çalışırken ondan alır.

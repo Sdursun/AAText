@@ -33,6 +33,16 @@ run otag            tests/test.prefs otag tests/data/arial.otag
 run auto            tests/data/empty.prefs auto AutoTest.font
 run charsets        tests/charset.prefs charsets
 
+# .otag written on a volume of another name: "Gone:Fonts/..." must be
+# found again in FONTS:
+M=$(mktemp -d)
+mkdir -p $M/moved_fonts_test_directory
+cp tests/data/MovedTest.otag $M/
+cp third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf $M/moved_fonts_test_directory/
+V="vamos -C 68020 -m 8192 -V movedfonts:$M -a FONTS:movedfonts:"
+run moved-volume    tests/data/empty.prefs auto MovedTest.font
+rm -rf $M
+
 echo
 if [ $fail -eq 0 ]; then
     echo "all tests passed"

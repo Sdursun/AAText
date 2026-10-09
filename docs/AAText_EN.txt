@@ -267,6 +267,11 @@ Please include the output of the debug version:
 History
 -------
 
+0.13  Fonts are found when the boot volume has another name than when
+      they were installed: .otag files name the font file with the old
+      volume (e.g. System:Fonts/...); AAText now also looks in FONTS:
+      and SYS:.
+
 0.12  Preferences program AATextPrefs (English and Turkish): changes
       are shown at once, Prefs menus, GlowIcon. AAText takes new
       settings from it while running.
