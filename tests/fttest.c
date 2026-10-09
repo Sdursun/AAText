@@ -77,15 +77,15 @@ int main(int argc, char **argv)
         }
         return bad ? 10 : 0;
     }
-    /* "ft2ver": the freetype2.library version; argv[3] is the expected
-       one, or "none" */
-    if (strcmp(argv[2], "ft2ver") == 0 && argc > 3)
+    /* "libver": version of library argv[3]; argv[4] is the expected one,
+       or "none" */
+    if (strcmp(argv[2], "libver") == 0 && argc > 4)
     {
         static char v[16];
-        BOOL have = aa_FT2Version(v, sizeof(v));
+        BOOL have = aa_LibVersion(argv[3], v, sizeof(v));
 
-        printf("freetype2.library: %s\n", have ? v : "none");
-        return strcmp(have ? v : "none", argv[3]) ? 10 : 0;
+        printf("%s: %s\n", argv[3], have ? v : "none");
+        return strcmp(have ? v : "none", argv[4]) ? 10 : 0;
     }
     /* "fix": fix the moved font argv[3], then scan again: it must be ok,
        name FONTS:..., and the original must be kept as .bak */

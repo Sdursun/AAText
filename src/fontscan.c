@@ -54,10 +54,12 @@ static BOOL IsFontFile(const char *path)
     return ok;
 }
 
-/* Engines AAText can use: TrueType/OpenType through FreeType. */
+/* Engines AAText can use: TrueType/OpenType through FreeType (ttf.library,
+   TTEngine, freetype2.library, aatext.library). */
 static BOOL KnownEngine(const char *engine)
 {
     return !engine || !Stricmp((CONST_STRPTR)engine, (CONST_STRPTR)"ttf") ||
+           !Stricmp((CONST_STRPTR)engine, (CONST_STRPTR)"aatext") ||
            !Stricmp((CONST_STRPTR)engine, (CONST_STRPTR)"ttengine") ||
            !Strnicmp((CONST_STRPTR)engine, (CONST_STRPTR)"freetype", 8);
 }
@@ -277,7 +279,7 @@ LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
     return result;
 }
 
-/* "2.14" from "$VER: freetype2.library 2.14 (9.10.2026)" */
+/* "1.0" from "$VER: aatext.library 1.0 (9.10.2026)" */
 static BOOL VersionFromVer(const char *ver, char *buf, LONG len)
 {
     LONG n = 0;
@@ -292,9 +294,10 @@ static BOOL VersionFromVer(const char *ver, char *buf, LONG len)
     return n > 0;
 }
 
-BOOL aa_FT2Version(char *buf, LONG len)
+BOOL aa_LibVersion(const char *name, char *buf, LONG len)
 {
     static UBYTE chunk[4096 + 64];
+    char path[64];
     struct Library *lib;
     BPTR fh;
     LONG got, keep = 0, i;
@@ -303,7 +306,7 @@ BOOL aa_FT2Version(char *buf, LONG len)
     buf[0] = 0;
     Forbid();
     lib = (struct Library *)FindName(&SysBase->LibList,
-                                     (CONST_STRPTR)"freetype2.library");
+                                     (CONST_STRPTR)name);
     if (lib)
         snprintf(buf, len, "%ld.%ld", (long)lib->lib_Version,
                  (long)lib->lib_Revision);
@@ -313,7 +316,8 @@ BOOL aa_FT2Version(char *buf, LONG len)
 
     /* not loaded: look for $VER in the file, 4 KB at a time; the last
        64 bytes are kept so that a string across two reads is found */
-    fh = Open((CONST_STRPTR)"LIBS:freetype2.library", MODE_OLDFILE);
+    snprintf(path, sizeof(path), "LIBS:%s", name);
+    fh = Open((CONST_STRPTR)path, MODE_OLDFILE);
     if (!fh)
         return FALSE;
     while (!found && (got = Read(fh, chunk + keep, 4096)) > 0)

@@ -53,21 +53,25 @@ cp tests/data/MovedTest.otag $M/Moved.otag
 perl -pe 's/DejaVuSans\.ttf/NotThere__.ttf/' tests/data/MovedTest.otag > $M/Missing.otag
 perl -pe 's/DejaVuSans\.ttf/NotAFont__.ttf/' tests/data/MovedTest.otag > $M/NotFont.otag
 echo "garbage" > $M/Broken.otag
+perl tests/otag-engine.pl tests/data/fonts/AutoTest.otag aatext > $M/AAEngine.otag
 V="vamos -C 68020 -m 8192 -V scanfonts:$M -a FONTS:scanfonts:"
 run scan            tests/data/empty.prefs scan Good=ok Moved=moved \
-                    Missing=missing NotFont=badfile Broken=badotag
+                    Missing=missing NotFont=badfile Broken=badotag \
+                    AAEngine=ok
 run fix             tests/data/empty.prefs fix Moved
 rm -rf $M
 
-# freetype2.library version from the $VER string of LIBS:freetype2.library
-# (placed across the 4 KB read boundary), and without the library
+# library versions from the $VER string in LIBS: (placed across the 4 KB
+# read boundary), and without the library
 M=$(mktemp -d)
 mkdir $M/libs $M/nolibs
-{ head -c 4090 /dev/zero; printf '$VER: freetype2.library 2.14 (09/10/26)\0'; head -c 100 /dev/zero; } > $M/libs/freetype2.library
+{ head -c 4090 /dev/zero; printf '$VER: aatext.library 1.0 (09/10/26)\0'; head -c 100 /dev/zero; } > $M/libs/aatext.library
+printf '$VER: freetype2.library 1.3 (01.01.2002)\0' > $M/libs/freetype2.library
 V="vamos -C 68020 -m 8192 -V ft2:$M/libs -a LIBS:ft2:"
-run ft2ver          tests/data/empty.prefs ft2ver 2.14
+run libver-aatext   tests/data/empty.prefs libver aatext.library 1.0
+run libver-ft2      tests/data/empty.prefs libver freetype2.library 1.3
 V="vamos -C 68020 -m 8192 -V ft2:$M/nolibs -a LIBS:ft2:"
-run ft2ver-none     tests/data/empty.prefs ft2ver none
+run libver-none     tests/data/empty.prefs libver aatext.library none
 rm -rf $M
 
 echo

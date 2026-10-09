@@ -114,8 +114,9 @@
     S(MSG_DIAG_FIX_BACKUP, 103, "Cannot write the backup %s; nothing was changed.") \
     S(MSG_DIAG_FIX_READ,   104, "Cannot read or rebuild %s; nothing was changed.") \
     S(MSG_DIAG_FIX_WRITE,  105, "Cannot write %s. The original is in %s.") \
-    S(MSG_DIAG_FT2,        106, "; freetype2.library %s") \
-    S(MSG_DIAG_FT2_NONE,   107, "; no freetype2.library")
+    S(MSG_DIAG_LIB,        106, "; %s %s") \
+    S(MSG_DIAG_LIB_NONE,   107, "; no %s") \
+    S(MSG_DIAG_COL_ENGINE, 108, "Engine")
 
 
 #define S(id, n, s) id = n,

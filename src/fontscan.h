@@ -44,12 +44,13 @@ struct AADiagEntry
 LONG aa_ScanFonts(struct AADiagEntry *out, LONG max);
 
 /*
- * Version of freetype2.library ("2.14", "1.3") into buf (len bytes),
- * without opening it: from the library list if it is loaded, otherwise
- * from the $VER string of LIBS:freetype2.library. FALSE if there is
- * none. It is the outline engine of fonts installed with FTManager.
+ * Version of a library ("1.3" for name "freetype2.library") into buf
+ * (len bytes), without opening it: from the library list if it is
+ * loaded, otherwise from the $VER string of LIBS:<name>. FALSE if there
+ * is none. Used for the outline engines freetype2.library (FTManager
+ * fonts) and aatext.library.
  */
-BOOL aa_FT2Version(char *buf, LONG len);
+BOOL aa_LibVersion(const char *name, char *buf, LONG len);
 
 enum
 {

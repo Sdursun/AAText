@@ -209,7 +209,9 @@ MSG_DIAG_FIX_READ
 %s okunamadı ya da yeniden oluşturulamadı; hiçbir şey değiştirilmedi.
 MSG_DIAG_FIX_WRITE
 %s yazılamadı. Orijinali: %s
-MSG_DIAG_FT2
-; freetype2.library %s
-MSG_DIAG_FT2_NONE
-; freetype2.library yok
+MSG_DIAG_LIB
+; %s %s
+MSG_DIAG_LIB_NONE
+; %s yok
+MSG_DIAG_COL_ENGINE
+Motor

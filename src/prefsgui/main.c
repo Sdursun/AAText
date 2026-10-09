@@ -1005,7 +1005,13 @@ static LONG HintIndex(UBYTE hinting)
 /* ------------------------------------------------------------------ */
 
 static char scansum[160];
-static char ft2ver[16];                /* freetype2.library version */
+/* libraries of the outline engines: FTManager fonts, AAText's own */
+#define NUM_ENGINELIBS 2
+static const char *const enginelibs[NUM_ENGINELIBS] =
+{
+    "freetype2.library", "aatext.library"
+};
+static char libver[NUM_ENGINELIBS][16];  /* "" if not installed */
 static char detail1[AA_FONTFILE_LEN + 32];
 static char detail2[AA_FONTFILE_LEN + 32];
 static char detail3[128];
@@ -1030,9 +1036,10 @@ static const char *const diag_name[AA_DIAG_NUM] =
 
 static struct ColumnInfo fontcols[] =
 {
-    { 30, NULL, 0 },
-    { 20, NULL, 0 },
-    { 50, NULL, 0 },
+    { 28, NULL, 0 },
+    { 17, NULL, 0 },
+    { 13, NULL, 0 },
+    { 42, NULL, 0 },
     { -1, NULL, 0 }
 };
 
@@ -1075,10 +1082,11 @@ static void ShowScan(LONG sel)
     for (i = 0; i < numdiag; i++)
     {
         struct AADiagEntry *e = &diag[i];
-        struct Node *n = AllocListBrowserNode(3,
+        struct Node *n = AllocListBrowserNode(4,
             LBNA_Column, 0, LBNCA_Text, (ULONG)e->name,
             LBNA_Column, 1, LBNCA_Text, (ULONG)GetString(diag_msg[e->status]),
-            LBNA_Column, 2, LBNCA_Text,
+            LBNA_Column, 2, LBNCA_Text, (ULONG)e->engine,   /* OT_Engine */
+            LBNA_Column, 3, LBNCA_Text,
                 (ULONG)(e->found[0] ? e->found : e->want),
             TAG_DONE);
 
@@ -1098,17 +1106,17 @@ static void ShowScan(LONG sel)
     else
         snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_SUMMARY),
                  (long)numdiag, (long)ok, (long)(numdiag - ok));
-    /* the outline engine of FTManager fonts, useful in bug reports */
-    if (numdiag >= 0)
+    /* the outline engines' libraries, useful in bug reports */
+    for (i = 0; numdiag >= 0 && i < NUM_ENGINELIBS; i++)
     {
         LONG n = strlen(scansum);
 
-        if (aa_FT2Version(ft2ver, sizeof(ft2ver)))
+        if (aa_LibVersion(enginelibs[i], libver[i], sizeof(libver[i])))
             snprintf(scansum + n, sizeof(scansum) - n,
-                     GetString(MSG_DIAG_FT2), ft2ver);
+                     GetString(MSG_DIAG_LIB), enginelibs[i], libver[i]);
         else
-            snprintf(scansum + n, sizeof(scansum) - n, "%s",
-                     GetString(MSG_DIAG_FT2_NONE));
+            snprintf(scansum + n, sizeof(scansum) - n,
+                     GetString(MSG_DIAG_LIB_NONE), enginelibs[i]);
     }
     SetGad(GID_SCANSUM, GA_Text, (ULONG)scansum);
     ShowDetail();
@@ -1191,10 +1199,12 @@ static BOOL WriteReport(const char *path)
 
     if (!fh)
         return FALSE;
-    FPrintf(fh, (CONST_STRPTR)"AAText font report (%s)\n"
-            "freetype2.library: %s\n%ld font(s) in FONTS:\n",
-            (ULONG)(version + 6), (ULONG)(ft2ver[0] ? ft2ver : "none"),
-            (ULONG)numdiag);
+    FPrintf(fh, (CONST_STRPTR)"AAText font report (%s)\n",
+            (ULONG)(version + 6));
+    for (i = 0; i < NUM_ENGINELIBS; i++)
+        FPrintf(fh, (CONST_STRPTR)"%s: %s\n", (ULONG)enginelibs[i],
+                (ULONG)(libver[i][0] ? libver[i] : "not installed"));
+    FPrintf(fh, (CONST_STRPTR)"%ld font(s) in FONTS:\n", (ULONG)numdiag);
     for (i = 0; i < numdiag && ok; i++)
     {
         struct AADiagEntry *e = &diag[i];
@@ -1255,7 +1265,8 @@ static Object *DiagPage(void)
 
     fontcols[0].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FONT);
     fontcols[1].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_STATUS);
-    fontcols[2].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FILE);
+    fontcols[2].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_ENGINE);
+    fontcols[3].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FILE);
 
     return VLayoutObject,
         LAYOUT_SpaceOuter, TRUE,
