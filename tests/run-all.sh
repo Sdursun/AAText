@@ -48,6 +48,13 @@ V="vamos -C 68020 -m 8192 -V movedfonts:$M -a FONTS:movedfonts:"
 run moved-volume    tests/data/empty.prefs auto MovedTest.font
 rm -rf $M
 
+# font installer: into an empty directory, compared with FTManager's
+# .otag for Verdana
+M=$(mktemp -d)
+V="vamos -C 68020 -m 8192 -V inst:$M"
+run install         tests/data/empty.prefs install third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf inst: tests/data/verdanaregular.otag
+rm -rf $M
+
 # font diagnostics: one .otag for each status
 M=$(mktemp -d)
 mkdir -p $M/moved_fonts_test_directory

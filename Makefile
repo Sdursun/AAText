@@ -116,7 +116,7 @@ clean:
 # Host-side smoke test (run under vamos, see test.ps1)
 TEST_OBJS := $(BUILDDIR)/prefs.o $(BUILDDIR)/glyphs.o $(BUILDDIR)/metrics.o \
              $(BUILDDIR)/otag.o $(BUILDDIR)/debug.o $(BUILDDIR)/charsets.o $(BUILDDIR)/fontfile.o $(BUILDDIR)/fontscan.o \
-             $(BUILDDIR)/otagfile.o $(BUILDDIR)/fontinfo.o \
+             $(BUILDDIR)/otagfile.o $(BUILDDIR)/fontinfo.o $(BUILDDIR)/fontinstall.o \
              $(BUILDDIR)/stub.o
 
 .PHONY: test
@@ -203,3 +203,23 @@ $(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
 	@mkdir -p $(dir $@)
 	python3 -I tools/mkicon.py tool icons/AATextPrefs.png \
 		icons/AATextPrefs_sel.png --stack 16384 -o $@
+
+# Font installer; FreeType from aatext.library
+MGR_TARGET := $(BUILDDIR)/AATextManager
+MGR_SRCS   := src/manager/main.c src/fontinstall.c src/fontinfo.c \
+              src/otagfile.c src/otag.c src/charsets.c
+MGR_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/mgr/%.o,$(MGR_SRCS))
+
+.PHONY: manager
+manager: $(MGR_TARGET)
+
+$(MGR_TARGET): $(MGR_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ -lamiga
+ifneq ($(DEBUG),1)
+	$(STRIP) --strip-unneeded $@
+endif
+	@ls -l $@
+
+$(BUILDDIR)/mgr/%.o: src/%.c src/*.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/aatextlib -Wno-pointer-sign -c -o $@ $<

@@ -20,6 +20,7 @@
 #include "fontscan.h"
 #include "otagfile.h"
 #include "fontinfo.h"
+#include "fontinstall.h"
 
 /* stub.s references these; the patch itself is not linked here. */
 volatile LONG aa_UseCount;
@@ -176,6 +177,104 @@ int main(int argc, char **argv)
         }
         return bad ? 10 : 0;
     }
+    /* "install": install font file argv[3] into directory argv[4] (an
+       empty one) with Latin-5, check the .otag against FTManager's
+       argv[5] (same tags plus the code page), then name clash and
+       OVERWRITE */
+    if (strcmp(argv[2], "install") == 0 && argc > 5)
+    {
+        static struct AAInstall in;
+        static struct AAOTagFile mine, ftm;
+        static struct AAOTagInfo info;
+        static UBYTE buf[65536];
+        char path[300];
+        LONG r, k = 0;
+        FILE *fp;
+        size_t len;
+        int bad = 0;
+
+        aa_InstallDefaults(&in);
+        in.source = argv[3];
+        in.fonts = argv[4];
+        in.charset = AA_CHARSET_LATIN5;
+        r = aa_InstallFont(&in);
+        printf("install: %ld, name %s, font file %s\n", (long)r, in.name,
+               in.fontfile);
+        if (r != AA_INSTALL_OK || !in.copied)
+            return 10;
+        sprintf(path, "%s%s.otag", argv[4], in.name);
+        fp = fopen(path, "rb");
+        len = fp ? fread(buf, 1, sizeof(buf), fp) : 0;
+        if (fp)
+            fclose(fp);
+        if (!aa_ParseOTag(buf, len, &info) || strcmp(info.engine, "aatext") ||
+            strcmp(info.fontfile, in.fontfile) || !info.hascodepage ||
+            info.codepage[0xFD] != 0x0131 || info.facenum != 0)
+        {
+            printf("FAIL: .otag reads back wrong\n");
+            bad = 1;
+        }
+        if (!bad && aa_OTagLoad(&mine, buf, len) &&
+            aa_OTagReadFile(&ftm, argv[5]))
+        {
+            LONG i;
+
+            for (i = 0; i < mine.count; i++)
+            {
+                if (mine.items[i].tag == OT_Spec2_CodePage)
+                    continue;
+                if (k >= ftm.count || ftm.items[k].tag != mine.items[i].tag)
+                {
+                    printf("FAIL: tag %08lx where FTManager has %08lx\n",
+                           (unsigned long)mine.items[i].tag,
+                           k < ftm.count ? (unsigned long)ftm.items[k].tag : 0);
+                    bad = 1;
+                    break;
+                }
+                k++;
+            }
+            if (!bad && k != ftm.count)
+            {
+                printf("FAIL: %ld tags, FTManager %ld\n", (long)k,
+                       (long)ftm.count);
+                bad = 1;
+            }
+        }
+        else if (!bad)
+            bad = 1;
+        sprintf(path, "%s%s.font", argv[4], in.name);
+        fp = fopen(path, "rb");
+        len = fp ? fread(buf, 1, sizeof(buf), fp) : 0;
+        if (fp)
+            fclose(fp);
+        if (len != 4 || buf[0] != 0x0F || buf[1] != 0x03 || buf[2] || buf[3])
+        {
+            printf("FAIL: .font is not 0F030000\n");
+            bad = 1;
+        }
+
+        r = aa_InstallFont(&in);
+        if (r != AA_INSTALL_EXISTS)
+        {
+            printf("FAIL: second install gave %ld, not EXISTS\n", (long)r);
+            bad = 1;
+        }
+        in.overwrite = TRUE;
+        r = aa_InstallFont(&in);
+        sprintf(path, "%s%s.otag.bak", argv[4], in.name);
+        fp = fopen(path, "rb");
+        if (r != AA_INSTALL_OK || !in.replaced || in.copied || !fp)
+        {
+            printf("FAIL: overwrite: %ld replaced %d copied %d bak %d\n",
+                   (long)r, in.replaced, in.copied, fp != NULL);
+            bad = 1;
+        }
+        if (fp)
+            fclose(fp);
+        printf("%s\n", bad ? "FAIL" : "ok: tags as FTManager, clash, overwrite");
+        return bad ? 10 : 0;
+    }
+
     /* "fontinfo": print what AATextManager reads from font file argv[3]
        (face argv[4]); argv[5], if given, is the expected "base name" */
     if (strcmp(argv[2], "fontinfo") == 0 && argc > 3)
