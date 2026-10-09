@@ -1,4 +1,4 @@
-AAText 0.13 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.14 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
