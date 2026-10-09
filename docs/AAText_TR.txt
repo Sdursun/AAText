@@ -138,6 +138,9 @@ satırında görürsünüz.
               dokunulmaz, yani her zaman en eski orijinali tutar); geri
               almak için onu geri kopyalayın. Bundan sonra fontu yalnız
               AAText değil, bütün programlar bulur.
+              "Fontları tara"nın yanındaki satır, FTManager ile kurulan
+              fontların motoru freetype2.library'nin sürümünü de
+              gösterir (1.3 eskisi, 2.14 yenisi).
               "Raporu kaydet..." listeyi hata bildirimleri için bir metin
               dosyasına yazar. Taramanın kendisi hiçbir şeyi değiştirmez.
 

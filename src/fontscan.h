@@ -38,10 +38,18 @@ struct AADiagEntry
 /*
  * Scan FONTS: into out (room for max entries), fonts with problems
  * first, then by name. A font name found in more than one directory of
- * the assign is listed once, as diskfont.library uses the first. Returns the number of entries,
- * or -1 if FONTS: cannot be read.
+ * the assign is listed once, as diskfont.library uses the first.
+ * Returns the number of entries, or -1 if FONTS: cannot be read.
  */
 LONG aa_ScanFonts(struct AADiagEntry *out, LONG max);
+
+/*
+ * Version of freetype2.library ("2.14", "1.3") into buf (len bytes),
+ * without opening it: from the library list if it is loaded, otherwise
+ * from the $VER string of LIBS:freetype2.library. FALSE if there is
+ * none. It is the outline engine of fonts installed with FTManager.
+ */
+BOOL aa_FT2Version(char *buf, LONG len);
 
 enum
 {

@@ -59,6 +59,17 @@ run scan            tests/data/empty.prefs scan Good=ok Moved=moved \
 run fix             tests/data/empty.prefs fix Moved
 rm -rf $M
 
+# freetype2.library version from the $VER string of LIBS:freetype2.library
+# (placed across the 4 KB read boundary), and without the library
+M=$(mktemp -d)
+mkdir $M/libs $M/nolibs
+{ head -c 4090 /dev/zero; printf '$VER: freetype2.library 2.14 (09/10/26)\0'; head -c 100 /dev/zero; } > $M/libs/freetype2.library
+V="vamos -C 68020 -m 8192 -V ft2:$M/libs -a LIBS:ft2:"
+run ft2ver          tests/data/empty.prefs ft2ver 2.14
+V="vamos -C 68020 -m 8192 -V ft2:$M/nolibs -a LIBS:ft2:"
+run ft2ver-none     tests/data/empty.prefs ft2ver none
+rm -rf $M
+
 echo
 if [ $fail -eq 0 ]; then
     echo "all tests passed"

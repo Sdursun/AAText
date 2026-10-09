@@ -5,12 +5,14 @@
 
 #include <exec/types.h>
 #include <exec/memory.h>
+#include <exec/execbase.h>
 #include <dos/dos.h>
 #include <dos/dosextens.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/utility.h>
 
+#include <stdio.h>
 #include <string.h>
 
 #include "fontscan.h"
@@ -273,4 +275,65 @@ LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
     }
     FreeVec(buf);
     return result;
+}
+
+/* "2.14" from "$VER: freetype2.library 2.14 (9.10.2026)" */
+static BOOL VersionFromVer(const char *ver, char *buf, LONG len)
+{
+    LONG n = 0;
+
+    while (*ver && *ver != ' ')         /* the name */
+        ver++;
+    while (*ver == ' ')
+        ver++;
+    while (n < len - 1 && ((*ver >= '0' && *ver <= '9') || *ver == '.'))
+        buf[n++] = *ver++;
+    buf[n] = 0;
+    return n > 0;
+}
+
+BOOL aa_FT2Version(char *buf, LONG len)
+{
+    static UBYTE chunk[4096 + 64];
+    struct Library *lib;
+    BPTR fh;
+    LONG got, keep = 0, i;
+    BOOL found = FALSE;
+
+    buf[0] = 0;
+    Forbid();
+    lib = (struct Library *)FindName(&SysBase->LibList,
+                                     (CONST_STRPTR)"freetype2.library");
+    if (lib)
+        snprintf(buf, len, "%ld.%ld", (long)lib->lib_Version,
+                 (long)lib->lib_Revision);
+    Permit();
+    if (lib)
+        return TRUE;
+
+    /* not loaded: look for $VER in the file, 4 KB at a time; the last
+       64 bytes are kept so that a string across two reads is found */
+    fh = Open((CONST_STRPTR)"LIBS:freetype2.library", MODE_OLDFILE);
+    if (!fh)
+        return FALSE;
+    while (!found && (got = Read(fh, chunk + keep, 4096)) > 0)
+    {
+        got += keep;
+        for (i = 0; i + 6 < got && !found; i++)
+            if (!memcmp(chunk + i, "$VER: ", 6))
+            {
+                char ver[64];
+                LONG k;
+
+                for (k = 0; k < 63 && i + 6 + k < got && chunk[i + 6 + k];
+                     k++)
+                    ver[k] = chunk[i + 6 + k];
+                ver[k] = 0;
+                found = VersionFromVer(ver, buf, len);
+            }
+        keep = got > 64 ? 64 : got;
+        memmove(chunk, chunk + got - keep, keep);
+    }
+    Close(fh);
+    return found;
 }

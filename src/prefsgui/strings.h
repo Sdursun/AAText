@@ -113,7 +113,9 @@
     S(MSG_DIAG_FIX_NOTMOVED, 102, "Only fonts marked Moved can be fixed.") \
     S(MSG_DIAG_FIX_BACKUP, 103, "Cannot write the backup %s; nothing was changed.") \
     S(MSG_DIAG_FIX_READ,   104, "Cannot read or rebuild %s; nothing was changed.") \
-    S(MSG_DIAG_FIX_WRITE,  105, "Cannot write %s. The original is in %s.")
+    S(MSG_DIAG_FIX_WRITE,  105, "Cannot write %s. The original is in %s.") \
+    S(MSG_DIAG_FT2,        106, "; freetype2.library %s") \
+    S(MSG_DIAG_FT2_NONE,   107, "; no freetype2.library")
 
 
 #define S(id, n, s) id = n,

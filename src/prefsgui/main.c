@@ -1004,7 +1004,8 @@ static LONG HintIndex(UBYTE hinting)
 /* Diagnostics tab                                                     */
 /* ------------------------------------------------------------------ */
 
-static char scansum[96];
+static char scansum[160];
+static char ft2ver[16];                /* freetype2.library version */
 static char detail1[AA_FONTFILE_LEN + 32];
 static char detail2[AA_FONTFILE_LEN + 32];
 static char detail3[128];
@@ -1097,6 +1098,18 @@ static void ShowScan(LONG sel)
     else
         snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_SUMMARY),
                  (long)numdiag, (long)ok, (long)(numdiag - ok));
+    /* the outline engine of FTManager fonts, useful in bug reports */
+    if (numdiag >= 0)
+    {
+        LONG n = strlen(scansum);
+
+        if (aa_FT2Version(ft2ver, sizeof(ft2ver)))
+            snprintf(scansum + n, sizeof(scansum) - n,
+                     GetString(MSG_DIAG_FT2), ft2ver);
+        else
+            snprintf(scansum + n, sizeof(scansum) - n, "%s",
+                     GetString(MSG_DIAG_FT2_NONE));
+    }
     SetGad(GID_SCANSUM, GA_Text, (ULONG)scansum);
     ShowDetail();
 }
@@ -1179,7 +1192,9 @@ static BOOL WriteReport(const char *path)
     if (!fh)
         return FALSE;
     FPrintf(fh, (CONST_STRPTR)"AAText font report (%s)\n"
-            "%ld font(s) in FONTS:\n", (ULONG)(version + 6), (ULONG)numdiag);
+            "freetype2.library: %s\n%ld font(s) in FONTS:\n",
+            (ULONG)(version + 6), (ULONG)(ft2ver[0] ? ft2ver : "none"),
+            (ULONG)numdiag);
     for (i = 0; i < numdiag && ok; i++)
     {
         struct AADiagEntry *e = &diag[i];
