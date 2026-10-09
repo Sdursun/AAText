@@ -69,6 +69,8 @@ sh tools/fetch-freetype.sh      # FreeType 2.14.3 into third_party/ (sha256 chec
 .\build.ps1                     # build/68020/AAText
 .\build.ps1 DEBUG=1             # build/68020-debug/AAText (serial kprintf output)
 .\build.ps1 CPU=68060           # build/68060/AAText
+.\build.ps1 USE_AATEXTLIB=1     # build/68020-lib/AAText: FreeType from aatext.library
+                                # (experimental, ~43 KB; needs LIBS:aatext.library 1+)
 .\build.ps1 gui                 # build/68020/AATextPrefs
 .\build.ps1 catalogs icons      # Turkish catalog and GlowIcon (build/catalogs, build/icons)
 .\build.ps1 dist                # build/dist/AAText.lha + AAText.readme

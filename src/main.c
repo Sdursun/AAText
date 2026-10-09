@@ -490,6 +490,12 @@ int main(int argc, char **argv)
     }
 
     numfonts = aa_GlyphsInit(&prefs, from_shell);
+    if (!aa_GlyphsReady())
+    {
+        /* the reason was printed by aa_GlyphsInit() */
+        Cleanup();
+        return RETURN_FAIL;
+    }
     if (numfonts == 0 && !prefs.autodetect && mode == AA_MODE_TEXT)
     {
         Msg("AAText: no usable font mappings and \"auto off\", "

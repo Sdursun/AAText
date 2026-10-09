@@ -3,6 +3,8 @@
 #   make            release build (68020+)
 #   make DEBUG=1    debug build with serial kprintf output
 #   make CPU=68060  build for 68060
+#   make USE_AATEXTLIB=1   FreeType from aatext.library instead of built in
+#                   (build/<cpu>-lib/AAText; headers in include/aatextlib)
 #
 # Normally invoked inside Docker via build.ps1.
 # FreeType sources are fetched with tools/fetch-freetype.sh.
@@ -15,11 +17,12 @@ STRIP   := $(PREFIX)strip
 
 CPU     ?= 68020
 DEBUG   ?= 0
+USE_AATEXTLIB ?= 0
 
 FT_VER  := 2.14.3
 FT_DIR  := third_party/freetype-$(FT_VER)
 
-BUILDDIR := build/$(CPU)$(if $(filter 1,$(DEBUG)),-debug,)
+BUILDDIR := build/$(CPU)$(if $(filter 1,$(DEBUG)),-debug,)$(if $(filter 1,$(USE_AATEXTLIB)),-lib,)
 TARGET   := $(BUILDDIR)/AAText
 
 ARCHFLAGS := -m$(CPU) -noixemul
@@ -38,6 +41,15 @@ LIBS    := -lm
 
 ifeq ($(DEBUG),1)
 CFLAGS  += -DDEBUG
+endif
+
+# FreeType in the program, or from aatext.library: then only AAText's
+# memory functions (aa_ftsystem.c) are linked, the rest is in the library
+ifeq ($(USE_AATEXTLIB),1)
+CFLAGS  += -DAA_USE_AATEXTLIB -Iinclude/aatextlib
+FT_LINK  = $(BUILDDIR)/ft/aa_ftsystem.o
+else
+FT_LINK  = $(FT_LIB)
 endif
 
 SRCS_C := src/main.c src/patch.c src/render.c src/metrics.c src/prefs.c \
@@ -70,8 +82,8 @@ vpath %.c $(sort $(dir $(FT_SRCS)))
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS) $(FT_LIB)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(FT_LIB) $(LIBS)
+$(TARGET): $(OBJS) $(FT_LINK)
+	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(FT_LINK) $(LIBS)
 ifneq ($(DEBUG),1)
 	$(STRIP) --strip-unneeded $@
 endif

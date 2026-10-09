@@ -124,6 +124,9 @@ extern UBYTE aa_GammaLUT[256];
 LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report);
 void aa_GlyphsCleanup(void);
 
+/* FALSE if aa_GlyphsInit() could not set up FreeType (e.g. no library). */
+BOOL aa_GlyphsReady(void);
+
 /*
  * Apply the settings that can change while AAText runs: gamma, hinting,
  * charset, cache size, automatic detection. Flushes the glyph cache and

@@ -36,6 +36,16 @@
 #include FT_TRUETYPE_TABLES_H
 #include FT_TRUETYPE_TAGS_H
 
+#ifdef AA_USE_AATEXTLIB
+/*
+ * USE_AATEXTLIB=1 build: FreeType comes from aatext.library. The
+ * proto file turns every FreeType call into a call through the library
+ * vector; it must follow the FreeType headers.
+ */
+#include <proto/aatext.h>
+struct Library *AATextBase;
+#endif
+
 /* src/ft/aa_ftsystem.c (internal FreeType API, not in public headers) */
 FT_Memory FT_New_Memory(void);
 void FT_Done_Memory(FT_Memory memory);
@@ -497,6 +507,15 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
 
     MakeGammaLUT(prefs->gamma100, aa_GammaLUT);
 
+#ifdef AA_USE_AATEXTLIB
+    AATextBase = OpenLibrary((CONST_STRPTR)AATEXTLIBNAME, AATEXTLIBVERSION);
+    if (!AATextBase)
+    {
+        ReportError(report, "AAText: this version needs %s %ld or newer "
+                    "(LIBS:)\n", (LONG)AATEXTLIBNAME, AATEXTLIBVERSION);
+        return 0;
+    }
+#endif
     aa_Stack = AllocVec(AA_STACK_SIZE, MEMF_ANY);
     aa_FTMemory = FT_New_Memory();
     if (!aa_Stack || !aa_FTMemory)
@@ -622,6 +641,11 @@ void aa_GlyphsStatus(LONG *numfonts, LONG *numfaces, ULONG *bytes,
     ReleaseSemaphore(&aa_GlyphSem);
 }
 
+BOOL aa_GlyphsReady(void)
+{
+    return aa_FTLib != NULL;
+}
+
 void aa_GlyphsCleanup(void)
 {
     LONG i;
@@ -659,6 +683,11 @@ void aa_GlyphsCleanup(void)
     if (aa_Stack)
         FreeVec(aa_Stack);
     aa_Stack = NULL;
+#ifdef AA_USE_AATEXTLIB
+    if (AATextBase)
+        CloseLibrary(AATextBase);
+    AATextBase = NULL;
+#endif
 }
 
 /* ------------------------------------------------------------------ */
