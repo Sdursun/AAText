@@ -17,6 +17,7 @@
 #include "otag.h"
 #include "charsets.h"
 #include "fontscan.h"
+#include "otagfile.h"
 
 /* stub.s references these; the patch itself is not linked here. */
 volatile LONG aa_UseCount;
@@ -26,6 +27,24 @@ void aa_TextExtentHook(void) { }
 void aa_TextFitHook(void) { }
 
 static struct AAPrefs prefs;
+
+static BOOL StrToCharset(const char *name, int *cs)
+{
+    int k;
+
+    for (k = 0; k < AA_NUM_CHARSETS; k++)
+        if (!strcmp(aa_CharsetNames[k], name))
+        {
+            *cs = k;
+            return TRUE;
+        }
+    return FALSE;
+}
+
+static ULONG GetL(const UBYTE *p)
+{
+    return ((ULONG)p[0] << 24) | ((ULONG)p[1] << 16) | ((ULONG)p[2] << 8) | p[3];
+}
 
 int main(int argc, char **argv)
 {
@@ -154,6 +173,100 @@ int main(int argc, char **argv)
             }
         }
         return bad ? 10 : 0;
+    }
+    /* "otagrw": read argv[3] as a tag list, write and read it again (all
+       tags must be equal), then edit it as AATextManager will and check
+       the result with AAText's own parser */
+    if (strcmp(argv[2], "otagrw") == 0 && argc > 3)
+    {
+        static struct AAOTagFile a, b;
+        static struct AAOTagInfo info;
+        static UBYTE in[65536], out[65536];
+        static UWORD page[256];
+        FILE *fp = fopen(argv[3], "rb");
+        size_t len = fp ? fread(in, 1, sizeof(in), fp) : 0;
+        ULONG n;
+        int bad = 0;
+
+        if (fp)
+            fclose(fp);
+        if (!aa_OTagLoad(&a, in, len))
+        {
+            printf("FAIL: cannot load %s\n", argv[3]);
+            return 10;
+        }
+        n = aa_OTagSave(&a, out, sizeof(out));
+        printf("%s: %ld bytes, %ld tags -> written %ld bytes\n", argv[3],
+               (long)len, (long)a.count, (long)n);
+        if (!n || !aa_OTagLoad(&b, out, n) || a.count != b.count)
+            bad = 1;
+        for (i = 0; !bad && i < a.count; i++)
+        {
+            struct AAOTagItem *x = &a.items[i], *y = &b.items[i];
+
+            if (x->tag != y->tag ||
+                (!x->ind && x->tag != OT_FileIdent && x->data != y->data) ||
+                (x->ind && (!y->ind || memcmp(x->ind, y->ind, x->indlen) ||
+                            y->indlen < x->indlen)))
+            {
+                printf("FAIL: tag %d (%08lx) differs\n", i,
+                       (unsigned long)x->tag);
+                bad = 1;
+            }
+        }
+        if (!bad && (GetL(out + 4) != n))
+        {
+            printf("FAIL: OT_FileIdent %lu, size %lu\n",
+                   (unsigned long)GetL(out + 4), (unsigned long)n);
+            bad = 1;
+        }
+
+        /* edit: engine, code page, font file; drop the empty AFM file */
+        aa_CharsetPage(AA_CHARSET_LATIN5, page);
+        aa_OTagSetString(&a, OT_Engine, "aatext");
+        aa_OTagSetData(&a, OT_Spec2_CodePage, page, sizeof(page));
+        aa_OTagSetString(&a, OT_Spec1_FontFile, "FONTS:_ttf/test.ttf");
+        aa_OTagRemove(&a, OT_Spec3_AFMFile);
+        n = aa_OTagSave(&a, out, sizeof(out));
+        if (!bad && (!n || !aa_ParseOTag(out, n, &info) ||
+                     strcmp(info.engine, "aatext") ||
+                     strcmp(info.fontfile, "FONTS:_ttf/test.ttf") ||
+                     !info.hascodepage || info.codepage[0xFD] != 0x0131 ||
+                     info.codepage[0x41] != 0x41))
+        {
+            printf("FAIL: edited .otag reads back wrong\n");
+            bad = 1;
+        }
+        if (!bad && (!aa_OTagLoad(&b, out, n) ||
+                     aa_OTagFind(&b, OT_Spec3_AFMFile)))
+        {
+            printf("FAIL: OT_Spec3_AFMFile not removed\n");
+            bad = 1;
+        }
+        printf("edited: %ld bytes, engine %s, font file %s, code page %s\n",
+               (long)n, info.engine ? info.engine : "-",
+               info.fontfile ? info.fontfile : "-",
+               info.hascodepage ? "yes" : "no");
+        return bad ? 10 : 0;
+    }
+    /* "otagcopy in out [engine [charset]]": rewrite a .otag through the
+       tag list, optionally with another engine and a code page (for
+       trying the result with diskfont on an Amiga) */
+    if (strcmp(argv[2], "otagcopy") == 0 && argc > 4)
+    {
+        static struct AAOTagFile a;
+        static UWORD page[256];
+
+        if (!aa_OTagReadFile(&a, argv[3]))
+            return 10;
+        if (argc > 5)
+            aa_OTagSetString(&a, OT_Engine, argv[5]);
+        if (argc > 6 && StrToCharset(argv[6], &i))
+        {
+            aa_CharsetPage(i, page);
+            aa_OTagSetData(&a, OT_Spec2_CodePage, page, sizeof(page));
+        }
+        return aa_OTagWriteFile(&a, argv[4]) ? 0 : 10;
     }
     /* "otag": parse a .otag file given as third argument */
     if (strcmp(argv[2], "otag") == 0 && argc > 3)

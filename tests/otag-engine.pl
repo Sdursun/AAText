@@ -4,7 +4,7 @@
 #   perl tests/otag-engine.pl <in.otag> <engine> > out.otag
 #
 # The new name is appended (4-byte aligned), the OT_Engine tag points to
-# it and OT_FileIdent (the file size) is updated, as aa_OTagSetFontFile()
+# it and OT_FileIdent (the file size) is updated, as AATextPrefs does when it fixes a .otag
 # does for the font file.
 use strict;
 use warnings;

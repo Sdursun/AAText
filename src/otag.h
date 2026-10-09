@@ -36,14 +36,4 @@ struct AAOTagInfo
  */
 BOOL aa_ParseOTag(const UBYTE *buf, ULONG len, struct AAOTagInfo *info);
 
-/*
- * Build a copy of the .otag in buf with another font file path in out
- * (room for outmax bytes). Everything else is kept: the new path is
- * appended, the tag that named the old one points to it, and
- * OT_FileIdent (the file size) is updated. Returns the new length, or
- * 0 if buf names no font file or out is too small.
- */
-ULONG aa_OTagSetFontFile(const UBYTE *buf, ULONG len, const char *fontfile,
-                         UBYTE *out, ULONG outmax);
-
 #endif

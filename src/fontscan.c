@@ -17,6 +17,7 @@
 
 #include "fontscan.h"
 #include "otag.h"
+#include "otagfile.h"
 
 #define MAX_OTAG (64 * 1024)
 
@@ -276,6 +277,31 @@ static BOOL WriteAll(const char *path, const UBYTE *data, LONG len)
     return ok;
 }
 
+/*
+ * A copy of the .otag in buf naming fontfile in out: the tag that held
+ * the old path (OT_Spec1_FontFile, or for other engines the string
+ * aa_ParseOTag() found) gets the new one; nothing else changes.
+ * Returns the new size, 0 on error.
+ */
+static ULONG SetFontFile(const UBYTE *buf, ULONG len, const char *fontfile,
+                         UBYTE *out, ULONG max)
+{
+    static struct AAOTagFile f;
+    static struct AAOTagInfo ot;
+    LONG i;
+
+    if (!aa_ParseOTag(buf, len, &ot) || !aa_OTagLoad(&f, buf, len))
+        return 0;
+    for (i = 0; i < f.count; i++)
+        if (f.items[i].ind && f.items[i].indlen &&
+            !strcmp((const char *)f.items[i].ind, ot.fontfile))
+            break;
+    if (i == f.count ||
+        !aa_OTagSetString(&f, f.items[i].tag, fontfile))
+        return 0;
+    return aa_OTagSave(&f, out, max);
+}
+
 LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
 {
     UBYTE *buf, *out;
@@ -296,7 +322,7 @@ LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
         Close(fh);
     }
     newlen = len > 0 && len < MAX_OTAG
-             ? aa_OTagSetFontFile(buf, len, e->found, out, MAX_OTAG) : 0;
+             ? SetFontFile(buf, len, e->found, out, MAX_OTAG) : 0;
     if (!newlen)
         result = AA_FIX_READ;
     else

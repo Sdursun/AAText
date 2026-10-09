@@ -116,6 +116,7 @@ clean:
 # Host-side smoke test (run under vamos, see test.ps1)
 TEST_OBJS := $(BUILDDIR)/prefs.o $(BUILDDIR)/glyphs.o $(BUILDDIR)/metrics.o \
              $(BUILDDIR)/otag.o $(BUILDDIR)/debug.o $(BUILDDIR)/charsets.o $(BUILDDIR)/fontfile.o $(BUILDDIR)/fontscan.o \
+             $(BUILDDIR)/otagfile.o \
              $(BUILDDIR)/stub.o
 
 .PHONY: test
@@ -164,7 +165,8 @@ dist:
 # both programs have a main.c
 GUI_TARGET := $(BUILDDIR)/AATextPrefs
 GUI_SRCS   := src/prefsgui/main.c src/prefsgui/strings.c src/prefs.c \
-              src/prefswrite.c src/aaclient.c src/charsets.c src/otag.c src/fontfile.c src/fontscan.c
+              src/prefswrite.c src/aaclient.c src/charsets.c src/otag.c src/fontfile.c src/fontscan.c \
+              src/otagfile.c
 GUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/gui/%.o,$(GUI_SRCS))
 
 .PHONY: gui
