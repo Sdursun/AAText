@@ -6,6 +6,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <exec/types.h>
 #include <graphics/text.h>
@@ -18,6 +19,7 @@
 #include "charsets.h"
 #include "fontscan.h"
 #include "otagfile.h"
+#include "fontinfo.h"
 
 /* stub.s references these; the patch itself is not linked here. */
 volatile LONG aa_UseCount;
@@ -174,6 +176,36 @@ int main(int argc, char **argv)
         }
         return bad ? 10 : 0;
     }
+    /* "fontinfo": print what AATextManager reads from font file argv[3]
+       (face argv[4]); argv[5], if given, is the expected "base name" */
+    if (strcmp(argv[2], "fontinfo") == 0 && argc > 3)
+    {
+        static struct AAFontInfo fi;
+        char base[32];
+
+        if (!aa_GetFontInfo(argv[3], argc > 4 ? atol(argv[4]) : 0, &fi))
+        {
+            printf("FAIL: cannot read %s\n", argv[3]);
+            return 10;
+        }
+        aa_FontBaseName(&fi, base, sizeof(base));
+        printf("family \"%s\" style \"%s\" faces %ld base %s\n"
+               "bold %d italic %d fixed %d serif %d weight %d width %d\n"
+               "upem %d space %lu -> OT_SpaceWidth %lu OT_StemWeight %lu "
+               "OT_HorizStyle %lu OT_SlantStyle %lu\n",
+               fi.family, fi.style, (long)fi.numfaces, base, fi.bold,
+               fi.italic, fi.fixed, fi.serif, fi.weight, fi.width,
+               fi.unitsperem, (unsigned long)fi.spaceadvance,
+               (unsigned long)fi.spacewidth, (unsigned long)fi.stemweight,
+               (unsigned long)fi.horizstyle, (unsigned long)fi.slantstyle);
+        if (argc > 5 && strcmp(base, argv[5]))
+        {
+            printf("FAIL: base name %s, expected %s\n", base, argv[5]);
+            return 10;
+        }
+        return 0;
+    }
+
     /* "otagrw": read argv[3] as a tag list, write and read it again (all
        tags must be equal), then edit it as AATextManager will and check
        the result with AAText's own parser */
