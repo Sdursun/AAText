@@ -220,9 +220,9 @@ $(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
 
 # Font installer; FreeType from aatext.library
 MGR_TARGET := $(BUILDDIR)/AATextManager
-MGR_SRCS   := src/manager/main.c src/manager/gui.c src/manager/strings.c src/prefs.c src/debug.c src/fontinstall.c src/fontinfo.c \
+MGR_SRCS   := src/manager/main.c src/manager/gui.c src/manager/preview.c src/manager/strings.c src/prefs.c src/debug.c src/fontinstall.c src/fontinfo.c \
               src/otagfile.c src/otag.c src/charsets.c src/fontscan.c src/fontfile.c
-MGR_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/mgr/%.o,$(MGR_SRCS))
+MGR_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/mgr/%.o,$(MGR_SRCS)) $(BUILDDIR)/mgr/cgx.o
 
 .PHONY: manager
 manager: $(MGR_TARGET)
@@ -255,3 +255,7 @@ $(MGR_ICON): icons/AATextManager.png icons/AATextManager_sel.png tools/mkicon.py
 	@mkdir -p $(dir $@)
 	python3 -I tools/mkicon.py tool icons/AATextManager.png \
 		icons/AATextManager_sel.png --stack 16384 -o $@
+
+$(BUILDDIR)/mgr/cgx.o: src/cgx.s
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) -c -o $@ $<

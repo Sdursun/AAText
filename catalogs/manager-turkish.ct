@@ -103,3 +103,7 @@ MSG_CHARSET_CYRILLIC
 ISO-8859-5 (Kiril)
 MSG_CHARSET_KOI8R
 KOI8-R (Rusça)
+MSG_PREVIEW
+Önizleme
+MSG_PV_NOTRTG
+Önizleme için RTG ekran gerekir (15 bit ya da fazlası).

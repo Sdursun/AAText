@@ -51,6 +51,8 @@
     S(MSG_NOTOPEN,          35, "Installed, but diskfont cannot open %s.") \
     S(MSG_NOFONTS,          36, "Add font files first.") \
     S(MSG_FONTSERR,         37, "Cannot read FONTS:.") \
+    S(MSG_PREVIEW,          38, "Preview") \
+    S(MSG_PV_NOTRTG,        39, "The preview needs an RTG screen (15 bit or more).") \
     S(MSG_CHARSET_LATIN1,   40, "ISO-8859-1 (Western European)") \
     S(MSG_CHARSET_LATIN2,   41, "ISO-8859-2 (Central European)") \
     S(MSG_CHARSET_LATIN3,   42, "ISO-8859-3 (South European)") \

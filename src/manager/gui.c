@@ -31,6 +31,7 @@
 #include <proto/label.h>
 #include <proto/button.h>
 #include <proto/listbrowser.h>
+#include <proto/space.h>
 #include <proto/string.h>
 #include <proto/asl.h>
 
@@ -41,6 +42,8 @@
 #include <gadgets/checkbox.h>
 #include <gadgets/button.h>
 #include <gadgets/listbrowser.h>
+#include <gadgets/space.h>
+#include <utility/hooks.h>
 #include <gadgets/string.h>
 #include <images/label.h>
 #include <reaction/reaction_macros.h>
@@ -51,6 +54,7 @@
 
 #include "manager.h"
 #include "strings.h"
+#include "preview.h"
 #include "../fontscan.h"
 #include "../charsets.h"
 #include "../prefs.h"
@@ -60,12 +64,12 @@ struct GfxBase *GfxBase;
 struct Library *UtilityBase;
 struct Library *WindowBase, *LayoutBase, *ClickTabBase, *ChooserBase,
                *CheckBoxBase, *LabelBase, *ButtonBase, *ListBrowserBase,
-               *StringBase, *AslBase;
+               *StringBase, *AslBase, *SpaceBase;
 
 enum
 {
     GID_TABS = 1, GID_CHARSET, GID_ENGINE,
-    GID_FILES, GID_ADD, GID_REMOVE, GID_SIZES, GID_OVERWRITE, GID_INSTALL,
+    GID_FILES, GID_PREVIEW, GID_ADD, GID_REMOVE, GID_SIZES, GID_OVERWRITE, GID_INSTALL,
     GID_CHECK, GID_REPAIRLIST, GID_CHANGEENGINE, GID_REPAIR,
     GID_STATUS,
     GID_COUNT
@@ -133,6 +137,7 @@ static BOOL OpenLibs(void)
         { &ListBrowserBase, "gadgets/listbrowser.gadget" },
         { &StringBase,   "gadgets/string.gadget" },
         { &AslBase,      "asl.library" },
+        { &SpaceBase,    "gadgets/space.gadget" },
     };
     ULONG i;
 
@@ -153,7 +158,7 @@ static void CloseLibs(void)
 {
     struct Library **bases[] =
     {
-        &AslBase, &StringBase, &ListBrowserBase, &ButtonBase, &LabelBase,
+        &SpaceBase, &AslBase, &StringBase, &ListBrowserBase, &ButtonBase, &LabelBase,
         &CheckBoxBase, &ChooserBase, &ClickTabBase, &LayoutBase,
         &WindowBase, &UtilityBase, (struct Library **)&GfxBase,
         (struct Library **)&IntuitionBase
@@ -234,6 +239,41 @@ static const char *Engine(void)
     return engines[GetGad(GID_ENGINE, CHOOSER_Selected) ? 1 : 0];
 }
 
+static struct Hook previewhook;
+
+/* The preview box: copy the rendered sample lines (render hook) */
+static ULONG PreviewRender(struct Hook *hook, Object *obj,
+                           struct gpRender *gpr)
+{
+    struct DrawInfo *dri = gpr->gpr_GInfo ? gpr->gpr_GInfo->gi_DrInfo : NULL;
+    struct IBox *box = NULL;
+
+    GetAttr(SPACE_AreaBox, obj, (ULONG *)&box);
+    if (gpr->gpr_RPort && box)
+        pv_Draw(gpr->gpr_RPort, box->Left, box->Top, box->Width,
+                box->Height, dri ? dri->dri_Pens[BACKGROUNDPEN] : 0,
+                dri ? dri->dri_Pens[TEXTPEN] : 1, GetString(MSG_PV_NOTRTG));
+    return 0;
+}
+
+/* Render the selected font (or nothing) and show it */
+static void ShowPreview(void)
+{
+    LONG sel = (LONG)GetGad(GID_FILES, LISTBROWSER_Selected);
+    ULONG page = GetGad(GID_TABS, CLICKTAB_Current);
+
+    if (!win)
+        return;
+    Busy(TRUE);
+    if (sel >= 0 && sel < numfiles)
+        pv_Render(win->WScreen, files[sel].path, files[sel].face);
+    else
+        pv_Render(win->WScreen, NULL, 0);
+    Busy(FALSE);
+    if (page == 0)
+        RefreshGList(gads[GID_PREVIEW], win, NULL, 1);
+}
+
 /* ------------------------------------------------------------------ */
 /* Install tab                                                          */
 /* ------------------------------------------------------------------ */
@@ -261,6 +301,7 @@ static void ShowFiles(void)
             AddTail(&filelb, n);
     }
     SetGad(GID_FILES, LISTBROWSER_Labels, (ULONG)&filelb);
+    ShowPreview();
 }
 
 /* Add a file: one entry per face; FALSE if FreeType cannot read it */
@@ -574,6 +615,17 @@ static Object *InstallPage(void)
             CHILD_WeightedWidth, 0,
         End,
         CHILD_WeightedHeight, 0,
+        LAYOUT_AddChild, VLayoutObject,
+            LAYOUT_BevelStyle, BVS_GROUP,
+            LAYOUT_Label, (ULONG)GetString(MSG_PREVIEW),
+            LAYOUT_AddChild, gads[GID_PREVIEW] = (struct Gadget *)SpaceObject,
+                GA_ID, GID_PREVIEW,
+                SPACE_MinHeight, pv_NeededHeight(),
+                SPACE_MinWidth, 300,
+                SPACE_RenderHook, (ULONG)&previewhook,
+            End,
+        End,
+        CHILD_WeightedHeight, 0,
         LAYOUT_AddChild, gads[GID_SIZES] = (struct Gadget *)StringObject,
             GA_ID, GID_SIZES,
             STRINGA_MaxChars, sizeof(sizestext) - 1,
@@ -716,6 +768,7 @@ static void Action(ULONG id)
 {
     switch (id)
     {
+        case GID_FILES:     ShowPreview();  break;
         case GID_ADD:       AddFiles();     break;
         case GID_REMOVE:    RemoveFile();   break;
         case GID_INSTALL:   Install();      break;
@@ -765,6 +818,9 @@ int mgr_RunGUI(const char *language)
     if (!files || !diag || !problems || !OpenLibs())
         goto out;
     InitStrings(language);
+    pv_Init();              /* without it the box stays empty */
+    previewhook.h_Entry = (HOOKFUNC)(APTR)HookEntry;
+    previewhook.h_SubEntry = (HOOKFUNC)(APTR)PreviewRender;
 
     /* the character set chosen in AATextPrefs */
     aa_ReadPrefs(&prefs, NULL, FALSE);
@@ -818,6 +874,7 @@ out:
         UnlockPubScreen(NULL, scr);
     FreeLists();
     FreeStrings();
+    pv_Cleanup();
     CloseLibs();
     if (problems)
         FreeVec(problems);

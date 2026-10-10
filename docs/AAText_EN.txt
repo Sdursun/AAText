@@ -185,7 +185,9 @@ ENV:ftcodepage.
                  works too), "Replace fonts of the same name"
                  (otherwise they are skipped; replaced files are kept
                  as .bak), "Install". At the end diskfont opens each
-                 font as a check.
+                 font as a check. Select a font in the list to see
+                 it in a few sizes below it (RTG screens), before it
+                 is installed.
   Repair tab     "Check fonts" lists the fonts in FONTS: that can be
                  repaired: font file moved, no code page, engine
                  freetype2 (changed to the chosen engine if the box is

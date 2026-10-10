@@ -194,7 +194,9 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  görünecek boyutlar (8-16,18,20,24; diğer boyutlar da
                  çalışır), "Aynı adlı fontların yerine yaz" (yoksa
                  atlanırlar; eski dosyalar .bak olarak saklanır), "Kur".
-                 Sonunda diskfont her fontu denetim için açar.
+                 Sonunda diskfont her fontu denetim için açar. Listede bir
+                 font seçilince altında birkaç boyutta önizlemesi
+                 görünür (RTG ekranlarda), kurulmadan önce.
   Onar sekmesi   "Fontları denetle" FONTS:'taki onarılabilir fontları
                  listeler: font dosyası taşınmış, kod sayfası yok, motor
                  freetype2 (kutu işaretliyse seçilen motora çevrilir).
