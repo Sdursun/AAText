@@ -88,7 +88,7 @@ struct Device *TimerBase;
 static struct timerequest aa_TimerReq;
 static BOOL aa_TimerOpen;
 static ULONG aa_EFreq;
-static ULONG stat_ticks, stat_maxticks, stat_chars, stat_offscreen;
+static ULONG stat_ticks, stat_maxticks, stat_chars, stat_offscreen, stat_menu;
 static ULONG stat_widthmismatch;
 static ULONG stat_phase[4];          /* setup, read, draw, write */
 static ULONG stat_declined, stat_declinedticks;
@@ -392,6 +392,30 @@ static struct ViewPort *FindViewPort(struct RastPort *rp)
         }
         if ((scr->Flags & SCREENTYPE) == WBENCHSCREEN)
             wbvp = &scr->ViewPort;
+    }
+
+    /*
+     * Menus: without a menu tool (MagicMenu), Intuition draws the menu
+     * items on input.device into a buffer that belongs to no screen and
+     * has no layer. They use the pens of the menu's screen, that of the
+     * active window (else the front screen).
+     */
+    if (!vp && !layer)
+    {
+        static struct Task *inputtask;
+        struct Window *aw = IntuitionBase->ActiveWindow;
+
+        if (!inputtask)
+            inputtask = FindTask((CONST_STRPTR)"input.device");
+        if (inputtask && FindTask(NULL) == inputtask)
+        {
+            scr = aw ? aw->WScreen : IntuitionBase->FirstScreen;
+            if (scr)
+                vp = &scr->ViewPort;
+#ifdef DEBUG
+            stat_menu++;
+#endif
+        }
     }
     Permit();
 
@@ -1223,6 +1247,9 @@ void aa_PrintRenderStats(void)
     if (stat_offscreen)
         kprintf("AAText: offscreen bitmaps drawn with Workbench colours: %ld\n",
                 stat_offscreen);
+    if (stat_menu)
+        kprintf("AAText: menu items drawn with the menu screen's colours: %ld\n",
+                stat_menu);
     if (stat_widthmismatch)
         kprintf("AAText: width mismatches vs TextLength(): %ld\n",
                 stat_widthmismatch);
