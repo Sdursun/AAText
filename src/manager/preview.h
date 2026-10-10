@@ -22,10 +22,12 @@ void pv_Cleanup(void);
 
 /*
  * Render font file path (face) for screen scr in its text and
- * background colours; path NULL clears it. FALSE if the font cannot be
+ * background colours: an alphabet line and a sentence in a few sizes
+ * (texts from the catalog, ISO-8859-9); path NULL clears it. FALSE if the font cannot be
  * read (the box then stays empty).
  */
-BOOL pv_Render(struct Screen *scr, const char *path, LONG face);
+BOOL pv_Render(struct Screen *scr, const char *path, LONG face,
+               const char *alphabet, const char *sentence);
 
 /* Draw the buffer into box of rp (from the render hook). */
 void pv_Draw(struct RastPort *rp, LONG left, LONG top, LONG width,

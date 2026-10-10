@@ -107,3 +107,8 @@ MSG_PREVIEW
 Önizleme
 MSG_PV_NOTRTG
 Önizleme için RTG ekran gerekir (15 bit ya da fazlası).
+; preview: letters of the language and a sentence with all of them
+MSG_PV_ALPHABET
+AaBbCcÇçDdEeFfGgĞğHhIıİiJjKkLlMmNnOoÖöPpRrSsŞşTtUuÜüVvYyZz
+MSG_PV_SENTENCE
+Pijamalı hasta yağız şoföre çabucak güvendi. 0123456789

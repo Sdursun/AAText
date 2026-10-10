@@ -234,7 +234,7 @@ ifneq ($(DEBUG),1)
 endif
 	@ls -l $@
 
-$(BUILDDIR)/mgr/%.o: src/%.c src/*.h
+$(BUILDDIR)/mgr/%.o: src/%.c src/*.h src/manager/*.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/aatextlib -Wno-pointer-sign -c -o $@ $<
 

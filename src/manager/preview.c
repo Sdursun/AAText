@@ -21,19 +21,17 @@
 
 #include "preview.h"
 #include "../cgx.h"
+#include "../charsets.h"
+#include "../prefs.h"
 
 static struct Library *CyberGfxBase;
 static UBYTE *rgb;              /* PV_WIDTH x PV_HEIGHT, 3 bytes a pixel */
 static BOOL drawn;              /* rgb holds a font */
 
-/* sample lines: pixel size and UTF-8 text; the size goes in front */
-static const struct { UBYTE size; const char *text; } lines[] =
+/* sample lines: pixel size and which text (0 alphabet, 1 sentence) */
+static const struct { UBYTE size, sentence; } lines[] =
 {
-    { 14, "AaBbCcÇçDdEeFfGgĞğHhIıİiJjKkLlMmNnOoÖöPpRrSsŞşTtUuÜüVvYyZz" },
-    { 10, "Pijamalı hasta yağız şoföre çabucak güvendi. 0123456789" },
-    { 14, "Pijamalı hasta yağız şoföre çabucak güvendi. 0123456789" },
-    { 20, "Pijamalı hasta yağız şoföre çabucak güvendi. 0123456789" },
-    { 28, "Pijamalı hasta yağız şoföre çabucak güvendi." },
+    { 14, 0 }, { 10, 1 }, { 14, 1 }, { 20, 1 }, { 28, 1 }
 };
 #define NUM_LINES (sizeof(lines) / sizeof(lines[0]))
 #define GAP 3
@@ -65,24 +63,13 @@ LONG pv_NeededHeight(void)
     return h < PV_HEIGHT ? h : PV_HEIGHT;
 }
 
-/* next code point of UTF-8 text s */
+/*
+ * Next character of s as Unicode: the texts come from the catalog,
+ * which tools/mkcatalog.pl writes in ISO-8859-9 (English is ASCII)
+ */
 static ULONG NextChar(const UBYTE **s)
 {
-    const UBYTE *p = *s;
-    ULONG c = *p++;
-
-    if (c >= 0xE0 && p[0] && p[1])
-    {
-        c = ((c & 0x0F) << 12) | ((p[0] & 0x3F) << 6) | (p[1] & 0x3F);
-        p += 2;
-    }
-    else if (c >= 0xC0 && p[0])
-    {
-        c = ((c & 0x1F) << 6) | (p[0] & 0x3F);
-        p++;
-    }
-    *s = p;
-    return c;
+    return aa_CharsetToUnicode(AA_CHARSET_LATIN5, *(*s)++);
 }
 
 static ULONG PenRGB(struct Screen *scr, UBYTE pen)
@@ -150,7 +137,8 @@ static UBYTE *LoadFile(const char *path, LONG *len)
     return buf;
 }
 
-BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum)
+BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum,
+               const char *alphabet, const char *sentence)
 {
     FT_Library lib;
     FT_Face face;
@@ -206,7 +194,8 @@ BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum)
         label[4] = 0;
         for (pass = 0; pass < 2; pass++)
         {
-            s = (const UBYTE *)(pass ? lines[i].text : label);
+            s = (const UBYTE *)(!pass ? label :
+                                lines[i].sentence ? sentence : alphabet);
             while (*s && x < PV_WIDTH)
             {
                 ULONG c = NextChar(&s);

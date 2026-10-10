@@ -62,7 +62,9 @@
     S(MSG_CHARSET_LATIN10,  46, "ISO-8859-16 (South-Eastern European)") \
     S(MSG_CHARSET_CP1250,   47, "Windows-1250 (Central European)") \
     S(MSG_CHARSET_CYRILLIC, 48, "ISO-8859-5 (Cyrillic)") \
-    S(MSG_CHARSET_KOI8R,    49, "KOI8-R (Russian)")
+    S(MSG_CHARSET_KOI8R,    49, "KOI8-R (Russian)") \
+    S(MSG_PV_ALPHABET,      50, "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz") \
+    S(MSG_PV_SENTENCE,      51, "The quick brown fox jumps over the lazy dog. 0123456789")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

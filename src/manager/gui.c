@@ -266,9 +266,10 @@ static void ShowPreview(void)
         return;
     Busy(TRUE);
     if (sel >= 0 && sel < numfiles)
-        pv_Render(win->WScreen, files[sel].path, files[sel].face);
+        pv_Render(win->WScreen, files[sel].path, files[sel].face,
+                  GetString(MSG_PV_ALPHABET), GetString(MSG_PV_SENTENCE));
     else
-        pv_Render(win->WScreen, NULL, 0);
+        pv_Render(win->WScreen, NULL, 0, NULL, NULL);
     Busy(FALSE);
     if (page == 0)
         RefreshGList(gads[GID_PREVIEW], win, NULL, 1);
