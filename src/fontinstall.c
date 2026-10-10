@@ -124,7 +124,11 @@ static BOOL WriteFile(const char *path, const void *data, LONG len)
 }
 
 /*
- * Tags in FTManager's order and with its values; added: the code page.
+ * Tags in FTManager's order and with its values; added: the code page,
+ * and the em height from the hhea ascender/descender (OT_Spec4_Metric)
+ * instead of FTManager's bounding box: in fonts with a few very tall or
+ * deep glyphs (Calibri) the bounding box made the letters small and put
+ * the baseline high in the cell.
  * Not verified: what FTManager writes for OT_InhibitAlgoStyle of bold
  * and italic faces (its regular face has 3: underline and bold).
  */
@@ -161,7 +165,7 @@ BOOL aa_BuildOTag(const struct AAInstall *in, struct AAOTagFile *f)
     }
     return ok &&
            aa_OTagSetString(f, OT_Spec3_AFMFile, "") &&
-           aa_OTagSet(f, OT_Spec4_MetricsFont, 0) &&
+           aa_OTagSet(f, OT_Spec4_Metric, OT_METRIC_ASCEND) &&
            aa_OTagSet(f, OT_Spec6_FaceNum, in->face) &&
            aa_OTagSetData(f, OT_AvailSizes, sizes,
                           (in->numsizes + 1) * sizeof(UWORD));

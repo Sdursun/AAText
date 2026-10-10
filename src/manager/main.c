@@ -36,6 +36,7 @@
 
 struct Library *AATextBase;
 struct Library *DiskfontBase;
+extern struct Library *UtilityBase;     /* gui.c */
 
 static int ToLower(int c)
 {
@@ -43,6 +44,8 @@ static int ToLower(int c)
 }
 
 static const char version[] __attribute__((used)) = "$VER: AATextManager 0.16 (10.10.2026)";
+/* stack the Shell gives the program (V47); main() also makes sure */
+static const char stackcookie[] __attribute__((used)) = "$STACK:65536";
 
 #define TEMPLATE "FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,OVERWRITE/S,REPAIR/S,APPLY/S,LANGUAGE/K"
 enum { ARG_FILES, ARG_FACE, ARG_CHARSET, ARG_ENGINE, ARG_SIZES, ARG_TO,
@@ -242,7 +245,50 @@ static void NoLibrary(BOOL wb)
     IntuitionBase = NULL;
 }
 
+/*
+ * Run Main() on a stack of at least MIN_STACK bytes. diskfont.library
+ * makes the font for the check after installing on our stack, through
+ * the engine (aatext.library); a big font such as Calibri overflowed the
+ * 4 KB a Shell gives and the Amiga rebooted. The window, Shell and
+ * Workbench start all come here, whatever stack they were given.
+ */
+#define MIN_STACK (64 * 1024)
+
+static int Main(int argc, char **argv);
+
+static int swapargc;
+static char **swapargv;
+static int swaprc;
+
+static void RunMain(void)
+{
+    swaprc = Main(swapargc, swapargv);
+}
+
 int main(int argc, char **argv)
+{
+    /* static: locals are addressed through the stack pointer, which
+       StackSwap() changes */
+    static struct StackSwapStruct sss;
+    static UBYTE *stack;
+    struct Task *me = FindTask(NULL);
+
+    if ((ULONG)me->tc_SPUpper - (ULONG)me->tc_SPLower >= MIN_STACK ||
+        !(stack = AllocVec(MIN_STACK, MEMF_ANY)))
+        return Main(argc, argv);
+    swapargc = argc;
+    swapargv = argv;
+    sss.stk_Lower = stack;
+    sss.stk_Upper = (ULONG)(stack + MIN_STACK);
+    sss.stk_Pointer = stack + MIN_STACK;
+    StackSwap(&sss);
+    RunMain();
+    StackSwap(&sss);
+    FreeVec(stack);
+    return swaprc;
+}
+
+static int Main(int argc, char **argv)
 {
     LONG args[ARG_COUNT] = { 0 };
     struct RDArgs *rda = NULL;
@@ -272,6 +318,17 @@ int main(int argc, char **argv)
     if (!argc || (!args[ARG_FILES] && !args[ARG_REPAIR]))
     {
         rc = mgr_RunGUI((const char *)args[ARG_LANGUAGE]);
+        goto out;
+    }
+
+    /* gui.c defines these bases (so libnix does not open them) and fills
+       them only for the window: the Shell uses graphics (CloseFont) and
+       utility (Stricmp in the font scan) too */
+    GfxBase = (struct GfxBase *)OpenLibrary((CONST_STRPTR)"graphics.library", 39);
+    UtilityBase = OpenLibrary((CONST_STRPTR)"utility.library", 39);
+    if (!GfxBase || !UtilityBase)
+    {
+        rc = RETURN_FAIL;
         goto out;
     }
 
@@ -346,6 +403,13 @@ int main(int argc, char **argv)
 out:
     if (DiskfontBase)
         CloseLibrary(DiskfontBase);
+    /* the window's CloseLibs() leaves these NULL */
+    if (UtilityBase)
+        CloseLibrary(UtilityBase);
+    if (GfxBase)
+        CloseLibrary((struct Library *)GfxBase);
+    UtilityBase = NULL;
+    GfxBase = NULL;
     CloseLibrary(AATextBase);
     if (rda)
         FreeArgs(rda);

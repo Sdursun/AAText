@@ -280,6 +280,14 @@ int main(int argc, char **argv)
                        (long)ftm.count);
                 bad = 1;
             }
+            /* em height from hhea, not FTManager's bounding box */
+            if (!bad && (!aa_OTagFind(&mine, OT_Spec4_Metric) ||
+                         aa_OTagFind(&mine, OT_Spec4_Metric)->data !=
+                         OT_METRIC_ASCEND))
+            {
+                printf("FAIL: OT_Spec4_Metric is not hhea\n");
+                bad = 1;
+            }
         }
         else if (!bad)
             bad = 1;

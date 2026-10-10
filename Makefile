@@ -254,7 +254,7 @@ icons: $(MGR_ICON)
 $(MGR_ICON): icons/AATextManager.png icons/AATextManager_sel.png tools/mkicon.py
 	@mkdir -p $(dir $@)
 	python3 -I tools/mkicon.py tool icons/AATextManager.png \
-		icons/AATextManager_sel.png --stack 16384 -o $@
+		icons/AATextManager_sel.png --stack 65536 -o $@
 
 $(BUILDDIR)/mgr/cgx.o: src/cgx.s
 	@mkdir -p $(dir $@)

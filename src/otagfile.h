@@ -32,7 +32,12 @@
 #define OT_AvailSizes        (OT_Level1 | OT_Indirect | 0x20)
 #define OT_SpecCount         (OT_Level1 | 0x100)
 #define OT_Spec3_AFMFile     (OT_Level1 | OT_Indirect | 0x103)
-#define OT_Spec4_MetricsFont (OT_Level1 | 0x104)
+#define OT_Spec4_Metric      (OT_Level1 | 0x104)
+
+/* OT_Spec4_Metric of the FreeType engines: which font metric becomes the
+   em height (ascent + descent = the size asked for) */
+#define OT_METRIC_GLOBALBBOX 0  /* bounding box of all glyphs (FTManager) */
+#define OT_METRIC_ASCEND     2  /* hhea ascender/descender */
 
 #define AA_OTAG_MAXTAGS  64
 #define AA_OTAG_POOL     8192   /* indirect data of all tags */
