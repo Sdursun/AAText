@@ -231,3 +231,13 @@ catalogs: $(MGR_CATALOG)
 $(MGR_CATALOG): catalogs/manager-turkish.ct src/manager/strings.h tools/mkcatalog.pl
 	@mkdir -p $(dir $@)
 	perl tools/mkcatalog.pl src/manager/strings.h catalogs/manager-turkish.ct $@
+
+# GlowIcon for AATextManager; the PNG art is drawn by
+# tools/mkmanagericon.py from the AATextPrefs icon
+MGR_ICON := build/icons/AATextManager.info
+icons: $(MGR_ICON)
+
+$(MGR_ICON): icons/AATextManager.png icons/AATextManager_sel.png tools/mkicon.py
+	@mkdir -p $(dir $@)
+	python3 -I tools/mkicon.py tool icons/AATextManager.png \
+		icons/AATextManager_sel.png --stack 16384 -o $@
