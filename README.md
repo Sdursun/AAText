@@ -34,6 +34,15 @@ and MUI programs — everything that draws text through `graphics.library`.
 
   ![AATextPrefs Diagnostics: every .otag in FONTS: with its font file and status](docs/screenshots/diagnostics.png)
 
+- **Font installer.** AATextManager installs TrueType and OpenType fonts like
+  FTManager, but writes the code page of a character set into the `.otag` (so
+  Turkish and other letters work without `ENV:ftcodepage`) and names the font
+  file without a volume name. It also repairs installed fonts: moved file, no
+  code page, engine `freetype2` -> `aatext`. Window and Shell, English and
+  Turkish; uses `aatext.library` (included).
+
+  ![AATextManager: fonts to install, one line per face of a .ttc](docs/screenshots/aatextmanager.png)
+
 - Bitmap fonts and palette (AGA) screens are left untouched.
 
 *Türkçe açıklama aşağıda.*
@@ -54,7 +63,8 @@ Binary releases are on Aminet (`util/wb/AAText.lha`) and on the
 `C:` and add `Run >NIL: C:AAText` to `S:Startup-Sequence`, after the monitor
 drivers are loaded and before `LoadWB` (not to `WBStartup`: AAText must run
 before Workbench opens its windows), then reboot; copy `AATextPrefs` (and its icon) to `SYS:Prefs`
-if you want the preferences program. The full user guide is in
+if you want the preferences program, and `AATextManager` (and its icon) to
+`SYS:System` and `Libs/aatext.library` to `LIBS:` for the font installer. The full user guide is in
 [docs/AAText_EN.txt](docs/AAText_EN.txt) (Turkish:
 [docs/AAText_TR.txt](docs/AAText_TR.txt)); all settings are described in
 [docs/AAText.prefs.example](docs/AAText.prefs.example).
@@ -72,6 +82,7 @@ sh tools/fetch-freetype.sh      # FreeType 2.14.3 into third_party/ (sha256 chec
 .\build.ps1 USE_AATEXTLIB=1     # build/68020-lib/AAText: FreeType from aatext.library
                                 # (experimental, ~43 KB; needs LIBS:aatext.library 1+)
 .\build.ps1 gui                 # build/68020/AATextPrefs
+.\build.ps1 manager             # build/68020/AATextManager (needs aatext.library to run)
 .\build.ps1 catalogs icons      # Turkish catalog and GlowIcon (build/catalogs, build/icons)
 .\build.ps1 dist                # build/dist/AAText.lha + AAText.readme
 ```
@@ -110,6 +121,8 @@ See `tests/fttest.c` for the test modes (`metrics`, `stress`, `auto`,
 | `src/aamsg.h`, `src/aaclient.c` | message port interface of a running AAText (RELOAD, APPLY, STATUS) |
 | `src/prefswrite.c` | writes the settings file, keeping comments and font mappings |
 | `src/prefsgui/` | AATextPrefs (ReAction); strings in `strings.h`, Turkish in `catalogs/turkish.ct` |
+| `src/manager/` | AATextManager (window and Shell); Turkish in `catalogs/manager-turkish.ct` |
+| `src/otagfile.c`, `src/fontinfo.c`, `src/fontinstall.c`, `src/fontscan.c` | `.otag` writer, font information, installing, diagnostics and repair |
 | `tools/mkcatalog.pl`, `tools/mkicon.py` | locale catalog and GlowIcon builders (`icons/` holds the icon art) |
 | `src/ft/` | minimal FreeType configuration and exec memory pool allocator |
 
@@ -156,6 +169,15 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
 
   ![AATextPrefs Tanılama: FONTS: içindeki her .otag, font dosyası ve durumuyla](docs/screenshots/diagnostics.png)
 
+- **Font kurucu.** AATextManager, TrueType ve OpenType fontları FTManager gibi
+  kurar, ama `.otag`'a bir karakter setinin kod sayfasını yazar (Türkçe ve
+  diğer harfler `ENV:ftcodepage` olmadan çalışır) ve font dosyasını disk adı
+  olmadan gösterir. Kurulu fontları da onarır: taşınmış dosya, kod sayfası
+  yok, motor `freetype2` -> `aatext`. Pencere ve Shell, Türkçe ve İngilizce;
+  `aatext.library` kullanır (pakette var).
+
+  ![AATextManager: kurulacak fontlar, bir .ttc'nin her yüzü ayrı satır](docs/screenshots/aatextmanager.png)
+
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
 
 **Kurulum:** `AAText` dosyasını `C:` içine kopyalayın,
@@ -163,7 +185,8 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
 `LoadWB`'den önce `Run >NIL: C:AAText` satırını ekleyin (`WBStartup`'a değil:
 AAText, Workbench pencerelerini açmadan önce çalışıyor olmalı) ve sistemi
 yeniden başlatın; ayar programı için `AATextPrefs` dosyasını (ikonuyla)
-`SYS:Prefs` içine kopyalayın. Ayrıntılı kullanım kılavuzu:
+`SYS:Prefs` içine, font kurucu için `AATextManager` dosyasını (ikonuyla)
+`SYS:System` içine ve `Libs/aatext.library` dosyasını `LIBS:` içine kopyalayın. Ayrıntılı kullanım kılavuzu:
 [docs/AAText_TR.txt](docs/AAText_TR.txt).
 
 **Lisans:** [MIT](LICENSE). Ticari ya da ticari olmayan her amaçla

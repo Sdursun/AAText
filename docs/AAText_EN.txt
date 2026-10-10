@@ -1,4 +1,4 @@
-AAText 0.14 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.15 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -66,7 +66,16 @@ Installation
    Without AATextPrefs the defaults are used, or a settings file you
    write by hand (see "Settings").
 
-3. Reboot, or start AAText by hand. Windows that were already open are
+3. Optional: the font installer. Copy AATextManager and
+   AATextManager.info to SYS:System (AATextPrefs starts it from
+   there) and its library to LIBS:, and for Turkish its catalog:
+
+       Copy Libs/aatext.library LIBS:
+       Copy Catalogs/türkçe/aatextmanager.catalog LOCALE:Catalogs/türkçe/
+
+   AAText itself does not need aatext.library.
+
+4. Reboot, or start AAText by hand. Windows that were already open are
    drawn smoothly as soon as they are redrawn (e.g. resize them or
    close and reopen them).
 
@@ -137,6 +146,7 @@ while you try it out.
               font, and the line below says so.
               "Save report..." writes the list to a text file for bug
               reports. The scan itself changes nothing.
+              "Install fonts..." starts SYS:System/AATextManager.
 
 The menus offer Open..., Save As..., Reset To Defaults, Last Saved and
 Restore, like the system's Prefs programs.
@@ -148,6 +158,54 @@ in the file only).
 
 Shell options: LANGUAGE=türkçe (or english) chooses the language,
 PUBSCREEN=name opens the window on another public screen.
+
+
+Font installer (AATextManager)
+------------------------------
+
+AATextManager installs TrueType and OpenType fonts (.ttf, .otf, .ttc)
+for diskfont.library, as FTManager does, and repairs fonts installed
+before. It needs aatext.library in LIBS:.
+
+Installing copies the font file to FONTS:_ttf/ and writes
+<family><style>.font and .otag to FONTS: (e.g. verdanabold.font). The
+.otag names the file as FONTS:_ttf/... (no volume name, so renaming the
+boot disk does not break it) and holds the code page of the chosen
+character set, so Turkish and other letters work without
+ENV:ftcodepage.
+
+  Character set  the code page written into the .otag; preset to the
+                 one chosen in AATextPrefs
+  Engine         aatext (aatext.library, default) or freetype2
+                 (freetype2.library); programs need the engine's
+                 library to open the font
+  Install tab    "Add fonts..." (several files at once; each face of a
+                 .ttc is a line of its own), "Remove", the sizes shown
+                 in font requesters (8-16,18,20,24; every other size
+                 works too), "Replace fonts of the same name"
+                 (otherwise they are skipped; replaced files are kept
+                 as .bak), "Install". At the end diskfont opens each
+                 font as a check.
+  Repair tab     "Check fonts" lists the fonts in FONTS: that can be
+                 repaired: font file moved, no code page, engine
+                 freetype2 (changed to the chosen engine if the box is
+                 ticked). "Repair..." asks once, then repairs them all;
+                 each original is kept as .otag.bak. Fonts of other
+                 engines (ttf.library, ttengine) are not changed.
+
+From the Shell:
+
+  AATextManager FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,
+                OVERWRITE/S,REPAIR/S,APPLY/S,LANGUAGE/K
+
+  AATextManager Work:verdana.ttf CHARSET=latin5
+  AATextManager Work:cambria.ttc FACE=1 SIZES=10-12,20
+  AATextManager REPAIR CHARSET=latin5 ENGINE=aatext     (lists only)
+  AATextManager REPAIR CHARSET=latin5 ENGINE=aatext APPLY
+
+CHARSET is one of latin1 (default), latin2, latin3, latin4, latin5,
+latin9, latin10, cp1250, cyrillic, koi8r or none. Without FILES and
+REPAIR the window opens.
 
 
 Settings
@@ -295,6 +353,14 @@ Please include the output of the debug version:
 History
 -------
 
+0.15  New font installer AATextManager (English and Turkish, window
+      and Shell): installs TrueType/OpenType fonts with the code page
+      of a character set and a path without volume name, and repairs
+      installed fonts (moved file, missing code page, engine
+      freetype2 -> aatext). Uses aatext.library, included.
+      AATextPrefs: "Install fonts..." on the Diagnostics tab; the
+      OT_Engine of each font and its library version.
+
 0.14  AATextPrefs: Diagnostics tab. Checks the .otag files in FONTS:
       and the font files they name (moved, missing, not a font) and
       saves a report for bug reports. "Fix .otag..." points a moved
@@ -346,6 +412,9 @@ FreeType: AAText uses the FreeType 2 font engine (version 2.14.3). This
 software is based in part on the work of the FreeType Team. Portions of
 this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved.
+
+aatext.library (Libs/, used by AATextManager) is FreeType 2.14.3 as a
+shared library; licenses in LICENSE.aatext.txt and FTL.txt.
 
 AROS: the measuring code of the real metrics mode (TextExtent and
 TextFit) is derived from AROS, Copyright (C) 1995-2026 The AROS

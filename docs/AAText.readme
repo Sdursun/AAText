@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text for Workbench
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/wb
-Version:      0.14
+Version:      0.15
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
@@ -31,6 +31,11 @@ Features
 - Font diagnostics in AATextPrefs: finds .otag files that point to a
   missing or moved font file (e.g. after the boot volume was renamed)
   and can fix them, keeping a backup
+- Font installer AATextManager (window and Shell, English and
+  Turkish): installs TrueType/OpenType fonts like FTManager, but with
+  the code page of a character set in the .otag and a path without
+  volume name; repairs installed fonts (moved file, no code page,
+  engine freetype2 -> aatext). Needs aatext.library (included)
 - "Safe" metrics by default: letters keep the cells of the system's
   bitmap font, so no window layout changes
 - Optional real metrics mode ("real on"): the TrueType font's own
@@ -50,7 +55,8 @@ Picasso96.
 Installation: copy AAText to C: and add "Run >NIL: C:AAText" to
 S:Startup-Sequence, after the monitor drivers and before LoadWB (not
 WBStartup); copy AATextPrefs and its icon to SYS:Prefs for the
-preferences program. See AAText_EN.txt
+preferences program, AATextManager and its icon to SYS:System and
+Libs/aatext.library to LIBS: for the font installer. See AAText_EN.txt
 (English) or AAText_TR.txt (Turkish, ISO-8859-9) for details.
 
 License: MIT (free for any use, commercial or not; keep the copyright
@@ -62,3 +68,6 @@ AROS, Copyright (C) 1995-2026 The AROS Development Team, and its source
 This software is based in part on the work of the FreeType Team.
 Portions of this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved.
+
+aatext.library: FreeType 2.14.3 as a shared library, see
+LICENSE.aatext.txt and FTL.txt.

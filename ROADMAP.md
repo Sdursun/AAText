@@ -130,7 +130,7 @@ AAText FPU'yu sadece açılışta kullanıyor.
 - AATextPrefs OS 3.2'ye özgü: `WINDOW_NewMenu` (window.class V47) kullanır.
 - Test gerektirir (CLAUDE.md'de de ikincil).
 
-### 9. Font kurucu `AATextManager` — orta, aatext.library'ye dayanır
+### 9. Font kurucu `AATextManager` — **yapıldı (0.15)**
 - Sorun: FTManager (freetype2.library 1.3 ile gelen) eski ve `.otag`'a kod
   sayfası yazmıyor; Türkçe için `ENV:ftcodepage` gerekiyor. Ayrıca `.otag`'a
   disk adıyla yol yazıyor (System: sorunu).

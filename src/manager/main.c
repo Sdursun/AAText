@@ -42,7 +42,7 @@ static int ToLower(int c)
     return (c >= 'A' && c <= 'Z') ? c + 32 : c;
 }
 
-static const char version[] = "$VER: AATextManager 0.1 (9.10.2026)";
+static const char version[] __attribute__((used)) = "$VER: AATextManager 0.15 (10.10.2026)";
 
 #define TEMPLATE "FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,OVERWRITE/S,REPAIR/S,APPLY/S,LANGUAGE/K"
 enum { ARG_FILES, ARG_FACE, ARG_CHARSET, ARG_ENGINE, ARG_SIZES, ARG_TO,

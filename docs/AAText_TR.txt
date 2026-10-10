@@ -1,4 +1,4 @@
-AAText 0.14 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.15 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -69,7 +69,16 @@ Kurulum
    AATextPrefs olmadan varsayılan değerler ya da elle yazdığınız bir
    ayar dosyası kullanılır ("Ayarlar" bölümüne bakın).
 
-3. Sistemi yeniden başlatın ya da AAText'i elle çalıştırın. Önceden
+3. İsteğe bağlı: font kurucu. AATextManager ve AATextManager.info
+   dosyalarını SYS:System içine (AATextPrefs onu oradan başlatır),
+   kütüphanesini LIBS:'e, Türkçe için katalogunu da kopyalayın:
+
+       Copy Libs/aatext.library LIBS:
+       Copy Catalogs/türkçe/aatextmanager.catalog LOCALE:Catalogs/türkçe/
+
+   AAText'in kendisi aatext.library'ye ihtiyaç duymaz.
+
+4. Sistemi yeniden başlatın ya da AAText'i elle çalıştırın. Önceden
    açık olan pencereler yeniden çizildiklerinde (ör. boyutlarını
    değiştirince ya da kapatıp açınca) yumuşak görünür.
 
@@ -148,6 +157,7 @@ satırında görürsünüz.
               program açamaz; alttaki satır bunu söyler.
               "Raporu kaydet..." listeyi hata bildirimleri için bir metin
               dosyasına yazar. Taramanın kendisi hiçbir şeyi değiştirmez.
+              "Font kur..." SYS:System/AATextManager'ı başlatır.
 
 Menülerde, sistemin Prefs programlarındaki gibi Aç..., Farklı
 Kaydet..., Varsayılan Ayarlar, Son Kaydedilen ve Geri Al bulunur.
@@ -159,6 +169,52 @@ kaydederken dosyadaki açıklamaları ve font eşlemelerini korur
 
 Shell seçenekleri: LANGUAGE=english (veya türkçe) dili seçer,
 PUBSCREEN=ad pencereyi başka bir public screen'de açar.
+
+
+Font kurucu (AATextManager)
+---------------------------
+
+AATextManager, TrueType ve OpenType fontları (.ttf, .otf, .ttc)
+FTManager gibi diskfont.library için kurar ve önceden kurulmuş fontları
+onarır. LIBS:'te aatext.library gerekir.
+
+Kurulum, font dosyasını FONTS:_ttf/ altına kopyalar ve FONTS:'a
+<aile><stil>.font ile .otag yazar (ör. verdanabold.font). .otag dosyayı
+FONTS:_ttf/... olarak gösterir (disk adı yok, açılış diskinin adı
+değişse de bozulmaz) ve seçilen karakter setinin kod sayfasını taşır;
+böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
+
+  Karakter seti  .otag'a yazılan kod sayfası; AATextPrefs'te seçilen
+                 set önceden seçili gelir
+  Motor          aatext (aatext.library, varsayılan) ya da freetype2
+                 (freetype2.library); programların fontu açabilmesi
+                 için motorun kütüphanesi gerekir
+  Kur sekmesi    "Font ekle..." (birden çok dosya; bir .ttc'nin her
+                 yüzü ayrı satırdır), "Çıkar", font seçicilerde
+                 görünecek boyutlar (8-16,18,20,24; diğer boyutlar da
+                 çalışır), "Aynı adlı fontların yerine yaz" (yoksa
+                 atlanırlar; eski dosyalar .bak olarak saklanır), "Kur".
+                 Sonunda diskfont her fontu denetim için açar.
+  Onar sekmesi   "Fontları denetle" FONTS:'taki onarılabilir fontları
+                 listeler: font dosyası taşınmış, kod sayfası yok, motor
+                 freetype2 (kutu işaretliyse seçilen motora çevrilir).
+                 "Onar..." bir kez sorar, sonra hepsini onarır; her
+                 asıl dosya .otag.bak olarak saklanır. Başka motorların
+                 fontlarına (ttf.library, ttengine) dokunulmaz.
+
+Shell'den:
+
+  AATextManager FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,
+                OVERWRITE/S,REPAIR/S,APPLY/S,LANGUAGE/K
+
+  AATextManager Work:verdana.ttf CHARSET=latin5
+  AATextManager Work:cambria.ttc FACE=1 SIZES=10-12,20
+  AATextManager REPAIR CHARSET=latin5 ENGINE=aatext     (sadece listeler)
+  AATextManager REPAIR CHARSET=latin5 ENGINE=aatext APPLY
+
+CHARSET: latin1 (varsayılan), latin2, latin3, latin4, latin5, latin9,
+latin10, cp1250, cyrillic, koi8r ya da none. FILES ve REPAIR
+verilmezse pencere açılır.
 
 
 Ayarlar
@@ -312,6 +368,14 @@ Lütfen debug sürümünün çıktısını ekleyin:
 Geçmiş
 ------
 
+0.15  Yeni font kurucu AATextManager (Türkçe ve İngilizce, pencere ve
+      Shell): TrueType/OpenType fontları bir karakter setinin kod
+      sayfasıyla ve disk adı olmayan bir yolla kurar, kurulu fontları
+      onarır (taşınmış dosya, eksik kod sayfası, motor freetype2 ->
+      aatext). aatext.library'yi kullanır, pakette var.
+      AATextPrefs: Tanılama sekmesinde "Font kur..."; her fontun
+      OT_Engine'i ve kütüphanesinin sürümü.
+
 0.14  AATextPrefs: Tanılama sekmesi. FONTS: içindeki .otag dosyalarını
       ve gösterdikleri font dosyalarını denetler (yeri değişmiş, eksik,
       font değil) ve hata bildirimleri için rapor kaydeder. ".otag'ı
@@ -365,6 +429,9 @@ FreeType: AAText, FreeType 2 font motorunu (sürüm 2.14.3) kullanır.
 This software is based in part on the work of the FreeType Team.
 Portions of this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved.
+
+aatext.library (Libs/, AATextManager kullanır) paylaşılan kütüphane
+olarak FreeType 2.14.3'tür; lisansları LICENSE.aatext.txt ve FTL.txt'de.
 
 AROS: Gerçek ölçü modunun ölçüm kodu (TextExtent ve TextFit) AROS'tan
 türetilmiştir, Copyright (C) 1995-2026 The AROS Development Team. Bu
