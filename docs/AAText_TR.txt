@@ -1,4 +1,4 @@
-AAText 0.18 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.19 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -371,6 +371,11 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.19  Menü öğeleri MagicMenu gibi bir menü aracı olmadan da, "offscreen
+      off" iken de yumuşatılır: Intuition onları hiçbir ekrana ait
+      olmayan bir tampona çizer, AAText artık menünün ekranının
+      renklerini kullanır.
 
 0.18  AATextManager, Onar sekmesi: yüksekliği sınır kutusundan gelen
       fontlar (FTManager, AATextManager 0.15/0.16) listelenir ve hhea'ya

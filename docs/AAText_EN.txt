@@ -1,4 +1,4 @@
-AAText 0.18 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.19 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -356,6 +356,10 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.19  Menu items are antialiased without a menu tool such as MagicMenu,
+      also with "offscreen off": Intuition draws them into a buffer of no
+      screen, AAText now takes the colours of the menu's screen.
 
 0.18  AATextManager, Repair tab: fonts whose height comes from the
       bounding box (FTManager, AATextManager 0.15/0.16) are listed and
