@@ -1,4 +1,4 @@
-AAText 0.17 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.18 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -372,13 +372,18 @@ Lütfen debug sürümünün çıktısını ekleyin:
 Geçmiş
 ------
 
+0.18  AATextManager, Onar sekmesi: yüksekliği sınır kutusundan gelen
+      fontlar (FTManager, AATextManager 0.15/0.16) listelenir ve hhea'ya
+      çevrilir; artık fazla küçük ve hücrenin üstünde durmazlar. Açık
+      fontlarda yeniden başlattıktan sonra geçerli olur.
+
 0.17  AATextManager düzeltmeleri:
       - Fontlar fazla küçük çıkıyor ve hücrenin üstünde duruyordu (ör.
         pencere ve ekran başlıklarında Calibri): .otag artık font
         yüksekliğini bütün harflerin sınır kutusundan (FTManager'ın
         seçimi) değil, hhea ascender/descender değerlerinden alır. 0.15
-        ya da 0.16 ile kurulan fontları "Aynı adlı fontların yerine yaz"
-        ile yeniden kurun.
+        ya da 0.16 ile kurulan fontlar için 0.18'in Onar sekmesini
+        kullanın.
       - Shell'den kurulum ve REPAIR Amiga'yı yeniden başlatıyordu.
       - Büyük fontların kurulumu küçük yığınla çökebiliyordu;
         AATextManager artık nasıl başlatılırsa başlatılsın 64 KB kullanır.

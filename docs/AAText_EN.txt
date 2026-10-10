@@ -1,4 +1,4 @@
-AAText 0.17 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.18 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -357,12 +357,17 @@ Please include the output of the debug version:
 History
 -------
 
+0.18  AATextManager, Repair tab: fonts whose height comes from the
+      bounding box (FTManager, AATextManager 0.15/0.16) are listed and
+      repaired to hhea, so they are no longer too small and high in
+      their cell. Takes effect for open fonts after a reboot.
+
 0.17  AATextManager fixes:
       - Fonts were too small and sat high in their cell (e.g. Calibri in
         window and screen titles): the .otag now takes the font height
         from the hhea ascender/descender, not from the bounding box of
         all glyphs (FTManager's choice). Fonts installed with 0.15 or
-        0.16: install them again with "Replace fonts of the same name".
+        0.16: use the Repair tab of 0.18.
       - Installing from the Shell and REPAIR rebooted the Amiga.
       - Installing big fonts could crash with a small stack; AATextManager
         now uses 64 KB whatever it is started with.
