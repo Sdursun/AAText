@@ -440,7 +440,7 @@ static void Install(void)
 
 static void Repair_Settings(struct AARepair *r)
 {
-    r->what = AA_REPAIR_PATH | AA_REPAIR_CODEPAGE;
+    r->what = AA_REPAIR_PATH | AA_REPAIR_CODEPAGE | AA_REPAIR_HEIGHT;
     r->charset = Charset();
     r->engine = Engine();
     if (GetGad(GID_CHANGEENGINE, GA_Selected))
@@ -450,11 +450,12 @@ static void Repair_Settings(struct AARepair *r)
 /* "font file moved, no code page" */
 static void Problems(ULONG what, char *buf, LONG len)
 {
-    static const LONG msg[3] = { MSG_P_MOVED, MSG_P_CODEPAGE, MSG_P_ENGINE };
+    static const LONG msg[4] =
+        { MSG_P_MOVED, MSG_P_CODEPAGE, MSG_P_ENGINE, MSG_P_HEIGHT };
     LONG i;
 
     buf[0] = 0;
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 4; i++)
         if (what & (1 << i))
             snprintf(buf + strlen(buf), len - strlen(buf), "%s%s",
                      buf[0] ? ", " : "", GetString(msg[i]));

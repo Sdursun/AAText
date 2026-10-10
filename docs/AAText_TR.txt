@@ -199,7 +199,9 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  görünür (RTG ekranlarda), kurulmadan önce.
   Onar sekmesi   "Fontları denetle" FONTS:'taki onarılabilir fontları
                  listeler: font dosyası taşınmış, kod sayfası yok, motor
-                 freetype2 (kutu işaretliyse seçilen motora çevrilir).
+                 freetype2 (kutu işaretliyse seçilen motora çevrilir). Yükseklik sınır kutusuna göre (FTManager ya da
+                 AATextManager 0.15/0.16 ile kurulan fontlar fazla küçük
+                 olup yukarıda durabilir): hhea'ya çevrilir.
                  "Onar..." bir kez sorar, sonra hepsini onarır; her
                  asıl dosya .otag.bak olarak saklanır. Başka motorların
                  fontlarına (ttf.library, ttengine) dokunulmaz.

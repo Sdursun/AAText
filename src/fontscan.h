@@ -35,6 +35,8 @@ struct AADiagEntry
     LONG  facenum;
     UBYTE status;                       /* AA_DIAG_... */
     UBYTE codepage;                     /* the .otag has a code page */
+    UBYTE bboxheight;                   /* OT_Spec4_Metric 0 or missing:
+                                           height from the bounding box */
 };
 
 /*
@@ -68,6 +70,7 @@ enum
 #define AA_REPAIR_PATH      1   /* moved font file: point at where it is */
 #define AA_REPAIR_CODEPAGE  2   /* no code page: add the one of charset */
 #define AA_REPAIR_ENGINE    4   /* engine "freetype2" -> engine */
+#define AA_REPAIR_HEIGHT    8   /* height from the bounding box -> hhea */
 
 struct AARepair
 {
@@ -79,7 +82,8 @@ struct AARepair
 /*
  * Which of r->what apply to e: only fonts that are OK or MOVED; code
  * pages and engine only for the FreeType engines (freetype2, aatext),
- * whose .otag tags are known; the engine only from "freetype2".
+ * whose .otag tags are known; the engine only from "freetype2"; the
+ * height (OT_Spec4_Metric bounding box -> hhea) only for those too.
  */
 ULONG aa_RepairNeeded(const struct AADiagEntry *e, const struct AARepair *r);
 

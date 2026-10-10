@@ -64,7 +64,8 @@
     S(MSG_CHARSET_CYRILLIC, 48, "ISO-8859-5 (Cyrillic)") \
     S(MSG_CHARSET_KOI8R,    49, "KOI8-R (Russian)") \
     S(MSG_PV_ALPHABET,      50, "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz") \
-    S(MSG_PV_SENTENCE,      51, "The quick brown fox jumps over the lazy dog. 0123456789")
+    S(MSG_PV_SENTENCE,      51, "The quick brown fox jumps over the lazy dog. 0123456789") \
+    S(MSG_P_HEIGHT,         52, "height from the bounding box (too small)")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

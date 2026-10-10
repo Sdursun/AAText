@@ -191,7 +191,9 @@ ENV:ftcodepage.
   Repair tab     "Check fonts" lists the fonts in FONTS: that can be
                  repaired: font file moved, no code page, engine
                  freetype2 (changed to the chosen engine if the box is
-                 ticked). "Repair..." asks once, then repairs them all;
+                 ticked). Height from the bounding box (fonts
+                 installed with FTManager or AATextManager 0.15/0.16
+                 can be too small and sit high): changed to hhea. "Repair..." asks once, then repairs them all;
                  each original is kept as .otag.bak. Fonts of other
                  engines (ttf.library, ttengine) are not changed.
 

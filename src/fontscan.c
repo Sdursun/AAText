@@ -91,6 +91,14 @@ static void Check(struct AADiagEntry *e, UBYTE *buf)
         Copy(e->engine, ot.engine, sizeof(e->engine));
     e->facenum = ot.facenum;
     e->codepage = ot.hascodepage;
+    {
+        static struct AAOTagFile f;
+        struct AAOTagItem *m;
+
+        e->bboxheight = aa_OTagLoad(&f, buf, len) &&
+                        (!(m = aa_OTagFind(&f, OT_Spec4_Metric)) ||
+                         m->data == OT_METRIC_GLOBALBBOX);
+    }
     Copy(e->want, ot.fontfile, sizeof(e->want));
 
     lock = aa_LockFontFile(ot.fontfile, e->found);
@@ -301,6 +309,9 @@ ULONG aa_RepairNeeded(const struct AADiagEntry *e, const struct AARepair *r)
         !Stricmp((CONST_STRPTR)e->engine, (CONST_STRPTR)"freetype2") &&
         Stricmp((CONST_STRPTR)r->engine, (CONST_STRPTR)e->engine))
         what |= AA_REPAIR_ENGINE;
+    if ((r->what & AA_REPAIR_HEIGHT) && e->bboxheight &&
+        FreeTypeEngine(e->engine))
+        what |= AA_REPAIR_HEIGHT;
     return what;
 }
 
@@ -340,6 +351,9 @@ static ULONG Apply(const UBYTE *buf, ULONG len, const struct AADiagEntry *e,
         if (!aa_OTagSetData(&f, OT_Spec2_CodePage, page, sizeof(page)))
             return 0;
     }
+    if ((what & AA_REPAIR_HEIGHT) &&
+        !aa_OTagSet(&f, OT_Spec4_Metric, OT_METRIC_ASCEND))
+        return 0;
     if ((what & AA_REPAIR_ENGINE) &&
         !aa_OTagSetString(&f, OT_Engine, r->engine))
         return 0;

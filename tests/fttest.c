@@ -109,15 +109,17 @@ int main(int argc, char **argv)
         printf("%s: %s\n", argv[3], have ? v : "none");
         return strcmp(have ? v : "none", argv[4]) ? 10 : 0;
     }
-    /* "repair": add the Latin-5 code page to font argv[3] and set its
-       engine freetype2 -> aatext; scan again: ok, engine aatext, code
-       page, .bak kept; a second repair has nothing to do */
+    /* "repair": add the Latin-5 code page to font argv[3], set its
+       engine freetype2 -> aatext and its height bounding box -> hhea;
+       scan again: ok, engine aatext, code page, hhea, .bak kept; a
+       second repair has nothing to do */
     if (strcmp(argv[2], "repair") == 0 && argc > 3)
     {
         static struct AADiagEntry e[32];
         static char backup[AA_FONTFILE_LEN];
         static const struct AARepair rp =
-            { AA_REPAIR_PATH | AA_REPAIR_CODEPAGE | AA_REPAIR_ENGINE,
+            { AA_REPAIR_PATH | AA_REPAIR_CODEPAGE | AA_REPAIR_ENGINE |
+              AA_REPAIR_HEIGHT,
               AA_CHARSET_LATIN5, "aatext" };
         LONG cnt = aa_ScanFonts(e, 32), k, r, r2;
         ULONG what;
@@ -140,7 +142,8 @@ int main(int argc, char **argv)
         lock = Lock((CONST_STRPTR)backup, ACCESS_READ);
         if (lock)
             UnLock(lock);
-        if (what != (AA_REPAIR_CODEPAGE | AA_REPAIR_ENGINE) ||
+        if (what != (AA_REPAIR_CODEPAGE | AA_REPAIR_ENGINE |
+                     AA_REPAIR_HEIGHT) || e[k].bboxheight ||
             r != AA_FIX_OK || r2 != AA_FIX_NOTHING ||
             strcmp(e[k].engine, "aatext") || !e[k].codepage ||
             e[k].status != AA_DIAG_OK || !lock)

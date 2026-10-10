@@ -140,7 +140,7 @@ static LONG Repair(STRPTR *names, LONG charset, const char *engine,
     char backup[AA_FONTFILE_LEN];
     LONG n, i, done = 0, todo = 0, rc = RETURN_OK;
 
-    r.what = AA_REPAIR_PATH;
+    r.what = AA_REPAIR_PATH | AA_REPAIR_HEIGHT;
     r.charset = charset;
     r.engine = engine;
     if (charset >= 0)
@@ -174,7 +174,9 @@ static LONG Repair(STRPTR *names, LONG charset, const char *engine,
         if (!what)
             continue;
         todo++;
-        Printf("%s:%s%s%s", (LONG)e[i].name,
+        Printf("%s:%s%s%s%s", (LONG)e[i].name,
+               (LONG)((what & AA_REPAIR_HEIGHT) ?
+                      " height from the bounding box;" : ""),
                (LONG)((what & AA_REPAIR_PATH) ? " font file moved;" : ""),
                (LONG)((what & AA_REPAIR_CODEPAGE) ? " no code page;" : ""),
                (LONG)((what & AA_REPAIR_ENGINE) ?
