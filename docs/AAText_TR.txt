@@ -1,4 +1,4 @@
-AAText 0.15 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.16 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -369,6 +369,9 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.16  AATextManager: Kur sekmesinde seçilen fontun önizlemesi,
+      kurulmadan önce birkaç boyutta (örnek metin arayüzün dilinde).
 
 0.15  Yeni font kurucu AATextManager (Türkçe ve İngilizce, pencere ve
       Shell): TrueType/OpenType fontları bir karakter setinin kod

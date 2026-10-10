@@ -38,10 +38,11 @@ and MUI programs — everything that draws text through `graphics.library`.
   FTManager, but writes the code page of a character set into the `.otag` (so
   Turkish and other letters work without `ENV:ftcodepage`) and names the font
   file without a volume name. It also repairs installed fonts: moved file, no
-  code page, engine `freetype2` -> `aatext`. Window and Shell, English and
+  code page, engine `freetype2` -> `aatext`. Selecting a font shows a preview
+  in several sizes before it is installed. Window and Shell, English and
   Turkish; uses `aatext.library` (included).
 
-  ![AATextManager: fonts to install, one line per face of a .ttc](docs/screenshots/aatextmanager.png)
+  ![AATextManager: fonts to install, one line per face of a .ttc, with a preview of the selected font](docs/screenshots/aatextmanager.png)
 
 - Bitmap fonts and palette (AGA) screens are left untouched.
 
@@ -173,10 +174,11 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
   kurar, ama `.otag`'a bir karakter setinin kod sayfasını yazar (Türkçe ve
   diğer harfler `ENV:ftcodepage` olmadan çalışır) ve font dosyasını disk adı
   olmadan gösterir. Kurulu fontları da onarır: taşınmış dosya, kod sayfası
-  yok, motor `freetype2` -> `aatext`. Pencere ve Shell, Türkçe ve İngilizce;
-  `aatext.library` kullanır (pakette var).
+  yok, motor `freetype2` -> `aatext`. Seçilen font, kurulmadan önce birkaç
+  boyutta önizlenir. Pencere ve Shell, Türkçe ve İngilizce; `aatext.library`
+  kullanır (pakette var).
 
-  ![AATextManager: kurulacak fontlar, bir .ttc'nin her yüzü ayrı satır](docs/screenshots/aatextmanager.png)
+  ![AATextManager: kurulacak fontlar, bir .ttc'nin her yüzü ayrı satır, seçilen fontun önizlemesiyle](docs/screenshots/aatextmanager.png)
 
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
 

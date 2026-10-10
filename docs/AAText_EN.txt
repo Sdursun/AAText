@@ -1,4 +1,4 @@
-AAText 0.15 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.16 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -354,6 +354,10 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.16  AATextManager: a preview of the selected font on the Install tab,
+      in a few sizes, before it is installed (sample text in the
+      language of the user interface).
 
 0.15  New font installer AATextManager (English and Turkish, window
       and Shell): installs TrueType/OpenType fonts with the code page

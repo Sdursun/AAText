@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text for Workbench
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/wb
-Version:      0.15
+Version:      0.16
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
@@ -34,8 +34,9 @@ Features
 - Font installer AATextManager (window and Shell, English and
   Turkish): installs TrueType/OpenType fonts like FTManager, but with
   the code page of a character set in the .otag and a path without
-  volume name; repairs installed fonts (moved file, no code page,
-  engine freetype2 -> aatext). Needs aatext.library (included)
+  volume name, with a preview before installing; repairs installed
+  fonts (moved file, no code page, engine freetype2 -> aatext). Needs
+  aatext.library (included)
 - "Safe" metrics by default: letters keep the cells of the system's
   bitmap font, so no window layout changes
 - Optional real metrics mode ("real on"): the TrueType font's own
