@@ -1190,23 +1190,26 @@ static void FixSelected(void)
 }
 
 /*
- * The font installer, from the directory of AATextPrefs; it runs on its
- * own (asynchronously).
+ * The font installer, SYS:System/AATextManager; it runs on its own
+ * (asynchronously).
  */
 static void StartManager(void)
 {
-    char path[AA_PATH_LEN], cmd[AA_PATH_LEN + 2], msg[sizeof(statustext)];
-    BPTR in = Open((CONST_STRPTR)"NIL:", MODE_OLDFILE);
-    BPTR out = Open((CONST_STRPTR)"NIL:", MODE_NEWFILE);
+    static const char path[] = "SYS:System/AATextManager";
+    char msg[sizeof(statustext)];
+    BPTR lock = Lock((CONST_STRPTR)path, ACCESS_READ);
+    BPTR in = 0, out = 0;
 
-    /* PROGDIR: belongs to this process only: give the new one the
-       full path, quoted ("Ram Disk:...") */
-    if (!NameFromLock(GetProgramDir(), (STRPTR)path, sizeof(path)))
-        strcpy(path, "PROGDIR:");
-    AddPart((STRPTR)path, (CONST_STRPTR)"AATextManager", sizeof(path));
-    snprintf(cmd, sizeof(cmd), "\"%s\"", path);
+    /* an asynchronous SystemTags() succeeds even when the program is
+       missing, so look first */
+    if (lock)
+    {
+        UnLock(lock);
+        in = Open((CONST_STRPTR)"NIL:", MODE_OLDFILE);
+        out = Open((CONST_STRPTR)"NIL:", MODE_NEWFILE);
+    }
     if (in && out &&
-        SystemTags((CONST_STRPTR)cmd, SYS_Input, in, SYS_Output, out,
+        SystemTags((CONST_STRPTR)path, SYS_Input, in, SYS_Output, out,
                    SYS_Asynch, TRUE, NP_StackSize, 16384, TAG_DONE) == 0)
         return;             /* the new process closes in and out */
     if (in)
