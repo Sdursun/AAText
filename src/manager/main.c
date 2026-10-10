@@ -4,7 +4,7 @@
  * Started from Workbench, or from the Shell without FILES or REPAIR,
  * it opens its window (gui.c). Shell use:
  *   AATextManager FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,
- *                 OVERWRITE/S,REPAIR/S,APPLY/S
+ *                 OVERWRITE/S,REPAIR/S,APPLY/S,LANGUAGE/K
  *
  * FreeType comes from aatext.library.
  */
@@ -44,9 +44,9 @@ static int ToLower(int c)
 
 static const char version[] = "$VER: AATextManager 0.1 (9.10.2026)";
 
-#define TEMPLATE "FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,OVERWRITE/S,REPAIR/S,APPLY/S"
+#define TEMPLATE "FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,OVERWRITE/S,REPAIR/S,APPLY/S,LANGUAGE/K"
 enum { ARG_FILES, ARG_FACE, ARG_CHARSET, ARG_ENGINE, ARG_SIZES, ARG_TO,
-       ARG_OVERWRITE, ARG_REPAIR, ARG_APPLY, ARG_COUNT };
+       ARG_OVERWRITE, ARG_REPAIR, ARG_APPLY, ARG_LANGUAGE, ARG_COUNT };
 
 static LONG Stricmp_(CONST_STRPTR a, CONST_STRPTR b)
 {
@@ -271,7 +271,7 @@ int main(int argc, char **argv)
     /* Workbench, or neither files nor REPAIR: the window */
     if (!argc || (!args[ARG_FILES] && !args[ARG_REPAIR]))
     {
-        rc = mgr_RunGUI();
+        rc = mgr_RunGUI((const char *)args[ARG_LANGUAGE]);
         goto out;
     }
 

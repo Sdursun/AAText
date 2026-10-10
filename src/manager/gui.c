@@ -105,7 +105,7 @@ static const LONG charset_msg[AA_NUM_CHARSETS] =
 
 static struct ColumnInfo filecols[] =
 {
-    { 30, NULL, 0 }, { 20, NULL, 0 }, { 8, NULL, 0 }, { 42, NULL, 0 },
+    { 30, NULL, 0 }, { 20, NULL, 0 }, { 12, NULL, 0 }, { 38, NULL, 0 },
     { -1, NULL, 0 }
 };
 
@@ -539,7 +539,11 @@ static struct Gadget *MakeButton(ULONG id, LONG msg)
 
 static Object *InfoLine(LONG msg)
 {
-    return LabelObject, LABEL_Text, (ULONG)GetString(msg), End;
+    /* "FONTS:_ttf/": the "_" is part of the name, not a key */
+    return LabelObject,
+        LABEL_Text, (ULONG)GetString(msg),
+        LABEL_Underscore, 0,
+    End;
 }
 
 static Object *InstallPage(void)
@@ -735,7 +739,7 @@ static ULONG ShortcutKey(LONG msg)
     return u && u[1] ? ToLower((UBYTE)u[1]) : 0;
 }
 
-int mgr_RunGUI(void)
+int mgr_RunGUI(const char *language)
 {
     static const struct { LONG msg; ULONG gid; } keys[] =
     {
@@ -760,7 +764,7 @@ int mgr_RunGUI(void)
     problems = AllocVec(MAX_FONTS * sizeof(*problems), MEMF_ANY | MEMF_CLEAR);
     if (!files || !diag || !problems || !OpenLibs())
         goto out;
-    InitStrings(NULL);
+    InitStrings(language);
 
     /* the character set chosen in AATextPrefs */
     aa_ReadPrefs(&prefs, NULL, FALSE);

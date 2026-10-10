@@ -1195,11 +1195,16 @@ static void FixSelected(void)
  */
 static void StartManager(void)
 {
-    static const char cmd[] = "PROGDIR:AATextManager";
-    char msg[sizeof(statustext)];
+    char path[AA_PATH_LEN], cmd[AA_PATH_LEN + 2], msg[sizeof(statustext)];
     BPTR in = Open((CONST_STRPTR)"NIL:", MODE_OLDFILE);
     BPTR out = Open((CONST_STRPTR)"NIL:", MODE_NEWFILE);
 
+    /* PROGDIR: belongs to this process only: give the new one the
+       full path, quoted ("Ram Disk:...") */
+    if (!NameFromLock(GetProgramDir(), (STRPTR)path, sizeof(path)))
+        strcpy(path, "PROGDIR:");
+    AddPart((STRPTR)path, (CONST_STRPTR)"AATextManager", sizeof(path));
+    snprintf(cmd, sizeof(cmd), "\"%s\"", path);
     if (in && out &&
         SystemTags((CONST_STRPTR)cmd, SYS_Input, in, SYS_Output, out,
                    SYS_Asynch, TRUE, NP_StackSize, 16384, TAG_DONE) == 0)
@@ -1208,7 +1213,7 @@ static void StartManager(void)
         Close(in);
     if (out)
         Close(out);
-    snprintf(msg, sizeof(msg), GetString(MSG_DIAG_NOMANAGER), cmd);
+    snprintf(msg, sizeof(msg), GetString(MSG_DIAG_NOMANAGER), path);
     SetStatus(msg);
 }
 
