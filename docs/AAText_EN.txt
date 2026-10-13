@@ -1,4 +1,4 @@
-AAText 0.19 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.20 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -362,6 +362,15 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.20  Experimental: antialiasing on palette (AGA) screens, "aga on"
+      (AATextPrefs: Advanced), default off. Letter edges use the
+      palette colours nearest to the mix of text and background; needs
+      shades in the palette (e.g. MagicWB greys), else edges stay sharp.
+      AAText now also runs without RTG (no cybergraphics.library): then
+      it draws on palette screens only, with "aga on".
+      Note: AATextPrefs 0.20 and AAText 0.20 belong together (settings
+      message changed); update both.
 
 0.19  Menu items are antialiased without a menu tool such as MagicMenu,
       also with "offscreen off": Intuition draws them into a buffer of no

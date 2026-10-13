@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text for Workbench
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/wb
-Version:      0.19
+Version:      0.20
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
@@ -15,10 +15,13 @@ that draws text through graphics.library.
 No setup needed: every TrueType or OpenType font installed with a font manager
 (fonts with a .otag file) is detected automatically and drawn smoothly
 in every size, using the code page from its .otag file (Turkish,
-Central European etc. work out of the box). Bitmap fonts and AGA
-screens are left untouched.
+Central European etc. work out of the box). Bitmap fonts are left
+untouched; AGA screens too, unless the experimental "aga on" is set.
 
 Features
+- Experimental antialiasing on palette (AGA) screens ("aga on"): letter
+  edges in the palette colours nearest to the mix; needs shades such as
+  the MagicWB greys. Also runs without RTG, on palette screens only
 - Zero configuration; optional ENVARC:AAText.prefs for gamma, hinting
   (none/light/normal/full), glyph cache size, program blacklist and
   explicit font mappings
