@@ -220,7 +220,7 @@ $(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
 
 # Font installer; FreeType from aatext.library
 MGR_TARGET := $(BUILDDIR)/AATextManager
-MGR_SRCS   := src/manager/main.c src/manager/gui.c src/manager/preview.c src/manager/strings.c src/prefs.c src/debug.c src/fontinstall.c src/fontinfo.c \
+MGR_SRCS   := src/manager/main.c src/manager/gui.c src/manager/preview.c src/manager/update.c src/manager/strings.c src/prefs.c src/debug.c src/fontinstall.c src/fontinfo.c \
               src/otagfile.c src/otag.c src/charsets.c src/fontscan.c src/fontfile.c
 MGR_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/mgr/%.o,$(MGR_SRCS)) $(BUILDDIR)/mgr/cgx.o
 
@@ -259,3 +259,14 @@ $(MGR_ICON): icons/AATextManager.png icons/AATextManager_sel.png tools/mkicon.py
 $(BUILDDIR)/mgr/cgx.o: src/cgx.s
 	@mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) -c -o $@ $<
+
+# The update check uses AmiSSL 5 (headers from its SDK, fetched with
+# tools/fetch-amissl.sh); amissl.library itself is opened at run time.
+AMISSL_INC := third_party/amissl-sdk/AmiSSL/Developer/include
+
+$(BUILDDIR)/mgr/manager/update.o: src/manager/update.c src/manager/update.h
+	@test -f $(AMISSL_INC)/proto/amissl.h || \
+		{ echo "AmiSSL SDK missing: run tools/fetch-amissl.sh"; exit 1; }
+	@mkdir -p $(dir $@)
+	$(CC) $(ARCHFLAGS) -O2 -fomit-frame-pointer -Wall -Isrc -I$(AMISSL_INC) \
+		-c -o $@ $<

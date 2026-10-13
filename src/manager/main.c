@@ -43,7 +43,8 @@ static int ToLower(int c)
     return (c >= 'A' && c <= 'Z') ? c + 32 : c;
 }
 
-static const char version[] __attribute__((used)) = "$VER: AATextManager 0.20 (14.10.2026)";
+static const char version[] __attribute__((used)) =
+    "$VER: AATextManager " AAMGR_VERSION " (14.10.2026)";
 /* stack the Shell gives the program (V47); main() also makes sure */
 static const char stackcookie[] __attribute__((used)) = "$STACK:65536";
 

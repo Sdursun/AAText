@@ -203,6 +203,13 @@ ENV:ftcodepage.
                  each original is kept as .otag.bak. Fonts of other
                  engines (ttf.library, ttengine) are not changed.
 
+Updates: "Project > Check for updates..." asks GitHub for the latest
+release. If it is newer, the package is downloaded to RAM: (e.g.
+RAM:AAText-v0.21.lha) and its name is shown; unpack and install it as
+described above. Nothing is installed automatically, and nothing is sent
+but the request itself (no data about your system). Needs a running
+TCP/IP stack and AmiSSL 5 (Aminet util/libs/AmiSSL-5).
+
 From the Shell:
 
   AATextManager FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,

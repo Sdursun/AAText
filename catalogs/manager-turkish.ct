@@ -114,3 +114,23 @@ MSG_PV_SENTENCE
 Pijamalı hasta yağız şoföre çabucak güvendi. 0123456789
 MSG_P_HEIGHT
 yükseklik sınır kutusuna göre (fazla küçük)
+MSG_MENU_PROJECT
+Proje
+MSG_MENU_UPDATE
+Güncellemeleri denetle...
+MSG_MENU_QUIT
+Çıkış
+MSG_UPD_CHECKING
+GitHub'dan son sürüm soruluyor...
+MSG_UPD_NEWER
+AAText %s yayımlandı (bu sürüm %s).\n\nPaket indirildi ve şuraya kaydedildi:\n\n%s\n\nLhA ile açıp AAText_TR.txt ya da AAText_EN.txt\ndosyasında anlatıldığı gibi kurun.
+MSG_UPD_CURRENT
+AAText %s son sürüm.
+MSG_UPD_NONET
+Ağ yok: bsdsocket.library bulunamadı\n(TCP/IP yığını çalışıyor mu?).
+MSG_UPD_NOSSL
+Güncelleme denetimi için AmiSSL 5 gerekir\n(amisslmaster.library, Aminet: util/libs/AmiSSL-5).
+MSG_UPD_FAILED
+Güncelleme denetimi başarısız oldu:\n%s
+MSG_UPD_OK
+Tamam

@@ -77,6 +77,7 @@ in Docker; on Windows the scripts are PowerShell.
 
 ```sh
 sh tools/fetch-freetype.sh      # FreeType 2.14.3 into third_party/ (sha256 checked)
+sh tools/fetch-amissl.sh        # AmiSSL 5 SDK headers (AATextManager update check)
 .\build.ps1                     # build/68020/AAText
 .\build.ps1 DEBUG=1             # build/68020-debug/AAText (serial kprintf output)
 .\build.ps1 CPU=68060           # build/68060/AAText

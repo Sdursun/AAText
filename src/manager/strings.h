@@ -65,7 +65,17 @@
     S(MSG_CHARSET_KOI8R,    49, "KOI8-R (Russian)") \
     S(MSG_PV_ALPHABET,      50, "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz") \
     S(MSG_PV_SENTENCE,      51, "The quick brown fox jumps over the lazy dog. 0123456789") \
-    S(MSG_P_HEIGHT,         52, "height from the bounding box (too small)")
+    S(MSG_P_HEIGHT,         52, "height from the bounding box (too small)") \
+    S(MSG_MENU_PROJECT,     53, "Project") \
+    S(MSG_MENU_UPDATE,      54, "Check for updates...") \
+    S(MSG_MENU_QUIT,        55, "Quit") \
+    S(MSG_UPD_CHECKING,     56, "Asking GitHub for the latest release...") \
+    S(MSG_UPD_NEWER,        57, "AAText %s is available (this is %s).\n\nThe package was downloaded and saved as\n\n%s\n\nUnpack it with LhA and install it as described\nin AAText_EN.txt or AAText_TR.txt.") \
+    S(MSG_UPD_CURRENT,      58, "AAText %s is the latest release.") \
+    S(MSG_UPD_NONET,        59, "No network: bsdsocket.library is not available\n(is the TCP/IP stack running?).") \
+    S(MSG_UPD_NOSSL,        60, "The update check needs AmiSSL 5\n(amisslmaster.library, on Aminet: util/libs/AmiSSL-5).") \
+    S(MSG_UPD_FAILED,       61, "The update check failed:\n%s") \
+    S(MSG_UPD_OK,           62, "OK")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

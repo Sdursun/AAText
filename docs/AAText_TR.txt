@@ -211,6 +211,13 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  asıl dosya .otag.bak olarak saklanır. Başka motorların
                  fontlarına (ttf.library, ttengine) dokunulmaz.
 
+Güncellemeler: "Proje > Güncellemeleri denetle..." GitHub'dan son sürümü
+sorar. Daha yeniyse paket RAM:'e indirilir (ör. RAM:AAText-v0.21.lha) ve
+adı gösterilir; yukarıda anlatıldığı gibi açıp kurun. Hiçbir şey
+kendiliğinden kurulmaz ve istek dışında hiçbir şey gönderilmez (sisteminiz
+hakkında bilgi gitmez). Çalışan bir TCP/IP yığını ve AmiSSL 5 gerekir
+(Aminet util/libs/AmiSSL-5).
+
 Shell'den:
 
   AATextManager FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,

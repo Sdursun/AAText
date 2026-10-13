@@ -16,6 +16,7 @@
 #include <intuition/gadgetclass.h>
 #include <graphics/text.h>
 #include <libraries/asl.h>
+#include <libraries/gadtools.h>
 #include <workbench/startup.h>
 
 #include <proto/exec.h>
@@ -55,6 +56,7 @@
 #include "manager.h"
 #include "strings.h"
 #include "preview.h"
+#include "update.h"
 #include "../fontscan.h"
 #include "../charsets.h"
 #include "../prefs.h"
@@ -692,10 +694,85 @@ static Object *RepairPage(void)
     End;
 }
 
+/* ------------------------------------------------------------------ */
+/* Menu: update check                                                   */
+/* ------------------------------------------------------------------ */
+
+enum { MENU_UPDATE = 1, MENU_QUIT };
+
+static struct NewMenu menu[] =
+{
+    { NM_TITLE, NULL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, NULL, 0, 0, (APTR)MENU_UPDATE },
+    { NM_ITEM,  NM_BARLABEL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, (STRPTR)"Q", 0, 0, (APTR)MENU_QUIT },
+    { NM_END,   NULL, NULL, 0, 0, NULL }
+};
+
+static void LocalizeMenu(void)
+{
+    menu[0].nm_Label = (STRPTR)GetString(MSG_MENU_PROJECT);
+    menu[1].nm_Label = (STRPTR)GetString(MSG_MENU_UPDATE);
+    menu[3].nm_Label = (STRPTR)GetString(MSG_MENU_QUIT);
+}
+
+static void Requester(LONG msg, ULONG *args)
+{
+    struct EasyStruct es;
+
+    es.es_StructSize = sizeof(es);
+    es.es_Flags = 0;
+    es.es_Title = (UBYTE *)GetString(MSG_MENU_UPDATE);
+    es.es_TextFormat = (UBYTE *)GetString(msg);
+    es.es_GadgetFormat = (UBYTE *)GetString(MSG_UPD_OK);
+    EasyRequestArgs(win, &es, NULL, args);
+}
+
+/*
+ * Ask GitHub for the latest release; a newer package is downloaded to
+ * RAM: and its full path shown. Nothing is installed.
+ */
+static void CheckUpdate(void)
+{
+    static struct AAUpdate u;
+    ULONG args[3];
+    LONG r;
+
+    SetStatus(GetString(MSG_UPD_CHECKING));
+    Busy(TRUE);
+    r = upd_Check(AAMGR_VERSION, &u);
+    Busy(FALSE);
+    SetStatus("");
+    switch (r)
+    {
+        case UPD_NEWER:
+            args[0] = (ULONG)(u.tag[0] == 'v' ? u.tag + 1 : u.tag);
+            args[1] = (ULONG)AAMGR_VERSION;
+            args[2] = (ULONG)u.saved;
+            Requester(MSG_UPD_NEWER, args);
+            break;
+        case UPD_CURRENT:
+            args[0] = (ULONG)AAMGR_VERSION;
+            Requester(MSG_UPD_CURRENT, args);
+            break;
+        case UPD_NONET:
+            Requester(MSG_UPD_NONET, NULL);
+            break;
+        case UPD_NOSSL:
+            Requester(MSG_UPD_NOSSL, NULL);
+            break;
+        default:
+            args[0] = (ULONG)u.error;
+            Requester(MSG_UPD_FAILED, args);
+            break;
+    }
+}
+
 static BOOL OpenWin(struct Screen *scr, LONG charset)
 {
     LONG i;
 
+    LocalizeMenu();
     AddTab(&tablist, MSG_TAB_INSTALL, 0);
     AddTab(&tablist, MSG_TAB_REPAIR, 1);
     for (i = 0; i < AA_NUM_CHARSETS; i++)
@@ -711,7 +788,9 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
         WA_CloseGadget, TRUE,
         WA_SizeGadget, TRUE,
         WA_Activate, TRUE,
-        WA_IDCMP, IDCMP_GADGETUP | IDCMP_CLOSEWINDOW | IDCMP_VANILLAKEY,
+        WA_IDCMP, IDCMP_GADGETUP | IDCMP_CLOSEWINDOW | IDCMP_VANILLAKEY |
+                  IDCMP_MENUPICK,
+        WINDOW_NewMenu, (ULONG)menu,
         WINDOW_Position, WPOS_CENTERSCREEN,
         WINDOW_ParentGroup, VLayoutObject,
             LAYOUT_SpaceOuter, TRUE,
@@ -853,6 +932,25 @@ int mgr_RunGUI(const char *language)
                 case WMHI_GADGETUP:
                     Action(result & WMHI_GADGETMASK);
                     break;
+                case WMHI_MENUPICK:
+                {
+                    UWORD mc = result & WMHI_MENUMASK;
+
+                    while (mc != MENUNULL && !done)
+                    {
+                        struct MenuItem *item = ItemAddress(win->MenuStrip,
+                                                            mc);
+
+                        if (!item)
+                            break;
+                        if (GTMENUITEM_USERDATA(item) == (APTR)MENU_UPDATE)
+                            CheckUpdate();
+                        else if (GTMENUITEM_USERDATA(item) == (APTR)MENU_QUIT)
+                            done = TRUE;
+                        mc = item->NextSelect;
+                    }
+                    break;
+                }
                 case WMHI_VANILLAKEY:
                     key = ToLower(result & WMHI_KEYMASK);
                     if (key == 0x1b)
