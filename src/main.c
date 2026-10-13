@@ -463,6 +463,19 @@ int main(int argc, char **argv)
     /* Without it (no RTG card) only palette screens are drawn, with
        "aga on"; the check is in aa_RenderText() */
     CyberGfxBase = OpenLibrary((CONST_STRPTR)"cybergraphics.library", 40);
+#ifdef DEBUG
+    /* test the no-RTG path on a system that has the library */
+    {
+        char v[4];
+
+        if (CyberGfxBase && GetVar((CONST_STRPTR)"AATextNoCGX", (STRPTR)v,
+                                   sizeof(v), 0) >= 0)
+        {
+            CloseLibrary(CyberGfxBase);
+            CyberGfxBase = NULL;
+        }
+    }
+#endif
     if (CyberGfxBase)
         D(("AAText: cybergraphics.library %ld.%ld\n",
            (LONG)CyberGfxBase->lib_Version, (LONG)CyberGfxBase->lib_Revision));

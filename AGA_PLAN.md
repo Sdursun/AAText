@@ -168,7 +168,12 @@ Kalanlar:
   yazılacak.
 - Denenmedi: AGA Workbench (ikon etiketleri, menüler), örtülü/kısmen
   görünür pencereler (`ReadPixelArray8` kırpması), RTG LUT8 ekranlar.
-- CGX olmayan sistemler (yapıldı, **doğrulanmadı**): cybergraphics.library
-  yoksa AAText artık kapanmıyor; `aga on` ile paletli ekranlara çiziyor,
-  CGX çağrıları korunuyor. RTG'si olmayan bir Amiga'da (ya da RTG'siz
-  WinUAE yapılandırmasında) denenmeli.
+- CGX olmayan sistemler (yapıldı, 14.10.2026): cybergraphics.library yoksa
+  AAText kapanmıyor; `aga on` ile paletli ekranlara çiziyor. WinUAE'de RTG
+  kartı kapalıyken (`-s gfxcard_size=0`, yapılandırma dosyası değişmeden)
+  denendi; Picasso96 dosyaları diskte olduğu için kütüphane yine de
+  açılıyordu, "yok" yolu debug sürümündeki `ENV:AATextNoCGX` anahtarıyla
+  zorlandı. Sonuç: 4 renkli AGA Workbench'te menüler ve yazılar bozulmadan
+  (ara ton yok, keskin), 16 renkli gri ekranda yumuşatılmış (102/170
+  grileri); 76 çağrı palet yolundan, 12 menü öğesi, hata yok. Gerçek bir
+  RTG'siz Amiga'da (kütüphane hiç yokken) denenmedi.
