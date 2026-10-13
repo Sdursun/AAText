@@ -1,8 +1,7 @@
 # AGA ekranlar için yumuşatma — ön hazırlık
 
-Durum: **plan, onay bekliyor.** Kod değişikliği yok; yalnızca test araçları
-hazırlandı. Dal: `aga`. Yedek: `Desktop\Afa_backup_0.19` (0.19, tüm git
-geçmişi).
+Durum: **A1–A3 yapıldı (dal `aga`), A4–A5 bekliyor**; ayrıntılar 8.
+bölümde. Yedek: `Desktop\Afa_backup_0.19` (0.19, tüm git geçmişi).
 
 CLAUDE.md'deki 6. aşama: paletli ekranlarda (8 bit ve altı) birkaç ara tonla
 yumuşatma; yeterli renk yoksa orijinal `Text()`'e dönüş.
