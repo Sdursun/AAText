@@ -96,7 +96,7 @@ enum
     GID_TABS = 1, GID_GAMMA, GID_GAMMAVAL, GID_HINTING, GID_REAL,
     GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
-    GID_AUTO, GID_OFFSCREEN, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
+    GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
     GID_PICKFILE, GID_KERNING,
     GID_SCAN, GID_SCANSUM, GID_FONTLIST, GID_DETAIL1, GID_DETAIL2, GID_DETAIL3,
     GID_DETAIL4, GID_ADVICE, GID_REPORT, GID_FIX, GID_MANAGER,
@@ -242,7 +242,7 @@ static void SetGad2(LONG gid, Tag tag1, ULONG data1, Tag tag2, ULONG data2)
     }
     SetGadgetAttrsA(gads[gid], win, NULL, tags);
     if (gid == GID_REAL || gid == GID_KERNING || gid == GID_AUTO ||
-        gid == GID_OFFSCREEN)
+        gid == GID_OFFSCREEN || gid == GID_AGA)
     {
         /* checkbox.gadget does not redraw itself on GA_Selected; erase
            first, or its (antialiased) label is drawn over itself */
@@ -415,6 +415,8 @@ static void ReadGadgets(void)
         cur.autodetect = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_OFFSCREEN], &v))
         cur.offscreen = v != 0;
+    if (GetAttr(GA_Selected, (Object *)gads[GID_AGA], &v))
+        cur.aga = v != 0;
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
         cur.cachekb = v;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_CHARSET], &v))
@@ -945,6 +947,13 @@ static Object *AdvancedPage(void)
             GA_RelVerify, TRUE,
             GA_Text, (ULONG)GetString(MSG_OFFSCREEN),
             GA_Selected, cur.offscreen,
+        End,
+        CHILD_WeightedHeight, 0,
+        LAYOUT_AddChild, gads[GID_AGA] = (struct Gadget *)CheckBoxObject,
+            GA_ID, GID_AGA,
+            GA_RelVerify, TRUE,
+            GA_Text, (ULONG)GetString(MSG_AGA),
+            GA_Selected, cur.aga,
         End,
         CHILD_WeightedHeight, 0,
 
@@ -1620,6 +1629,7 @@ static BOOL Action(ULONG id)
 
         case GID_AUTO:
         case GID_OFFSCREEN:
+        case GID_AGA:
         case GID_CACHE:
         case GID_CHARSET:
             LiveApply();
@@ -1724,6 +1734,7 @@ static void ShowPrefs(void)
     SetGad(GID_KERNING, GA_Selected, cur.kerning);
     SetGad(GID_AUTO, GA_Selected, cur.autodetect);
     SetGad(GID_OFFSCREEN, GA_Selected, cur.offscreen);
+    SetGad(GID_AGA, GA_Selected, cur.aga);
     SetGad(GID_CACHE, INTEGER_Number, cur.cachekb);
     SetGad(GID_CHARSET, CHOOSER_Selected, cur.charset);
     ShowBlacklist();

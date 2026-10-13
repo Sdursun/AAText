@@ -120,7 +120,8 @@
     S(MSG_DIAG_ENGINEFMT,  114, "%s (%s.library %s)") \
     S(MSG_DIAG_ENGINENONE, 115, "%s (%s.library not installed)") \
     S(MSG_DIAG_MANAGER,    116, "_Install fonts...") \
-    S(MSG_DIAG_NOMANAGER,  117, "Cannot start %s.")
+    S(MSG_DIAG_NOMANAGER,  117, "Cannot start %s.") \
+    S(MSG_AGA,             118, "Antialiasing on palette (AGA) screens")
 
 
 #define S(id, n, s) id = n,

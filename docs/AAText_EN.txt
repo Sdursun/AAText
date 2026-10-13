@@ -23,13 +23,18 @@ Requirements
 - 68020 or better; a 68030, 68040, 68060 or PiStorm is recommended
   (see "Speed")
 - An RTG graphics system with cybergraphics.library, e.g. Picasso96
-  (P96). Tested with WinUAE (UAEGFX) and PiStorm (Emu68).
+  (P96). Tested with WinUAE (UAEGFX) and PiStorm (Emu68). Without RTG
+  (AGA only), AAText draws on palette screens with "aga on" only.
 - TrueType or OpenType fonts installed with a font manager (e.g.
   ttf.library, or freetype2.library with FTManager), so that each font
   has a .otag file next to its .font file in FONTS:
 
 Screens with 15, 16, 24 or 32 bit colour are drawn antialiased. AGA and
-other palette screens (256 colours or fewer) are not changed.
+other palette screens (256 colours or fewer) are not changed, unless
+"aga on" is set (AATextPrefs: Advanced): then letter edges use the
+palette colours nearest to the mix of text and background. This needs
+shades in the palette (e.g. the greys of MagicWB); where there is no
+colour close enough, the edge stays sharp. Experimental, default off.
 
 
 Which file?
@@ -116,8 +121,9 @@ while you try it out.
               name, choose the program file with "Choose...", or pick
               one from "Add a running program...". The program need
               not be running; AAText recognises it by its name.
-  Advanced    automatic font detection, off-screen bitmaps, cache size
-              (with the current use) and character set (see Tips)
+  Advanced    automatic font detection, off-screen bitmaps,
+              antialiasing on palette (AGA) screens, cache size (with
+              the current use) and character set (see Tips)
   Diagnostics "Scan fonts" checks every .otag file in FONTS: and the
               font file it names; fonts with problems are listed first.
               Select a font: the fields under the list show its .otag

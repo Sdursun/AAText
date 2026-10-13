@@ -460,15 +460,14 @@ int main(int argc, char **argv)
         return RETURN_FAIL;
     }
 
+    /* Without it (no RTG card) only palette screens are drawn, with
+       "aga on"; the check is in aa_RenderText() */
     CyberGfxBase = OpenLibrary((CONST_STRPTR)"cybergraphics.library", 40);
-    if (!CyberGfxBase)
-    {
-        Msg("AAText: cybergraphics.library not found (P96 or CGX needed).\n");
-        Cleanup();
-        return RETURN_FAIL;
-    }
-    D(("AAText: cybergraphics.library %ld.%ld\n",
-       (LONG)CyberGfxBase->lib_Version, (LONG)CyberGfxBase->lib_Revision));
+    if (CyberGfxBase)
+        D(("AAText: cybergraphics.library %ld.%ld\n",
+           (LONG)CyberGfxBase->lib_Version, (LONG)CyberGfxBase->lib_Revision));
+    else
+        D(("AAText: no cybergraphics.library, palette screens only\n"));
 #ifdef DEBUG
     aa_TraceInfo();
 #endif

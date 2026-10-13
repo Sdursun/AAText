@@ -1086,7 +1086,7 @@ static struct ViewPort *CanBlend(struct RastPort *rp, LONG x, LONG y,
 
     if (rp->DrawMode & (COMPLEMENT | INVERSVID))
         return NULL;
-    if (GetBitMapAttr(bm, BMA_DEPTH) < 15 ||
+    if (GetBitMapAttr(bm, BMA_DEPTH) < 15 || !CyberGfxBase ||
         !cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_ISCYBERGFX) ||
         cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_PIXFMT) == PIXFMT_LUT8)
         return NULL;
@@ -1261,7 +1261,8 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     {
         if (GetBitMapAttr(bm, BMA_DEPTH) < 15)
             FAIL(R_DEPTH);
-        if (!cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_ISCYBERGFX))
+        if (!CyberGfxBase ||
+            !cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_ISCYBERGFX))
             FAIL(R_NOTCGX);
         if (cgx_GetCyberMapAttr(CyberGfxBase, bm,
                                 CYBRMATTR_PIXFMT) == PIXFMT_LUT8)
@@ -1390,7 +1391,8 @@ BOOL aa_RenderText(struct RastPort *rp, CONST_STRPTR string, WORD count,
     struct EClockVal t0, t1;
 #endif
 
-    if (aa_Mode == AA_MODE_OFF || count <= 0 || !CyberGfxBase)
+    /* without cybergraphics.library (no RTG) only palette screens */
+    if (aa_Mode == AA_MODE_OFF || count <= 0 || (!CyberGfxBase && !aa_Aga))
         return FALSE;
     if (aa_NumBlack && IsBlacklisted(me))
         FAIL(R_BLACKLIST);

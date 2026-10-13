@@ -24,13 +24,18 @@ Gereksinimler
 - 68020 veya üstü işlemci; 68030, 68040, 68060 ya da PiStorm önerilir
   ("Hız" bölümüne bakın)
 - cybergraphics.library sunan bir RTG sistemi, örneğin Picasso96 (P96).
-  WinUAE (UAEGFX) ve PiStorm (Emu68) ile denendi.
+  WinUAE (UAEGFX) ve PiStorm (Emu68) ile denendi. RTG yoksa (yalnız AGA)
+  AAText yalnızca "aga on" ile paletli ekranlara çizer.
 - Bir font yöneticisiyle (ör. ttf.library ya da FTManager ile
   freetype2.library) kurulmuş TrueType veya OpenType fontlar: her fontun
   FONTS: içinde .font dosyasının yanında bir .otag dosyası olmalı.
 
 15, 16, 24 veya 32 bit renkli ekranlar yumuşatılmış çizilir. AGA ve
-diğer paletli ekranlar (256 renk ve altı) değiştirilmez.
+diğer paletli ekranlar (256 renk ve altı) değiştirilmez; "aga on"
+(AATextPrefs: Gelişmiş) ayarlanırsa harf kenarları, yazı ve zemin
+karışımına en yakın palet renkleriyle çizilir. Bunun için palette ara
+tonlar olmalı (ör. MagicWB grileri); yeterince yakın renk yoksa kenar
+keskin kalır. Deneysel, varsayılan kapalı.
 
 
 Hangi dosya?
@@ -122,9 +127,9 @@ satırında görürsünüz.
               yazın, program dosyasını "Seç..." ile seçin ya da
               "Çalışan bir program ekle..." listesinden alın. Programın
               o an çalışması gerekmez; AAText onu adından tanır.
-  Gelişmiş    otomatik font algılama, ekran dışı bitmap'ler, önbellek
-              boyutu (o anki kullanımıyla) ve karakter seti (İpuçları
-              bölümüne bakın)
+  Gelişmiş    otomatik font algılama, ekran dışı bitmap'ler, paletli
+              (AGA) ekranlarda yumuşatma, önbellek boyutu (o anki
+              kullanımıyla) ve karakter seti (İpuçları bölümüne bakın)
   Tanılama    "Fontları tara", FONTS: içindeki her .otag dosyasını ve
               gösterdiği font dosyasını denetler; sorunlu fontlar
               listenin başında yer alır. Bir font seçildiğinde

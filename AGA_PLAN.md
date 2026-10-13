@@ -1,7 +1,7 @@
 # AGA ekranlar için yumuşatma — ön hazırlık
 
-Durum: **A1–A3 yapıldı (dal `aga`), A4–A5 bekliyor**; ayrıntılar 8.
-bölümde. Yedek: `Desktop\Afa_backup_0.19` (0.19, tüm git geçmişi).
+Durum: **A1–A3 ve A5 yapıldı (dal `aga`), A4 (hız) bekliyor**; ayrıntılar
+8. bölümde. Yedek: `Desktop\Afa_backup_0.19` (0.19, tüm git geçmişi).
 
 CLAUDE.md'deki 6. aşama: paletli ekranlarda (8 bit ve altı) birkaç ara tonla
 yumuşatma; yeterli renk yoksa orijinal `Text()`'e dönüş.
@@ -162,9 +162,13 @@ WinUAE'de denendi (AGA, 640×256 HIRES):
 
 Kalanlar:
 - **A4 hız:** ölçülmedi. 68020 (JIT kapalı) ve A1200/PiStorm.
-- **A5:** AATextPrefs'te `aga` kutusu, belgeler (TR/EN), sürüm notu.
+- **A5 (yapıldı, 14.10.2026):** AATextPrefs Gelişmiş sekmesinde "Paletli
+  (AGA) ekranlarda yumuşatma" kutusu (TR/EN, canlı uygulanır; WinUAE'de
+  denendi), belgeler (TR/EN, örnek ayar dosyası). Sürüm notu yayında
+  yazılacak.
 - Denenmedi: AGA Workbench (ikon etiketleri, menüler), örtülü/kısmen
   görünür pencereler (`ReadPixelArray8` kırpması), RTG LUT8 ekranlar.
-- CGX olmayan sistemler: `aa_RenderText()` `CyberGfxBase` yoksa hiç
-  çizmiyor; salt AGA Amiga'da (RTG kartı yok) AAText bugün çalışmaz.
-  Palet yolu CGX'e ihtiyaç duymuyor; bu denetim gevşetilmeli (A5).
+- CGX olmayan sistemler (yapıldı, **doğrulanmadı**): cybergraphics.library
+  yoksa AAText artık kapanmıyor; `aga on` ile paletli ekranlara çiziyor,
+  CGX çağrıları korunuyor. RTG'si olmayan bir Amiga'da (ya da RTG'siz
+  WinUAE yapılandırmasında) denenmeli.

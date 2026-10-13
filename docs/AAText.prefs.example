@@ -48,6 +48,12 @@
 # if the program is not on the Workbench screen. Default off.
 #offscreen on
 
+# Antialiasing on palette (AGA) screens, 256 colours or fewer (default
+# off, experimental): letter edges use the palette colours nearest to the
+# mix of text and background; needs shades (e.g. MagicWB greys) in the
+# palette. Also the only mode that draws anything without RTG.
+#aga on
+
 # Explicit mappings (rarely needed): draw a font with a TrueType file,
 # e.g. a bitmap font, or a font whose .otag is not found.
 #
