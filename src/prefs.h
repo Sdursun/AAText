@@ -56,6 +56,8 @@ struct AAPrefs
                                        their .otag files (default on) */
     BOOL  autoreal;                 /* real metrics for detected fonts */
     BOOL  kerning;                  /* pair kerning in real metrics mode */
+    BOOL  aga;                      /* antialiasing on palette (AGA)
+                                       screens, default off */
     ULONG cachekb;                  /* glyph cache size in KB */
     char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];
     UWORD numblack;

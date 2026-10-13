@@ -6,8 +6,9 @@
  *   texttest <name.font> <size> [seconds] [style] [text] [pubscreen]
  *
  * style: optional letters b (bold), i (italic), u (underlined), applied
- * to the last line with SetSoftStyle(). The window closes after the
- * given number of seconds (default 10) or with its close gadget. "text"
+ * to the last line with SetSoftStyle(); j draws all lines in JAM2 with
+ * pen 1 on pen 2 (the background cell is filled). The window closes after the
+ * given number of seconds (default 10), with its close gadget or Ctrl-C. "text"
  * replaces the first line ("-": the default text). "pubscreen" opens the
  * window on that public screen instead of the Workbench, e.g. AATEST
  * from tests/pubscreen.c for palette (AGA) screens. After each line,
@@ -44,6 +45,7 @@ int main(int argc, char **argv)
     struct Window *win;
     struct RastPort *rp;
     ULONG style = 0;
+    BOOL jam2 = FALSE;
     int secs, i, y, w = 0;
 
     if (argc < 3)
@@ -57,6 +59,7 @@ int main(int argc, char **argv)
         if (strchr(argv[4], 'b')) style |= FSF_BOLD;
         if (strchr(argv[4], 'i')) style |= FSF_ITALIC;
         if (strchr(argv[4], 'u')) style |= FSF_UNDERLINED;
+        if (strchr(argv[4], 'j')) jam2 = TRUE;
     }
 
     DiskfontBase = OpenLibrary((CONST_STRPTR)"diskfont.library", 36);
@@ -95,7 +98,8 @@ int main(int argc, char **argv)
     rp = win->RPort;
     SetFont(rp, tf);
     SetAPen(rp, 1);
-    SetDrMd(rp, JAM1);
+    SetDrMd(rp, jam2 ? JAM2 : JAM1);
+    SetBPen(rp, 2);
 
     y = win->BorderTop + 4 + tf->tf_Baseline;
     for (i = 0; i < 3; i++)
@@ -131,6 +135,8 @@ int main(int argc, char **argv)
             ReplyMsg((struct Message *)m);
             break;
         }
+        if (SetSignal(0, SIGBREAKF_CTRL_C) & SIGBREAKF_CTRL_C)
+            break;
         Delay(5);
     }
 

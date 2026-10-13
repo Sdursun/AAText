@@ -63,13 +63,14 @@ static volatile BOOL aa_BufferBusy[AA_NUM_BUFFERS];
 static char aa_Blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];
 static LONG aa_NumBlack;
 static BOOL aa_Offscreen;
+static BOOL aa_Aga;
 
 #ifdef DEBUG
 enum
 {
     R_DRAWN, R_REAL_AA, R_REAL_MONO, R_BLACKLIST, R_DRAWMODE, R_STYLE,
     R_NOBITMAP, R_DEPTH, R_NOTCGX, R_LUT8, R_NOMAPPING, R_NOVIEWPORT,
-    R_COORDS, R_NOMEM, R_FONTFAIL, R_COUNT
+    R_COORDS, R_NOMEM, R_FONTFAIL, R_PALETTE, R_PAL_REAL, R_COUNT
 };
 static const char *const reason_names[R_COUNT] =
 {
@@ -77,7 +78,8 @@ static const char *const reason_names[R_COUNT] =
     "blacklisted task", "COMPLEMENT/INVERSVID",
     "bold/italic/underl.", "no bitmap/font", "depth < 15",
     "not a CGX bitmap", "LUT8 bitmap", "font not mapped", "no viewport",
-    "coords/size", "out of memory", "font setup failed"
+    "coords/size", "out of memory", "font setup failed",
+    "drawn, palette screen", "drawn, real, palette"
 };
 static ULONG reason_counts[R_COUNT];
 #define FAIL(r) do { reason_counts[r]++; return FALSE; } while (0)
@@ -132,7 +134,7 @@ static void InitLevels(void)
 }
 
 /*
- * Blacklist and offscreen option. Text() reads them without a lock, so
+ * Blacklist, offscreen and aga options. Text() reads them without a lock, so
  * they are replaced inside Forbid(): no task can run halfway through.
  */
 void aa_RenderReconfigure(const struct AAPrefs *prefs)
@@ -144,6 +146,7 @@ void aa_RenderReconfigure(const struct AAPrefs *prefs)
         CopyMem((APTR)prefs->blacklist[i], aa_Blacklist[i], AA_NAME_LEN);
     aa_NumBlack = prefs->numblack;
     aa_Offscreen = prefs->offscreen;
+    aa_Aga = prefs->aga;
     Permit();
 
     for (i = 0; i < aa_NumBlack; i++)
@@ -943,6 +946,139 @@ static void FreeChipBuffer(UBYTE *buf)
 }
 
 /* Can this rastport take the antialiased read-modify-write path? */
+/* ------------------------------------------------------------------ */
+/* Palette (AGA) screens                                                */
+/* ------------------------------------------------------------------ */
+
+/* Coverage steps: 0 (untouched), 1/3, 2/3 (palette mixes), 1 (text pen) */
+#define AA_PAL_STEPS 3
+
+/* Bitmaps AAText draws on with palette pens ("aga on"). */
+static BOOL IsPaletteBitMap(struct BitMap *bm)
+{
+    return aa_Aga && GetBitMapAttr(bm, BMA_DEPTH) <= 8;
+}
+
+/*
+ * The pen for bg + (fg - bg) * step / AA_PAL_STEPS: the nearest palette
+ * colour if it is close to that mix (within a quarter of the distance
+ * between bg and fg), else no mix at all: the text pen from half
+ * coverage up, the background below. A 16 colour palette without greys
+ * would otherwise give brown or blue edges to black text on grey.
+ */
+static UBYTE MixPen(struct ColorMap *cm, const ULONG *rgb, LONG ncol,
+                    UBYTE bgpen, UBYTE fgpen, LONG step)
+{
+    ULONG c[3];
+    LONG mix[3], span = 0, dist = 0, i;
+    UBYTE pen;
+
+    for (i = 0; i < 3; i++)
+    {
+        LONG b = rgb[bgpen * 3 + i] >> 24;
+        LONG f = rgb[fgpen * 3 + i] >> 24;
+
+        mix[i] = b + (f - b) * step / AA_PAL_STEPS;
+        c[i] = (ULONG)mix[i] * 0x01010101;
+        span += (f - b) * (f - b);
+    }
+    pen = (UBYTE)FindColor(cm, c[0], c[1], c[2], ncol - 1);
+    for (i = 0; i < 3; i++)
+    {
+        LONG d = (LONG)(rgb[pen * 3 + i] >> 24) - mix[i];
+
+        dist += d * d;
+    }
+    if (dist * 16 > span)       /* farther than a quarter of the span */
+        return step * 2 >= AA_PAL_STEPS ? fgpen : bgpen;
+    return pen;
+}
+
+/*
+ * Draw a coverage map (the first byte of each RGB pixel of cov: white
+ * text blended on black) into the w x h cell at x, y of a palette
+ * rastport. The pens under the cell are read (JAM1) or are the BgPen
+ * (JAM2); covered pixels become the text pen or the palette colour
+ * nearest to the mix, then the pens are written back.
+ *
+ * Everything is allocated per call: Text() runs on any task, often with
+ * layers locked, so no lock of ours may be held around these graphics
+ * calls. No pens are allocated.
+ */
+static BOOL PaletteCompose(struct RastPort *rp, struct ViewPort *vp,
+                           const UBYTE *cov, LONG x, LONG y, LONG w, LONG h)
+{
+    struct ColorMap *cm = vp->ColorMap;
+    LONG depth = GetBitMapAttr(rp->BitMap, BMA_DEPTH);
+    LONG ncol = 1L << depth;
+    LONG mod = (w + 15) & ~15;      /* row length ReadPixelArray8() uses */
+    struct RastPort temprp;
+    struct BitMap *tbm;
+    ULONG *rgb;
+    UBYTE *pens;
+    UWORD *mix;
+    UBYTE fgpen = GetAPen(rp);
+    LONG r, c, i;
+
+    if (ncol > cm->Count)
+        ncol = cm->Count;
+    if (fgpen >= ncol)
+        return FALSE;
+    /* palette (32 bit guns), pens of the cell, mix cache per step and pen */
+    rgb = AllocVec(ncol * 3 * sizeof(ULONG) + mod * h +
+                   (AA_PAL_STEPS - 1) * 256 * sizeof(UWORD), MEMF_ANY);
+    if (!rgb)
+        return FALSE;
+    pens = (UBYTE *)(rgb + ncol * 3);
+    mix = (UWORD *)(pens + mod * h);        /* mod is even */
+    tbm = AllocBitMap(mod, 1, depth, 0, NULL);
+    if (!tbm)
+    {
+        FreeVec(rgb);
+        return FALSE;
+    }
+    InitRastPort(&temprp);
+    temprp.BitMap = tbm;
+
+    GetRGB32(cm, 0, ncol, rgb);
+    for (i = 0; i < (AA_PAL_STEPS - 1) * 256; i++)
+        mix[i] = 0xFFFF;
+
+    if (rp->DrawMode & JAM2)
+        memset(pens, GetBPen(rp), mod * h);
+    else
+        ReadPixelArray8(rp, x, y, x + w - 1, y + h - 1, pens, &temprp);
+
+    for (r = 0; r < h; r++)
+    {
+        const UBYTE *cv = cov + r * w * 3;
+        UBYTE *p = pens + r * mod;
+
+        for (c = 0; c < w; c++, cv += 3, p++)
+        {
+            LONG step = (*cv * AA_PAL_STEPS + 127) / 255;
+            UWORD *m;
+
+            if (!step)
+                continue;
+            if (step >= AA_PAL_STEPS || *p >= ncol)
+            {
+                *p = fgpen;
+                continue;
+            }
+            m = &mix[(step - 1) * 256 + *p];
+            if (*m == 0xFFFF)
+                *m = MixPen(cm, rgb, ncol, *p, fgpen, step);
+            *p = (UBYTE)*m;
+        }
+    }
+
+    WritePixelArray8(rp, x, y, x + w - 1, y + h - 1, pens, &temprp);
+    FreeBitMap(tbm);
+    FreeVec(rgb);
+    return TRUE;
+}
+
 static struct ViewPort *CanBlend(struct RastPort *rp, LONG x, LONG y,
                                  LONG w, LONG h)
 {
@@ -1031,6 +1167,35 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
         }
     }
 
+    /* "aga on": palette screens with mixed pens */
+    if (!vp && IsPaletteBitMap(rp->BitMap) &&
+        !(rp->DrawMode & (COMPLEMENT | INVERSVID)) &&
+        w * h * 3 <= AA_MAX_BUFFER && CoordsOk(rp, rp->BitMap, x, y, w, h) &&
+        (vp = FindViewPort(rp)) && vp->ColorMap)
+    {
+        static const UBYTE white[3] = { 255, 255, 255 };
+        UBYTE *buf = GetBuffer(w * h * 3);
+
+        if (buf)
+        {
+            BOOL done;
+
+            memset(buf, 0, w * h * 3);
+            aa_LockGlyphs();
+            DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, white,
+                     BlendFor(white));
+            aa_UnlockGlyphs();
+            done = PaletteCompose(rp, vp, buf, x, y, w, h);
+            FreeBuffer(buf);
+            if (done)
+            {
+                rp->cp_x += te.te_Width;
+                COUNT(R_PAL_REAL);
+                return TRUE;
+            }
+        }
+    }
+
     /* 1 bit fallback: any screen type and draw mode. */
     {
         LONG bpr = ((w + 15) >> 4) << 1;
@@ -1062,6 +1227,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     UBYTE mode = aa_Mode;
     UBYTE fg[3], bg[3];
     UBYTE *buf;
+    BOOL palette;
     LONG x, y, w, h;
 #ifdef DEBUG
     ULONG ts0 = 0, ts1 = 0, ts2 = 0, ts3 = 0, ts4 = 0;
@@ -1090,12 +1256,17 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
 #endif
         FAIL(R_NOMAPPING);
     }
-    if (GetBitMapAttr(bm, BMA_DEPTH) < 15)
-        FAIL(R_DEPTH);
-    if (!cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_ISCYBERGFX))
-        FAIL(R_NOTCGX);
-    if (cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_PIXFMT) == PIXFMT_LUT8)
-        FAIL(R_LUT8);
+    palette = IsPaletteBitMap(bm);
+    if (!palette)
+    {
+        if (GetBitMapAttr(bm, BMA_DEPTH) < 15)
+            FAIL(R_DEPTH);
+        if (!cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_ISCYBERGFX))
+            FAIL(R_NOTCGX);
+        if (cgx_GetCyberMapAttr(CyberGfxBase, bm,
+                                CYBRMATTR_PIXFMT) == PIXFMT_LUT8)
+            FAIL(R_LUT8);
+    }
     vp = FindViewPort(rp);
     if (!vp || !vp->ColorMap)
     {
@@ -1142,6 +1313,31 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     buf = GetBuffer(w * h * 3);
     if (!buf)
         FAIL(R_NOMEM);
+
+    /* "aga on": coverage as white on black, then mixed palette pens */
+    if (palette)
+    {
+        static const UBYTE white[3] = { 255, 255, 255 };
+        BOOL done;
+
+        memset(buf, 0, w * h * 3);
+        if (font)
+        {
+            aa_LockGlyphs();
+            DrawString(buf, w, h, rp, font, string, count, white,
+                       BlendFor(white));
+            aa_UnlockGlyphs();
+        }
+        else
+            DrawGradient(buf, w, h, white);
+        done = PaletteCompose(rp, vp, buf, x, y, w, h);
+        FreeBuffer(buf);
+        if (!done)
+            FAIL(R_NOMEM);
+        rp->cp_x += w;
+        COUNT(R_PALETTE);
+        return TRUE;
+    }
 
     PenToRGB(vp, GetAPen(rp), fg);
 

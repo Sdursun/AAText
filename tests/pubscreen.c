@@ -2,12 +2,14 @@
  * pubscreen - opens a public screen of a given size and font, for testing
  * how AATextPrefs (PUBSCREEN=AATEST) fits on small screens.
  *
- *   pubscreen [width] [height] [font.font] [size] [seconds] [depth]
+ *   pubscreen [width] [height] [font.font] [size] [seconds] [depth] [grey]
  *
  * Defaults: 640 x 256 PAL high resolution, topaz.font 8, 60 seconds,
  * depth 3 (8 colours). With depth 2-8 it is also the test screen for
  * AAText on palette (AGA) screens: open a Shell on it with
- * NewShell "CON:0/20/600/200/Test/SCREEN AATEST".
+ * NewShell "CON:0/20/600/200/Test/SCREEN AATEST". "grey" sets pens 4-7 to grey
+ * shades between the background and black, as Workbench palettes such
+ * as MagicWB have them.
  * The screen closes after the given time or with Ctrl-C, once all its
  * visitor windows are gone.
  */
@@ -22,6 +24,7 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/intuition.h>
+#include <proto/graphics.h>
 
 int main(int argc, char **argv)
 {
@@ -48,6 +51,15 @@ int main(int argc, char **argv)
     {
         printf("pubscreen: cannot open the screen\n");
         return RETURN_FAIL;
+    }
+    if (argc > 7 && depth >= 3)
+    {
+        static const UBYTE grey[4] = { 136, 102, 68, 34 };
+        LONG i;
+
+        for (i = 0; i < 4; i++)
+            SetRGB32(&scr->ViewPort, 4 + i, grey[i] * 0x01010101UL,
+                     grey[i] * 0x01010101UL, grey[i] * 0x01010101UL);
     }
     PubScreenStatus(scr, 0);
     printf("pubscreen: AATEST %ldx%ld, %s %ld\n", (long)w, (long)h,

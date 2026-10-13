@@ -132,3 +132,40 @@ kapalıydı). Uygulamaya başlamadan önce ilk iş bu.
 - RTG LUT8 ekranlarda aynı yolun çalışması (CGX'in 8 bit karşılıkları da
   var).
 - Hız.
+
+---
+
+## 8. Durum (14.10.2026)
+
+Yapıldı (dal `aga`, ayar `aga on`, varsayılan kapalı):
+- `PaletteCompose()` (render.c): kaplama haritası beyaz-siyah RGB tampona
+  çizilir, kalemler okunur (JAM1, `ReadPixelArray8`) ya da BgPen ile
+  doldurulur (JAM2), kaplanan pikseller yazı kalemi ya da en yakın palet
+  karışımı olur, `WritePixelArray8` ile yazılır. Her çağrıda kendi
+  belleği; kalem ayrılmaz.
+- En yakın renk ideal karışıma yakın değilse (zemin–yazı uzaklığının
+  dörtte birinden uzak) karışım kullanılmaz: o renk çifti için 1 bit.
+- Güvenli mod (`RenderString`) ve gerçek ölçü modu (`RenderReal`, 1 bitlik
+  yedek çizimden önce).
+- Ayar: `aga on|off` (prefs.c, prefswrite.c), protokol sürümü 3
+  (`AAPrefs.aga`).
+- Test araçları: `pubscreen` derinlik ve `grey` (4–7 kalemleri gri),
+  `texttest` public screen, `j` (JAM2), Ctrl-C.
+
+WinUAE'de denendi (AGA, 640×256 HIRES):
+
+| Ekran | Sonuç |
+|---|---|
+| 16 renk, varsayılan palet (gri yok) | önce kahverengi/mavi kenarlar; eşikten sonra yalnızca gri+siyah (1 bit gibi) |
+| 16 renk, `grey` | DejaVu (güvenli mod) ve Calibri (gerçek ölçü): 68/102 grileriyle yumuşatılmış |
+| 16 renk, JAM2 siyah/beyaz | 170/102 grileriyle yumuşatılmış |
+| 256 renk, varsayılan palet | Calibri JAM2: 170/85 grileriyle yumuşatılmış |
+
+Kalanlar:
+- **A4 hız:** ölçülmedi. 68020 (JIT kapalı) ve A1200/PiStorm.
+- **A5:** AATextPrefs'te `aga` kutusu, belgeler (TR/EN), sürüm notu.
+- Denenmedi: AGA Workbench (ikon etiketleri, menüler), örtülü/kısmen
+  görünür pencereler (`ReadPixelArray8` kırpması), RTG LUT8 ekranlar.
+- CGX olmayan sistemler: `aa_RenderText()` `CyberGfxBase` yoksa hiç
+  çizmiyor; salt AGA Amiga'da (RTG kartı yok) AAText bugün çalışmaz.
+  Palet yolu CGX'e ihtiyaç duymuyor; bu denetim gevşetilmeli (A5).
