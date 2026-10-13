@@ -1,4 +1,4 @@
-AAText 0.20 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.21 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -383,6 +383,10 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.21  AATextManager: "Proje > Güncellemeleri denetle..." GitHub'dan son
+      sürümü sorar ve daha yeni paketi RAM:'e indirir (TCP/IP ve AmiSSL 5
+      gerekir). Hiçbir şey kendiliğinden kurulmaz.
 
 0.20  Deneysel: paletli (AGA) ekranlarda yumuşatma, "aga on"
       (AATextPrefs: Gelişmiş), varsayılan kapalı. Harf kenarları yazı ve

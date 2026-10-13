@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text for Workbench
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/wb
-Version:      0.20
+Version:      0.21
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
@@ -39,7 +39,8 @@ Features
   the code page of a character set in the .otag and a path without
   volume name, with a preview before installing; repairs installed
   fonts (moved file, no code page, engine freetype2 -> aatext). Needs
-  aatext.library (included)
+  aatext.library (included); "Check for updates" downloads a newer
+  release to RAM: (needs TCP/IP and AmiSSL 5)
 - "Safe" metrics by default: letters keep the cells of the system's
   bitmap font, so no window layout changes
 - Optional real metrics mode ("real on"): the TrueType font's own

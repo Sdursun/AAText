@@ -1,4 +1,4 @@
-AAText 0.20 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.21 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -369,6 +369,10 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.21  AATextManager: "Project > Check for updates..." asks GitHub for the
+      latest release and downloads a newer package to RAM: (needs
+      TCP/IP and AmiSSL 5). Nothing is installed automatically.
 
 0.20  Experimental: antialiasing on palette (AGA) screens, "aga on"
       (AATextPrefs: Advanced), default off. Letter edges use the
