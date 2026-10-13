@@ -3,13 +3,16 @@
  * lines with Text() in the given font, for testing AAText with any font
  * without changing the system's font preferences.
  *
- *   texttest <name.font> <size> [seconds] [style] [text]
+ *   texttest <name.font> <size> [seconds] [style] [text] [pubscreen]
  *
  * style: optional letters b (bold), i (italic), u (underlined), applied
  * to the last line with SetSoftStyle(). The window closes after the
  * given number of seconds (default 10) or with its close gadget. "text"
- * replaces the first line. After each line, cp_x is checked against
- * TextLength() and marked with a short line (pen 3).
+ * replaces the first line ("-": the default text). "pubscreen" opens the
+ * window on that public screen instead of the Workbench, e.g. AATEST
+ * from tests/pubscreen.c for palette (AGA) screens. After each line,
+ * cp_x is checked against TextLength() and marked with a short line
+ * (pen 3).
  */
 
 #include <stdio.h>
@@ -72,8 +75,10 @@ int main(int argc, char **argv)
     }
 
     win = OpenWindowTags(NULL,
-                         WA_Left, 40, WA_Top, 200,
-                         WA_InnerWidth, 640,
+                         WA_Left, 20, WA_Top, argc > 6 ? 20 : 200,
+                         WA_InnerWidth, argc > 6 ? 560 : 640,
+                         argc > 6 ? WA_PubScreenName : TAG_IGNORE,
+                             (ULONG)(argc > 6 ? argv[6] : NULL),
                          WA_InnerHeight, (tf->tf_YSize + 6) * 4 + 8,
                          WA_Title, (ULONG)argv[1],
                          WA_DragBar, TRUE, WA_DepthGadget, TRUE,
@@ -95,7 +100,8 @@ int main(int argc, char **argv)
     y = win->BorderTop + 4 + tf->tf_Baseline;
     for (i = 0; i < 3; i++)
     {
-        const char *s = (i == 0 && argc > 5) ? argv[5] : lines[i];
+        const char *s = (i == 0 && argc > 5 && strcmp(argv[5], "-")) ?
+                        argv[5] : lines[i];
         LONG x0 = win->BorderLeft + 8, tl;
 
         if (i == 2 && style)

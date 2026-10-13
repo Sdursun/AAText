@@ -2,9 +2,12 @@
  * pubscreen - opens a public screen of a given size and font, for testing
  * how AATextPrefs (PUBSCREEN=AATEST) fits on small screens.
  *
- *   pubscreen [width] [height] [font.font] [size] [seconds]
+ *   pubscreen [width] [height] [font.font] [size] [seconds] [depth]
  *
- * Defaults: 640 x 256 PAL high resolution, topaz.font 8, 60 seconds.
+ * Defaults: 640 x 256 PAL high resolution, topaz.font 8, 60 seconds,
+ * depth 3 (8 colours). With depth 2-8 it is also the test screen for
+ * AAText on palette (AGA) screens: open a Shell on it with
+ * NewShell "CON:0/20/600/200/Test/SCREEN AATEST".
  * The screen closes after the given time or with Ctrl-C, once all its
  * visitor windows are gone.
  */
@@ -27,12 +30,13 @@ int main(int argc, char **argv)
     struct TextAttr ta = { (STRPTR)(argc > 3 ? argv[3] : "topaz.font"),
                            (UWORD)(argc > 4 ? atol(argv[4]) : 8), 0, 0 };
     LONG secs = argc > 5 ? atol(argv[5]) : 60;
+    LONG depth = argc > 6 ? atol(argv[6]) : 3;
     UWORD pens[] = { (UWORD)~0 };
     struct Screen *scr;
     LONG t;
 
     scr = OpenScreenTags(NULL,
-                         SA_Width, w, SA_Height, h, SA_Depth, 3,
+                         SA_Width, w, SA_Height, h, SA_Depth, depth,
                          SA_DisplayID, PAL_MONITOR_ID | HIRES_KEY,
                          SA_Font, (ULONG)&ta,
                          SA_Pens, (ULONG)pens,
