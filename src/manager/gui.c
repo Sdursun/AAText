@@ -497,6 +497,12 @@ static void Problems(ULONG what, char *buf, LONG len)
                      buf[0] ? ", " : "", GetString(msg[i]));
 }
 
+/* "Verdana Bold" from the .otag, or its file name ("verdanabold") */
+static const char *FontLabel(const struct AADiagEntry *e)
+{
+    return e->display[0] ? e->display : e->name;
+}
+
 /* the problems text of each listed font, kept while the list shows */
 static char (*problems)[64];
 
@@ -524,7 +530,7 @@ static LONG CheckFonts(void)
             continue;
         Problems(what, problems[i], sizeof(problems[i]));
         n = AllocListBrowserNode(2,
-            LBNA_Column, 0, LBNCA_Text, (ULONG)diag[i].name,
+            LBNA_Column, 0, LBNCA_Text, (ULONG)FontLabel(&diag[i]),
             LBNA_Column, 1, LBNCA_Text, (ULONG)problems[i],
             TAG_DONE);
         if (n)
@@ -827,7 +833,7 @@ static void DiagShow(LONG sel)
     {
         struct AADiagEntry *e = &dscan[i];
         struct Node *n = AllocListBrowserNode(3,
-            LBNA_Column, 0, LBNCA_Text, (ULONG)e->name,
+            LBNA_Column, 0, LBNCA_Text, (ULONG)FontLabel(e),
             LBNA_Column, 1, LBNCA_Text, (ULONG)GetString(diag_msg[e->status]),
             LBNA_Column, 2, LBNCA_Text,
                 (ULONG)(e->found[0] ? e->found : e->want),
@@ -939,6 +945,8 @@ static BOOL DiagWrite(const char *path)
 
         FPrintf(fh, (CONST_STRPTR)"\n%s: %s\n  .otag:    %s\n",
                 (ULONG)e->name, (ULONG)diag_name[e->status], (ULONG)e->otag);
+        if (e->display[0])
+            FPrintf(fh, (CONST_STRPTR)"  family:   %s\n", (ULONG)e->display);
         if (e->want[0])
             FPrintf(fh, (CONST_STRPTR)"  in .otag: %s\n", (ULONG)e->want);
         if (e->found[0] && strcmp(e->found, e->want))

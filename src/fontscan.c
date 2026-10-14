@@ -66,6 +66,67 @@ static BOOL KnownEngine(const char *engine)
            !Strnicmp((CONST_STRPTR)engine, (CONST_STRPTR)"freetype", 8);
 }
 
+/* Append " word" to e->display, unless the family has it already
+   ("Abadi MT Condensed Light") or there is no room. */
+static void AddWord(struct AADiagEntry *e, const char *word)
+{
+    LONG n = strlen(e->display), w = strlen(word), i;
+
+    for (i = 0; i + w <= n; i++)
+        if (!Strnicmp((CONST_STRPTR)(e->display + i), (CONST_STRPTR)word, w))
+            return;
+
+    if (n + 1 + (LONG)strlen(word) < (LONG)sizeof(e->display))
+    {
+        e->display[n] = ' ';
+        strcpy(e->display + n + 1, word);
+    }
+}
+
+/*
+ * "Verdana Bold Italic": OT_Family with a style made from OT_StemWeight,
+ * OT_SlantStyle and OT_HorizStyle (the diskfonttag.h OTS_/OTH_ values,
+ * as AATextManager and FTManager write them). Left empty without
+ * OT_Family.
+ */
+static void DisplayName(struct AADiagEntry *e, struct AAOTagFile *f)
+{
+    struct AAOTagItem *m = aa_OTagFind(f, OT_Family);
+    ULONG w;
+    LONG n;
+
+    e->display[0] = 0;
+    if (!m || !m->ind || !m->indlen || !m->ind[0])
+        return;
+    n = m->indlen < sizeof(e->display) ? m->indlen : sizeof(e->display) - 1;
+    memcpy(e->display, m->ind, n);
+    e->display[n] = 0;
+
+    if ((m = aa_OTagFind(f, OT_StemWeight)))
+    {
+        w = m->data;
+        if (w <= 40)       AddWord(e, "Thin");
+        else if (w <= 56)  AddWord(e, "ExtraLight");
+        else if (w <= 104) AddWord(e, "Light");
+        /* OTS_Book (FTManager) or OTS_Medium (other installers) for
+           regular weight */
+        else if (w <= 136) ;
+        else if (w <= 168) AddWord(e, "SemiBold");
+        else if (w <= 184) AddWord(e, "Bold");
+        else if (w <= 200) AddWord(e, "ExtraBold");
+        else               AddWord(e, "Black");
+    }
+    if ((m = aa_OTagFind(f, OT_HorizStyle)))
+    {
+        if (m->data <= 112)
+            AddWord(e, "Condensed");
+        else if (m->data >= 176)
+            AddWord(e, "Expanded");
+    }
+    if ((m = aa_OTagFind(f, OT_SlantStyle)) && m->data)
+        AddWord(e, "Italic");
+}
+
 static void Check(struct AADiagEntry *e, UBYTE *buf)
 {
     static struct AAOTagInfo ot;
@@ -98,6 +159,8 @@ static void Check(struct AADiagEntry *e, UBYTE *buf)
         e->bboxheight = aa_OTagLoad(&f, buf, len) &&
                         (!(m = aa_OTagFind(&f, OT_Spec4_Metric)) ||
                          m->data == OT_METRIC_GLOBALBBOX);
+        if (f.count)
+            DisplayName(e, &f);
     }
     Copy(e->want, ot.fontfile, sizeof(e->want));
 

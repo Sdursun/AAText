@@ -26,6 +26,9 @@ enum
 struct AADiagEntry
 {
     char  name[AA_NAME_LEN];            /* font name, without .otag */
+    char  display[64];                  /* "Verdana Bold Italic" from the
+                                           .otag's OT_Family and style
+                                           tags, or "" */
     char  otag[AA_FONTFILE_LEN];        /* the .otag file */
     char  want[AA_FONTFILE_LEN];        /* font file named in the .otag */
     char  found[AA_FONTFILE_LEN];       /* where it is (MOVED, OK) */
