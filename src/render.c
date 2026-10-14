@@ -437,12 +437,28 @@ static struct ViewPort *FindViewPort(struct RastPort *rp)
  * The CGX pixel array functions take unsigned 16 bit coordinates, and
  * without a layer nothing clips against the bitmap. Reject anything that
  * could write outside the bitmap.
+ *
+ * With a layer, a cell starting left of or above the layer (negative x
+ * or y: an icon label scrolled half out of a window) is cropped: that
+ * part is never visible. *sx, *sy get the columns and rows to skip.
+ * Rejecting it instead left such a label to the 1 bit or bitmap
+ * fallback on every scroll, next to its scrolled, antialiased part.
  */
 static BOOL CoordsOk(struct RastPort *rp, struct BitMap *bm,
-                     LONG x, LONG y, LONG w, LONG h)
+                     LONG x, LONG y, LONG w, LONG h, LONG *sx, LONG *sy)
 {
-    if (x < 0 || y < 0 || x + w > 0x7FFF || y + h > 0x7FFF)
+    *sx = *sy = 0;
+    if (x + w > 0x7FFF || y + h > 0x7FFF)
         return FALSE;
+    if (x < 0 || y < 0)
+    {
+        if (!rp->Layer)
+            return FALSE;
+        *sx = x < 0 ? -x : 0;
+        *sy = y < 0 ? -y : 0;
+        if (*sx >= w || *sy >= h)
+            return FALSE;
+    }
 
     if (!rp->Layer)
     {
@@ -996,7 +1012,8 @@ static UBYTE MixPen(struct ColorMap *cm, const ULONG *rgb, LONG ncol,
 
 /*
  * Draw a coverage map (the first byte of each RGB pixel of cov: white
- * text blended on black) into the w x h cell at x, y of a palette
+ * text blended on black, covmod bytes a row) into the w x h cell at x,
+ * y of a palette
  * rastport. The pens under the cell are read (JAM1) or are the BgPen
  * (JAM2); covered pixels become the text pen or the palette colour
  * nearest to the mix, then the pens are written back.
@@ -1006,7 +1023,8 @@ static UBYTE MixPen(struct ColorMap *cm, const ULONG *rgb, LONG ncol,
  * calls. No pens are allocated.
  */
 static BOOL PaletteCompose(struct RastPort *rp, struct ViewPort *vp,
-                           const UBYTE *cov, LONG x, LONG y, LONG w, LONG h)
+                           const UBYTE *cov, LONG covmod, LONG x, LONG y,
+                           LONG w, LONG h)
 {
     struct ColorMap *cm = vp->ColorMap;
     LONG depth = GetBitMapAttr(rp->BitMap, BMA_DEPTH);
@@ -1051,7 +1069,7 @@ static BOOL PaletteCompose(struct RastPort *rp, struct ViewPort *vp,
 
     for (r = 0; r < h; r++)
     {
-        const UBYTE *cv = cov + r * w * 3;
+        const UBYTE *cv = cov + r * covmod;
         UBYTE *p = pens + r * mod;
 
         for (c = 0; c < w; c++, cv += 3, p++)
@@ -1080,7 +1098,7 @@ static BOOL PaletteCompose(struct RastPort *rp, struct ViewPort *vp,
 }
 
 static struct ViewPort *CanBlend(struct RastPort *rp, LONG x, LONG y,
-                                 LONG w, LONG h)
+                                 LONG w, LONG h, LONG *sx, LONG *sy)
 {
     struct BitMap *bm = rp->BitMap;
 
@@ -1090,7 +1108,7 @@ static struct ViewPort *CanBlend(struct RastPort *rp, LONG x, LONG y,
         !cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_ISCYBERGFX) ||
         cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_PIXFMT) == PIXFMT_LUT8)
         return NULL;
-    if (w * h * 3 > AA_MAX_BUFFER || !CoordsOk(rp, bm, x, y, w, h))
+    if (w * h * 3 > AA_MAX_BUFFER || !CoordsOk(rp, bm, x, y, w, h, sx, sy))
         return NULL;
     return FindViewPort(rp);
 }
@@ -1108,7 +1126,7 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
     struct AAMetricsCtx m;
     struct TextExtent te;
     struct ViewPort *vp;
-    LONG x, y, w, h, ox;
+    LONG x, y, w, h, ox, sx = 0, sy = 0;
     BOOL ok;
 
     if (!rp->BitMap)
@@ -1135,7 +1153,7 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
         return TRUE;
     }
 
-    vp = CanBlend(rp, x, y, w, h);
+    vp = CanBlend(rp, x, y, w, h, &sx, &sy);
     if (vp && vp->ColorMap)
     {
         UBYTE fg[3], bg[3];
@@ -1150,16 +1168,18 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
                 FillBuffer(buf, w * h, bg);
             }
             else
-                cgx_ReadPixelArray(CyberGfxBase, buf, 0, 0, w * 3, rp,
-                                   x, y, w, h, RECTFMT_RGB);
+                cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp,
+                                   x + sx, y + sy, w - sx, h - sy,
+                                   RECTFMT_RGB);
 
             aa_LockGlyphs();
             DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, fg,
                      BlendFor(fg));
             aa_UnlockGlyphs();
 
-            cgx_WritePixelArray(CyberGfxBase, buf, 0, 0, w * 3, rp,
-                                x, y, w, h, RECTFMT_RGB);
+            cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp,
+                                x + sx, y + sy, w - sx, h - sy,
+                                RECTFMT_RGB);
             FreeBuffer(buf);
             rp->cp_x += te.te_Width;
             COUNT(R_REAL_AA);
@@ -1170,7 +1190,8 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
     /* "aga on": palette screens with mixed pens */
     if (!vp && IsPaletteBitMap(rp->BitMap) &&
         !(rp->DrawMode & (COMPLEMENT | INVERSVID)) &&
-        w * h * 3 <= AA_MAX_BUFFER && CoordsOk(rp, rp->BitMap, x, y, w, h) &&
+        w * h * 3 <= AA_MAX_BUFFER &&
+        CoordsOk(rp, rp->BitMap, x, y, w, h, &sx, &sy) &&
         (vp = FindViewPort(rp)) && vp->ColorMap)
     {
         static const UBYTE white[3] = { 255, 255, 255 };
@@ -1185,7 +1206,8 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
             DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, white,
                      BlendFor(white));
             aa_UnlockGlyphs();
-            done = PaletteCompose(rp, vp, buf, x, y, w, h);
+            done = PaletteCompose(rp, vp, buf + (sy * w + sx) * 3, w * 3,
+                                  x + sx, y + sy, w - sx, h - sy);
             FreeBuffer(buf);
             if (done)
             {
@@ -1228,6 +1250,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     UBYTE fg[3], bg[3];
     UBYTE *buf;
     BOOL palette;
+    LONG sx = 0, sy = 0;           /* cropped columns and rows */
     LONG x, y, w, h;
 #ifdef DEBUG
     ULONG ts0 = 0, ts1 = 0, ts2 = 0, ts3 = 0, ts4 = 0;
@@ -1286,7 +1309,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     x = rp->cp_x;
     y = rp->cp_y - tf->tf_Baseline;
     if (w <= 0 || h <= 0 || w * h * 3 > AA_MAX_BUFFER ||
-        !CoordsOk(rp, bm, x, y, w, h))
+        !CoordsOk(rp, bm, x, y, w, h, &sx, &sy))
         FAIL(R_COORDS);
 
     if (mode == AA_MODE_BOX)
@@ -1331,7 +1354,8 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         }
         else
             DrawGradient(buf, w, h, white);
-        done = PaletteCompose(rp, vp, buf, x, y, w, h);
+        done = PaletteCompose(rp, vp, buf + (sy * w + sx) * 3, w * 3,
+                              x + sx, y + sy, w - sx, h - sy);
         FreeBuffer(buf);
         if (!done)
             FAIL(R_NOMEM);
@@ -1350,8 +1374,8 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         FillBuffer(buf, w * h, bg);
     }
     else
-        cgx_ReadPixelArray(CyberGfxBase, buf, 0, 0, w * 3, rp, x, y, w, h,
-                           RECTFMT_RGB);
+        cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp, x + sx,
+                           y + sy, w - sx, h - sy, RECTFMT_RGB);
     TSTAMP(ts2);
 
     if (font)
@@ -1364,8 +1388,8 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         DrawGradient(buf, w, h, fg);
 
     TSTAMP(ts3);
-    cgx_WritePixelArray(CyberGfxBase, buf, 0, 0, w * 3, rp, x, y, w, h,
-                        RECTFMT_RGB);
+    cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp, x + sx, y + sy,
+                        w - sx, h - sy, RECTFMT_RGB);
     FreeBuffer(buf);
     TSTAMP(ts4);
 #ifdef DEBUG
