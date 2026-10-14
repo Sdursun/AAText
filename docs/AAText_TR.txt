@@ -1,4 +1,4 @@
-AAText 0.27 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.28 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -431,6 +431,12 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.28  Install-AAText, "Run >NIL: C:AAText" satırını S:Startup-Sequence'te
+      IPrefs'in hemen altına ekler (yedekle; AAText zaten başlatılıyorsa
+      dokunmaz); yeni "AAText STARTUP=ADD|REMOVE". Kaldır artık
+      "aatext" motoruyla kurulan fontların ihtiyaç duyduğu
+      LIBS:aatext.library'yi silmiyor.
 
 0.27  AATextManager: İndir sekmesi. Google Fonts'tan 150 kadar ücretsiz
       font ailesi: arama, önizleme, indirme ve kurma (TCP/IP ve AmiSSL 5

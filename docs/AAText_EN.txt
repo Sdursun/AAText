@@ -1,4 +1,4 @@
-AAText 0.27 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.28 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -416,6 +416,12 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.28  Install-AAText adds "Run >NIL: C:AAText" to S:Startup-Sequence
+      right after IPrefs (with a backup; left alone if AAText is started
+      already); new "AAText STARTUP=ADD|REMOVE". Remove no longer deletes
+      LIBS:aatext.library, which fonts installed with the engine
+      "aatext" need.
 
 0.27  AATextManager: Download tab. About 150 free font families from
       Google Fonts: search, preview, download and install (needs TCP/IP
