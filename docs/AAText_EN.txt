@@ -192,7 +192,8 @@ ENV:ftcodepage.
                  (otherwise they are skipped; replaced files are kept
                  as .bak), "Install". At the end diskfont opens each
                  font as a check. Select a font in the list to see
-                 it in a few sizes below it (RTG screens), before it
+                 it in a few sizes below it (on palette screens in the
+                 nearest palette colours), before it
                  is installed.
   Repair tab     "Check fonts" lists the fonts in FONTS: that can be
                  repaired: font file moved, no code page, engine

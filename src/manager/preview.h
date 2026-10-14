@@ -6,7 +6,8 @@
  * sizes, rendered with FreeType (aatext.library) into an RGB buffer in
  * the program's own process. The gadget's render hook only copies that
  * buffer to the window (WritePixelArray), so FreeType never runs on
- * Intuition's small stacks. RTG screens only.
+ * Intuition's small stacks. RTG screens (RGB) and palette screens
+ * (nearest palette colours, as AAText's "aga on").
  */
 
 #include <exec/types.h>
@@ -16,7 +17,7 @@
 #define PV_WIDTH   720          /* the buffer; the box shows what fits */
 #define PV_HEIGHT  160
 
-/* Open cybergraphics.library; FALSE if missing (no preview). */
+/* Buffers (and cybergraphics.library if there); FALSE: no preview. */
 BOOL pv_Init(void);
 void pv_Cleanup(void);
 
