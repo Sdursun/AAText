@@ -147,15 +147,17 @@ AATextManager installs TrueType and OpenType fonts (.ttf, .otf, .ttc)
 for diskfont.library, as FTManager does, and repairs fonts installed
 before. It needs aatext.library in LIBS:.
 
-Installing copies the font file to FONTS:_ttf/ and writes
-<family><style>.font and .otag to FONTS: (e.g. verdanabold.font). The
-.otag names the file as FONTS:_ttf/... (no volume name, so renaming the
-boot disk does not break it) and holds the code page of the chosen
+Installing copies the font file to the directory set on the Settings
+tab (FONTS:_ttf/ unless changed) and writes <family><style>.font and
+.otag to FONTS: (e.g. verdanabold.font). The .otag names the file as
+FONTS:_ttf/... (no volume name, so renaming the boot disk does not
+break it) and holds the code page of the chosen
 character set, so Turkish and other letters work without
 ENV:ftcodepage.
 
   Character set  the code page written into the .otag; preset to the
-                 one chosen in AATextPrefs
+                 default set on the Settings tab (ISO-8859-1 if none
+                 was saved)
   Engine         aatext (aatext.library, default) or freetype2
                  (freetype2.library); programs need the engine's
                  library to open the font
@@ -204,6 +206,13 @@ ENV:ftcodepage.
                  font, and the line below says so.
                  "Save report..." writes the list to a text file for bug
                  reports. The scan itself changes nothing.
+  Settings tab   where font files are copied, one directory each for
+                 .ttf, .otf and .ttc/.otc (default FONTS:_ttf/;
+                 "Choose..." opens a drawer requester), and the
+                 default character set. A directory inside FONTS: is
+                 written as FONTS:... (e.g. FONTS:truetype/), others
+                 with their volume name. "Save settings" writes
+                 ENV: and ENVARC:AATextManager.prefs.
 
 Updates: "Project > Check for updates..." asks GitHub for the latest
 release. If it is newer, the package is downloaded to RAM: (e.g.
@@ -222,9 +231,11 @@ From the Shell:
   AATextManager REPAIR CHARSET=latin5 ENGINE=aatext     (lists only)
   AATextManager REPAIR CHARSET=latin5 ENGINE=aatext APPLY
 
-CHARSET is one of latin1 (default), latin2, latin3, latin4, latin5,
-latin9, latin10, cp1250, cyrillic, koi8r or none. Without FILES and
-REPAIR the window opens.
+CHARSET is one of latin1, latin2, latin3, latin4, latin5,
+latin9, latin10, cp1250, cyrillic, koi8r or none; without it the default
+from the Settings tab is used. Font files go to the directories of the
+Settings tab; TO=<dir> installs into <dir> (font files in <dir>_ttf/)
+instead. Without FILES and REPAIR the window opens.
 
 
 Settings

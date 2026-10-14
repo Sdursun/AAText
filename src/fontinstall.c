@@ -197,8 +197,19 @@ LONG aa_InstallFont(struct AAInstall *in)
     if ((Exists(fontpath) || Exists(otagpath)) && !in->overwrite)
         return AA_INSTALL_EXISTS;
 
-    /* the font file: <fonts>_ttf/<file> */
-    Join(ttfdir, sizeof(ttfdir), in->fonts, "_ttf");
+    /* the font file: <fontdir>/<file>, by default <fonts>_ttf/<file> */
+    if (in->fontdir && in->fontdir[0])
+    {
+        strncpy(ttfdir, in->fontdir, sizeof(ttfdir) - 1);
+        ttfdir[sizeof(ttfdir) - 1] = 0;
+        /* "FONTS:truetype/": CreateDir() wants no trailing "/" */
+        size = strlen(ttfdir);
+        while (size > 1 && ttfdir[size - 1] == '/' && ttfdir[size - 2] != ':' &&
+               ttfdir[size - 2] != '/')
+            ttfdir[--size] = 0;
+    }
+    else
+        Join(ttfdir, sizeof(ttfdir), in->fonts, "_ttf");
     if (!Exists(ttfdir))
     {
         BPTR l = CreateDir((CONST_STRPTR)ttfdir);

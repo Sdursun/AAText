@@ -323,7 +323,26 @@ int main(int argc, char **argv)
         }
         if (fp)
             fclose(fp);
-        printf("%s\n", bad ? "FAIL" : "ok: tags as FTManager, clash, overwrite");
+
+        /* a directory of its own (AATextManager's Settings tab), with a
+           trailing "/" that CreateDir() must not see */
+        in.fontdir = "inst:truetype/";
+        r = aa_InstallFont(&in);
+        sprintf(path, "%s%s.otag", argv[4], in.name);
+        fp = fopen(path, "rb");
+        len = fp ? fread(buf, 1, sizeof(buf), fp) : 0;
+        if (fp)
+            fclose(fp);
+        if (r != AA_INSTALL_OK || !in.copied ||
+            strcmp(in.fontfile, "inst:truetype/DejaVuSans.ttf") ||
+            !aa_ParseOTag(buf, len, &info) ||
+            strcmp(info.fontfile, "inst:truetype/DejaVuSans.ttf"))
+        {
+            printf("FAIL: fontdir: %ld copied %d file %s\n", (long)r,
+                   in.copied, in.fontfile);
+            bad = 1;
+        }
+        printf("%s\n", bad ? "FAIL" : "ok: tags as FTManager, clash, overwrite, fontdir");
         return bad ? 10 : 0;
     }
 

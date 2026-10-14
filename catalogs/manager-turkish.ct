@@ -74,7 +74,7 @@ MSG_REPAIRED
 MSG_CHANGE_ENGINE
 freetype2 motorunu seçilen motora çevir
 MSG_INFO_INSTALL
-Font dosyaları FONTS:_ttf/ altına kopyalanır, .font ve .otag FONTS:'a yazılır.
+Font dosyaları Ayarlar sekmesindeki dizinlere kopyalanır, .font ve .otag FONTS:'a yazılır.
 MSG_INFO_REPAIR
 FONTS:'taki .otag dosyalarını denetler. Kod sayfası: yukarıdaki karakter seti.
 MSG_NOTOPEN
@@ -214,3 +214,27 @@ MSG_DIAG_ENGINENONE
 %s (%s.library kurulu değil)
 MSG_DIAG_WRITEERR
 %s yazılamadı.
+MSG_TAB_SETTINGS
+Ayarlar
+MSG_SET_INFO
+Kurulan font dosyalarının kopyalanacağı yerler ve AATextManager açılırken seçili karakter seti.
+MSG_SET_TTFDIR
+TTF dizini
+MSG_SET_OTFDIR
+OTF dizini
+MSG_SET_TTCDIR
+TTC/OTC dizini
+MSG_SET_PICK
+Seç...
+MSG_SET_PICKTITLE
+Font dosyaları için dizin
+MSG_SET_CHARSET
+Varsayılan karakter seti
+MSG_SET_SAVE
+Ayarları _kaydet
+MSG_SET_SAVED
+Ayarlar kaydedildi (ENVARC:AATextManager.prefs).
+MSG_SET_SAVEERR
+ENV:/ENVARC:AATextManager.prefs yazılamadı.
+MSG_SET_NOTE
+FONTS: içindeki dizinler FONTS:... olarak, diğerleri disk adıyla yazılır.

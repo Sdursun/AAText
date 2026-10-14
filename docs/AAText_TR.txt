@@ -153,14 +153,15 @@ AATextManager, TrueType ve OpenType fontları (.ttf, .otf, .ttc)
 FTManager gibi diskfont.library için kurar ve önceden kurulmuş fontları
 onarır. LIBS:'te aatext.library gerekir.
 
-Kurulum, font dosyasını FONTS:_ttf/ altına kopyalar ve FONTS:'a
-<aile><stil>.font ile .otag yazar (ör. verdanabold.font). .otag dosyayı
+Kurulum, font dosyasını Ayarlar sekmesindeki dizine (değiştirilmediyse
+FONTS:_ttf/) kopyalar ve FONTS:'a <aile><stil>.font ile .otag yazar (ör. verdanabold.font). .otag dosyayı
 FONTS:_ttf/... olarak gösterir (disk adı yok, açılış diskinin adı
 değişse de bozulmaz) ve seçilen karakter setinin kod sayfasını taşır;
 böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
 
-  Karakter seti  .otag'a yazılan kod sayfası; AATextPrefs'te seçilen
-                 set önceden seçili gelir
+  Karakter seti  .otag'a yazılan kod sayfası; Ayarlar sekmesindeki
+                 varsayılan set seçili gelir (kaydedilmemişse
+                 ISO-8859-1)
   Motor          aatext (aatext.library, varsayılan) ya da freetype2
                  (freetype2.library); programların fontu açabilmesi
                  için motorun kütüphanesi gerekir
@@ -213,6 +214,13 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  program açamaz; alttaki satır bunu söyler.
                  "Raporu kaydet..." listeyi hata bildirimleri için bir metin
                  dosyasına yazar. Taramanın kendisi hiçbir şeyi değiştirmez.
+  Ayarlar        font dosyalarının kopyalanacağı yerler: .ttf, .otf ve
+                 .ttc/.otc için birer dizin (varsayılan FONTS:_ttf/;
+                 "Seç..." dizin seçiciyi açar) ve varsayılan karakter
+                 seti. FONTS: içindeki bir dizin FONTS:... olarak
+                 (ör. FONTS:truetype/), diğerleri disk adıyla yazılır.
+                 "Ayarları kaydet" ENV: ve ENVARC:AATextManager.prefs
+                 dosyalarına yazar.
 
 Güncellemeler: "Proje > Güncellemeleri denetle..." GitHub'dan son sürümü
 sorar. Daha yeniyse paket RAM:'e indirilir (ör. RAM:AAText-v0.21.lha) ve
@@ -231,9 +239,12 @@ Shell'den:
   AATextManager REPAIR CHARSET=latin5 ENGINE=aatext     (sadece listeler)
   AATextManager REPAIR CHARSET=latin5 ENGINE=aatext APPLY
 
-CHARSET: latin1 (varsayılan), latin2, latin3, latin4, latin5, latin9,
-latin10, cp1250, cyrillic, koi8r ya da none. FILES ve REPAIR
-verilmezse pencere açılır.
+CHARSET: latin1, latin2, latin3, latin4, latin5, latin9,
+latin10, cp1250, cyrillic, koi8r ya da none; verilmezse Ayarlar
+sekmesindeki varsayılan kullanılır. Font dosyaları Ayarlar sekmesindeki
+dizinlere gider; TO=<dizin> verilirse bunun yerine <dizin>'e kurulur
+(font dosyaları <dizin>_ttf/ altına). FILES ve REPAIR verilmezse pencere
+açılır.
 
 
 Ayarlar

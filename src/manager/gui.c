@@ -9,6 +9,8 @@
  *            repaired; Repair asks once, then repairs them all
  *   Diagnostics  every .otag in FONTS: with its font file and status,
  *            Fix .otag for a moved font file, a plain text report
+ *   Settings the directories font files are copied to (by kind) and the
+ *            character set the window starts with (settings.c)
  */
 
 #include <exec/types.h>
@@ -59,6 +61,7 @@
 #include "strings.h"
 #include "preview.h"
 #include "update.h"
+#include "settings.h"
 #include "../fontscan.h"
 #include "../charsets.h"
 #include "../prefs.h"
@@ -77,6 +80,8 @@ enum
     GID_CHECK, GID_REPAIRLIST, GID_CHANGEENGINE, GID_REPAIR,
     GID_DSCAN, GID_DSCANSUM, GID_DFONTLIST, GID_DDETAIL1, GID_DDETAIL2,
     GID_DDETAIL3, GID_DDETAIL4, GID_DADVICE, GID_DFIX, GID_DREPORT,
+    GID_TTFDIR, GID_TTFPICK, GID_OTFDIR, GID_OTFPICK, GID_TTCDIR,
+    GID_TTCPICK, GID_DEFCHARSET, GID_SAVESET,
     GID_STATUS,
     GID_COUNT
 };
@@ -95,7 +100,7 @@ struct FileEntry
 static struct Gadget *gads[GID_COUNT];
 static Object *winobj, *pages;
 static struct Window *win;
-static struct List tablist, charsetlist, enginelist, filelb, repairlb,
+static struct List tablist, charsetlist, defcharsetlist, enginelist, filelb, repairlb,
                    diaglb;
 static struct FileEntry *files;
 static LONG numfiles;
@@ -106,6 +111,7 @@ static LONG numdiag;
 static struct AADiagEntry *dscan;       /* MAX_DIAG entries */
 static LONG numdscan = -1;              /* -1: not scanned yet */
 static char statustext[200];
+static struct MgrSettings settings;
 static char sizestext[80] = "8-16,18,20,24";
 
 static const char *const engines[2] = { "aatext", "freetype2" };
@@ -193,6 +199,8 @@ static LONG PageOf(LONG gid)
         return 1;
     if (gid >= GID_DSCAN && gid <= GID_DREPORT)
         return 2;
+    if (gid >= GID_TTFDIR && gid <= GID_SAVESET)
+        return 3;
     return -1;
 }
 
@@ -390,6 +398,19 @@ static void RemoveFile(void)
     ShowFiles();
 }
 
+/* the Settings tab's directories, as they are typed */
+static const ULONG dirgad[MGR_NUM_DIRS] = { GID_TTFDIR, GID_OTFDIR, GID_TTCDIR };
+
+static void ReadDirs(void)
+{
+    LONG i;
+    const char *t;
+
+    for (i = 0; i < MGR_NUM_DIRS; i++)
+        if ((t = (const char *)GetGad(dirgad[i], STRINGA_TextVal)) && t[0])
+            snprintf(settings.dir[i], sizeof(settings.dir[i]), "%s", t);
+}
+
 static void Install(void)
 {
     static struct AAInstall in;
@@ -411,12 +432,14 @@ static void Install(void)
     in.charset = Charset();
     in.engine = Engine();
     in.overwrite = GetGad(GID_OVERWRITE, GA_Selected) != 0;
+    ReadDirs();
 
     Busy(TRUE);
     for (i = 0; i < numfiles; i++)
     {
         in.source = files[i].path;
         in.face = files[i].face;
+        in.fontdir = settings.dir[mgr_DirKind(in.source)];
         switch (aa_InstallFont(&in))
         {
             case AA_INSTALL_OK:
@@ -581,6 +604,8 @@ static void FreeLists(void)
     while ((n = RemHead(&tablist)))
         FreeClickTabNode(n);
     while ((n = RemHead(&charsetlist)))
+        FreeChooserNode(n);
+    while ((n = RemHead(&defcharsetlist)))
         FreeChooserNode(n);
     while ((n = RemHead(&enginelist)))
         FreeChooserNode(n);
@@ -1067,6 +1092,125 @@ static Object *DiagPage(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* Settings tab                                                         */
+/* ------------------------------------------------------------------ */
+
+/* ASL's drawer requester; the drawer goes into the field. */
+static void PickDir(LONG kind)
+{
+    static char path[MGR_DIR_LEN];
+    struct FileRequester *fr;
+    LONG n;
+
+    ReadDirs();
+    fr = AllocAslRequestTags(ASL_FileRequest,
+                             ASLFR_Window, (ULONG)win,
+                             ASLFR_TitleText,
+                                 (ULONG)GetString(MSG_SET_PICKTITLE),
+                             ASLFR_InitialDrawer, (ULONG)settings.dir[kind],
+                             ASLFR_DrawersOnly, TRUE,
+                             ASLFR_SleepWindow, TRUE,
+                             TAG_DONE);
+    if (!fr)
+        return;
+    if (AslRequest(fr, NULL) && fr->fr_Drawer && fr->fr_Drawer[0])
+    {
+        snprintf(path, sizeof(path), "%s", (char *)fr->fr_Drawer);
+        mgr_FontsRelative(path, sizeof(path));
+        n = strlen(path);
+        if (n && path[n - 1] != ':' && path[n - 1] != '/' &&
+            n < (LONG)sizeof(path) - 1)
+            strcat(path, "/");
+        snprintf(settings.dir[kind], sizeof(settings.dir[kind]), "%s", path);
+        SetGad(dirgad[kind], STRINGA_TextVal, (ULONG)settings.dir[kind]);
+    }
+    FreeAslRequest(fr);
+}
+
+static void SaveSettings(void)
+{
+    LONG i;
+
+    ReadDirs();
+    for (i = 0; i < MGR_NUM_DIRS; i++)
+    {
+        mgr_FontsRelative(settings.dir[i], sizeof(settings.dir[i]));
+        SetGad(dirgad[i], STRINGA_TextVal, (ULONG)settings.dir[i]);
+    }
+    settings.charset = (LONG)GetGad(GID_DEFCHARSET, CHOOSER_Selected);
+    SetStatus(GetString(mgr_SaveSettings(&settings) ? MSG_SET_SAVED :
+                                                       MSG_SET_SAVEERR));
+}
+
+static struct Gadget *DirField(ULONG id, LONG kind)
+{
+    return (struct Gadget *)StringObject,
+        GA_ID, id,
+        GA_TabCycle, TRUE,
+        STRINGA_MaxChars, MGR_DIR_LEN - 1,
+        STRINGA_TextVal, (ULONG)settings.dir[kind],
+    End;
+}
+
+static Object *DirRow(ULONG field, ULONG pick, LONG kind)
+{
+    return HLayoutObject,
+        LAYOUT_AddChild, gads[field] = DirField(field, kind),
+        LAYOUT_AddChild, gads[pick] = (struct Gadget *)ButtonObject,
+            GA_ID, pick, GA_RelVerify, TRUE,
+            GA_Text, (ULONG)GetString(MSG_SET_PICK),
+        End,
+        CHILD_WeightedWidth, 0,
+    End;
+}
+
+static Object *SettingsPage(void)
+{
+    return VLayoutObject,
+        LAYOUT_SpaceOuter, TRUE,
+        LAYOUT_DeferLayout, TRUE,
+        LAYOUT_AddImage, InfoLine(MSG_SET_INFO),
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, VLayoutObject,
+            LAYOUT_AddChild, DirRow(GID_TTFDIR, GID_TTFPICK, MGR_DIR_TTF),
+            CHILD_Label, LabelObject,
+                LABEL_Text, (ULONG)GetString(MSG_SET_TTFDIR),
+            End,
+            LAYOUT_AddChild, DirRow(GID_OTFDIR, GID_OTFPICK, MGR_DIR_OTF),
+            CHILD_Label, LabelObject,
+                LABEL_Text, (ULONG)GetString(MSG_SET_OTFDIR),
+            End,
+            LAYOUT_AddChild, DirRow(GID_TTCDIR, GID_TTCPICK, MGR_DIR_TTC),
+            CHILD_Label, LabelObject,
+                LABEL_Text, (ULONG)GetString(MSG_SET_TTCDIR),
+            End,
+            LAYOUT_AddChild, gads[GID_DEFCHARSET] =
+                             (struct Gadget *)ChooserObject,
+                GA_ID, GID_DEFCHARSET, GA_RelVerify, TRUE,
+                CHOOSER_PopUp, TRUE,
+                CHOOSER_Labels, (ULONG)&defcharsetlist,
+                CHOOSER_Selected, settings.charset,
+            End,
+            Label(GetString(MSG_SET_CHARSET)),
+        End,
+        CHILD_WeightedHeight, 0,
+        LAYOUT_AddImage, InfoLine(MSG_SET_NOTE),
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, SpaceObject, End,     /* takes the spare height */
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, SpaceObject, End,
+            LAYOUT_AddChild, gads[GID_SAVESET] = MakeButton(GID_SAVESET,
+                                                            MSG_SET_SAVE),
+            CHILD_WeightedWidth, 0,
+        End,
+        CHILD_WeightedHeight, 0,
+    End;
+}
+
+/* ------------------------------------------------------------------ */
 /* Menu: update check                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -1148,8 +1292,12 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
     AddTab(&tablist, MSG_TAB_INSTALL, 0);
     AddTab(&tablist, MSG_TAB_REPAIR, 1);
     AddTab(&tablist, MSG_TAB_DIAG, 2);
+    AddTab(&tablist, MSG_TAB_SETTINGS, 3);
     for (i = 0; i < AA_NUM_CHARSETS; i++)
+    {
         AddChoice(&charsetlist, GetString(charset_msg[i]));
+        AddChoice(&defcharsetlist, GetString(charset_msg[i]));
+    }
     AddChoice(&enginelist, GetString(MSG_ENGINE_AATEXT));
     AddChoice(&enginelist, GetString(MSG_ENGINE_FT2));
 
@@ -1198,6 +1346,7 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
                     PAGE_Add, InstallPage(),
                     PAGE_Add, RepairPage(),
                     PAGE_Add, DiagPage(),
+                    PAGE_Add, SettingsPage(),
                 End,
             End,
 
@@ -1233,6 +1382,10 @@ static void Action(ULONG id)
         case GID_DFONTLIST: DiagDetail();   break;
         case GID_DFIX:      DiagFix();      break;
         case GID_DREPORT:   DiagReport();   break;
+        case GID_TTFPICK:   PickDir(MGR_DIR_TTF); break;
+        case GID_OTFPICK:   PickDir(MGR_DIR_OTF); break;
+        case GID_TTCPICK:   PickDir(MGR_DIR_TTC); break;
+        case GID_SAVESET:   SaveSettings(); break;
         case GID_CHARSET:
         case GID_ENGINE:
         case GID_CHANGEENGINE:
@@ -1257,9 +1410,8 @@ int mgr_RunGUI(const char *language)
     {
         { MSG_ADD, GID_ADD }, { MSG_REMOVE, GID_REMOVE },
         { MSG_INSTALL, GID_INSTALL }, { MSG_CHECK, GID_CHECK },
-        { MSG_REPAIR, GID_REPAIR },
+        { MSG_REPAIR, GID_REPAIR }, { MSG_SET_SAVE, GID_SAVESET },
     };
-    static struct AAPrefs prefs;
     struct Screen *scr = NULL;
     ULONG sigmask = 0;
     BOOL done = FALSE;
@@ -1267,6 +1419,7 @@ int mgr_RunGUI(const char *language)
 
     NewList(&tablist);
     NewList(&charsetlist);
+    NewList(&defcharsetlist);
     NewList(&enginelist);
     NewList(&filelb);
     NewList(&repairlb);
@@ -1282,11 +1435,13 @@ int mgr_RunGUI(const char *language)
     previewhook.h_Entry = (HOOKFUNC)(APTR)HookEntry;
     previewhook.h_SubEntry = (HOOKFUNC)(APTR)PreviewRender;
 
-    /* the character set chosen in AATextPrefs */
-    aa_ReadPrefs(&prefs, NULL, FALSE);
+    /* the character set saved on the Settings tab, else ISO-8859-1 */
+    mgr_LoadSettings(&settings);
+    if (settings.charset < 0 || settings.charset >= AA_NUM_CHARSETS)
+        settings.charset = AA_CHARSET_LATIN1;
     if (!(scr = LockPubScreen(NULL)))
         goto out;
-    if (!OpenWin(scr, prefs.charset < AA_NUM_CHARSETS ? prefs.charset : 0))
+    if (!OpenWin(scr, settings.charset))
         goto out;
     UnlockPubScreen(NULL, scr);
     scr = NULL;

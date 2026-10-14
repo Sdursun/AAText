@@ -1,0 +1,49 @@
+#ifndef AATEXTMANAGER_SETTINGS_H
+#define AATEXTMANAGER_SETTINGS_H
+
+/*
+ * AATextManager's own settings: where installed font files go (one
+ * directory for each kind of font file) and the character set the
+ * window starts with. Kept in ENV:/ENVARC:AATextManager.prefs, plain
+ * text:
+ *
+ *   ttfdir  FONTS:_ttf/
+ *   otfdir  FONTS:_ttf/
+ *   ttcdir  FONTS:_ttf/
+ *   charset latin1
+ */
+
+#include <exec/types.h>
+
+#define MGR_PREFS_ENV     "ENV:AATextManager.prefs"
+#define MGR_PREFS_ENVARC  "ENVARC:AATextManager.prefs"
+#define MGR_DIR_DEFAULT   "FONTS:_ttf/"
+#define MGR_DIR_LEN       256
+
+enum { MGR_DIR_TTF, MGR_DIR_OTF, MGR_DIR_TTC, MGR_NUM_DIRS };
+
+struct MgrSettings
+{
+    char dir[MGR_NUM_DIRS][MGR_DIR_LEN];
+    LONG charset;                   /* AA_CHARSET_* */
+};
+
+/* Defaults: FONTS:_ttf/ for all, ISO-8859-1. */
+void mgr_DefaultSettings(struct MgrSettings *s);
+
+/* ENV: (then ENVARC:) over the defaults; FALSE if neither was there. */
+BOOL mgr_LoadSettings(struct MgrSettings *s);
+
+/* To ENV: and ENVARC:; FALSE if one could not be written. */
+BOOL mgr_SaveSettings(const struct MgrSettings *s);
+
+/* MGR_DIR_* for a font file name: .otf, .ttc/.otc, otherwise .ttf. */
+LONG mgr_DirKind(const char *file);
+
+/*
+ * A directory inside FONTS: as "FONTS:<rest>" (so the .otag still works
+ * after the boot volume is renamed); others are left as they are.
+ */
+void mgr_FontsRelative(char *path, LONG len);
+
+#endif

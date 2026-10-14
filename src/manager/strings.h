@@ -46,7 +46,7 @@
     S(MSG_REPAIR_GADS,      30, "Repair|Cancel") \
     S(MSG_REPAIRED,         31, "%ld of %ld fonts repaired.") \
     S(MSG_CHANGE_ENGINE,    32, "Change engine freetype2 to the chosen one") \
-    S(MSG_INFO_INSTALL,     33, "Font files are copied to FONTS:_ttf/, .font and .otag are written to FONTS:.") \
+    S(MSG_INFO_INSTALL,     33, "Font files are copied to the directories on the Settings tab, .font and .otag are written to FONTS:.") \
     S(MSG_INFO_REPAIR,      34, "Checks the .otag files in FONTS:. Code page: the character set above.") \
     S(MSG_NOTOPEN,          35, "Installed, but diskfont cannot open %s.") \
     S(MSG_NOFONTS,          36, "Add font files first.") \
@@ -115,7 +115,19 @@
     S(MSG_DIAG_L_ENGINE,   99, "OT_Engine") \
     S(MSG_DIAG_ENGINEFMT,  100, "%s (%s.library %s)") \
     S(MSG_DIAG_ENGINENONE, 101, "%s (%s.library not installed)") \
-    S(MSG_DIAG_WRITEERR,   102, "Cannot write %s.")
+    S(MSG_DIAG_WRITEERR,   102, "Cannot write %s.") \
+    S(MSG_TAB_SETTINGS,    103, "Settings") \
+    S(MSG_SET_INFO,        104, "Where installed font files are copied, and the character set AATextManager starts with.") \
+    S(MSG_SET_TTFDIR,      105, "TTF directory") \
+    S(MSG_SET_OTFDIR,      106, "OTF directory") \
+    S(MSG_SET_TTCDIR,      107, "TTC/OTC directory") \
+    S(MSG_SET_PICK,        108, "Choose...") \
+    S(MSG_SET_PICKTITLE,   109, "Directory for font files") \
+    S(MSG_SET_CHARSET,     110, "Default character set") \
+    S(MSG_SET_SAVE,        111, "Sa_ve settings") \
+    S(MSG_SET_SAVED,       112, "Settings saved (ENVARC:AATextManager.prefs).") \
+    S(MSG_SET_SAVEERR,     113, "Cannot write ENV:/ENVARC:AATextManager.prefs.") \
+    S(MSG_SET_NOTE,        114, "Directories in FONTS: are written as FONTS:..., others with their volume name.")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

@@ -29,6 +29,7 @@
 
 #include "../fontinstall.h"
 #include "../charsets.h"
+#include "settings.h"
 #include "../fontscan.h"
 #include "manager.h"
 
@@ -298,7 +299,8 @@ static int Main(int argc, char **argv)
     static struct AAInstall in;
     STRPTR *files;
     LONG rc = RETURN_OK, warn = RETURN_OK;
-    LONG cs = 0;                    /* latin1, the Amiga default */
+    static struct MgrSettings set;
+    LONG cs;
 
     (void)version;
     (void)argv;
@@ -335,6 +337,9 @@ static int Main(int argc, char **argv)
         goto out;
     }
 
+    /* the Settings tab's character set and directories, unless given */
+    mgr_LoadSettings(&set);
+    cs = set.charset;
     aa_InstallDefaults(&in);
     if (args[ARG_CHARSET])
         cs = Charset((const char *)args[ARG_CHARSET]);
@@ -366,6 +371,8 @@ static int Main(int argc, char **argv)
         LONG r;
 
         in.source = (const char *)*files;
+        /* TO= installs into that directory the old way (<TO>_ttf/) */
+        in.fontdir = args[ARG_TO] ? NULL : set.dir[mgr_DirKind(in.source)];
         r = aa_InstallFont(&in);
         switch (r)
         {

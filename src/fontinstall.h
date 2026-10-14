@@ -3,9 +3,9 @@
 
 /*
  * AATextManager: install an outline font for diskfont, as FTManager
- * does. The font file is copied to <fonts>_ttf/, and <name>.font (4 bytes,
+ * does. The font file is copied to fontdir (default <fonts>_ttf/), and <name>.font (4 bytes,
  * no bitmap sizes) and <name>.otag are written to <fonts>, the .otag
- * naming the font file as "<fonts>_ttf/<file>" (no volume name) and
+ * naming the font file as "<fontdir>/<file>" ("FONTS:_ttf/x.ttf") and
  * carrying the code page of the chosen character set.
  */
 
@@ -30,6 +30,7 @@ struct AAInstall
     const char *source;     /* font file */
     LONG  face;             /* face in a .ttc */
     const char *fonts;      /* "FONTS:" or a directory ending in ':'/'/' */
+    const char *fontdir;    /* where the font file goes; NULL: <fonts>_ttf/ */
     const char *engine;     /* "aatext" or "freetype2" */
     LONG  charset;          /* AA_CHARSET_*, or -1 for no code page */
     UWORD sizes[AA_INSTALL_MAXSIZES];
