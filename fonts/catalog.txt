@@ -242,3 +242,438 @@ Russo One	Regular	OFL	39124	ofl/russoone/RussoOne-Regular.ttf
 Audiowide	Regular	OFL	69916	ofl/audiowide/Audiowide-Regular.ttf
 Silkscreen	Bold	OFL	30632	ofl/silkscreen/Silkscreen-Bold.ttf
 Silkscreen	Regular	OFL	32220	ofl/silkscreen/Silkscreen-Regular.ttf
+Bebas Neue	Regular	OFL	61400	ofl/bebasneue/BebasNeue-Regular.ttf
+Archivo Black	Regular	OFL	90988	ofl/archivoblack/ArchivoBlack-Regular.ttf
+Prompt	Black	OFL	176388	ofl/prompt/Prompt-Black.ttf
+Prompt	BlackItalic	OFL	199068	ofl/prompt/Prompt-BlackItalic.ttf
+Prompt	Bold	OFL	178804	ofl/prompt/Prompt-Bold.ttf
+Prompt	BoldItalic	OFL	186428	ofl/prompt/Prompt-BoldItalic.ttf
+Prompt	ExtraBold	OFL	176172	ofl/prompt/Prompt-ExtraBold.ttf
+Prompt	ExtraBoldItalic	OFL	186668	ofl/prompt/Prompt-ExtraBoldItalic.ttf
+Prompt	ExtraLight	OFL	163680	ofl/prompt/Prompt-ExtraLight.ttf
+Prompt	ExtraLightItalic	OFL	175300	ofl/prompt/Prompt-ExtraLightItalic.ttf
+Prompt	Italic	OFL	179208	ofl/prompt/Prompt-Italic.ttf
+Prompt	Light	OFL	161980	ofl/prompt/Prompt-Light.ttf
+Prompt	LightItalic	OFL	173496	ofl/prompt/Prompt-LightItalic.ttf
+Prompt	Medium	OFL	176444	ofl/prompt/Prompt-Medium.ttf
+Prompt	MediumItalic	OFL	183936	ofl/prompt/Prompt-MediumItalic.ttf
+Prompt	Regular	OFL	168932	ofl/prompt/Prompt-Regular.ttf
+Prompt	SemiBold	OFL	175300	ofl/prompt/Prompt-SemiBold.ttf
+Prompt	SemiBoldItalic	OFL	185108	ofl/prompt/Prompt-SemiBoldItalic.ttf
+Prompt	Thin	OFL	164456	ofl/prompt/Prompt-Thin.ttf
+Prompt	ThinItalic	OFL	176092	ofl/prompt/Prompt-ThinItalic.ttf
+Asap Condensed	Black	OFL	113996	ofl/asapcondensed/AsapCondensed-Black.ttf
+Asap Condensed	BlackItalic	OFL	118772	ofl/asapcondensed/AsapCondensed-BlackItalic.ttf
+Asap Condensed	Bold	OFL	111544	ofl/asapcondensed/AsapCondensed-Bold.ttf
+Asap Condensed	BoldItalic	OFL	119980	ofl/asapcondensed/AsapCondensed-BoldItalic.ttf
+Asap Condensed	ExtraBold	OFL	113560	ofl/asapcondensed/AsapCondensed-ExtraBold.ttf
+Asap Condensed	ExtraBoldItalic	OFL	120208	ofl/asapcondensed/AsapCondensed-ExtraBoldItalic.ttf
+Asap Condensed	ExtraLight	OFL	106820	ofl/asapcondensed/AsapCondensed-ExtraLight.ttf
+Asap Condensed	ExtraLightItalic	OFL	113888	ofl/asapcondensed/AsapCondensed-ExtraLightItalic.ttf
+Asap Condensed	Italic	OFL	116644	ofl/asapcondensed/AsapCondensed-Italic.ttf
+Asap Condensed	Light	OFL	108020	ofl/asapcondensed/AsapCondensed-Light.ttf
+Asap Condensed	LightItalic	OFL	115208	ofl/asapcondensed/AsapCondensed-LightItalic.ttf
+Asap Condensed	Medium	OFL	111476	ofl/asapcondensed/AsapCondensed-Medium.ttf
+Asap Condensed	MediumItalic	OFL	118620	ofl/asapcondensed/AsapCondensed-MediumItalic.ttf
+Asap Condensed	Regular	OFL	110332	ofl/asapcondensed/AsapCondensed-Regular.ttf
+Asap Condensed	SemiBold	OFL	111244	ofl/asapcondensed/AsapCondensed-SemiBold.ttf
+Asap Condensed	SemiBoldItalic	OFL	119280	ofl/asapcondensed/AsapCondensed-SemiBoldItalic.ttf
+Black Ops One	Regular	OFL	166532	ofl/blackopsone/BlackOpsOne-Regular.ttf
+Barlow Condensed	Black	OFL	110828	ofl/barlowcondensed/BarlowCondensed-Black.ttf
+Barlow Condensed	BlackItalic	OFL	112592	ofl/barlowcondensed/BarlowCondensed-BlackItalic.ttf
+Barlow Condensed	Bold	OFL	109912	ofl/barlowcondensed/BarlowCondensed-Bold.ttf
+Barlow Condensed	BoldItalic	OFL	112196	ofl/barlowcondensed/BarlowCondensed-BoldItalic.ttf
+Barlow Condensed	ExtraBold	OFL	110296	ofl/barlowcondensed/BarlowCondensed-ExtraBold.ttf
+Barlow Condensed	ExtraBoldItalic	OFL	113004	ofl/barlowcondensed/BarlowCondensed-ExtraBoldItalic.ttf
+Barlow Condensed	ExtraLight	OFL	101172	ofl/barlowcondensed/BarlowCondensed-ExtraLight.ttf
+Barlow Condensed	ExtraLightItalic	OFL	107832	ofl/barlowcondensed/BarlowCondensed-ExtraLightItalic.ttf
+Barlow Condensed	Italic	OFL	109856	ofl/barlowcondensed/BarlowCondensed-Italic.ttf
+Barlow Condensed	Light	OFL	101996	ofl/barlowcondensed/BarlowCondensed-Light.ttf
+Barlow Condensed	LightItalic	OFL	108540	ofl/barlowcondensed/BarlowCondensed-LightItalic.ttf
+Barlow Condensed	Medium	OFL	103360	ofl/barlowcondensed/BarlowCondensed-Medium.ttf
+Barlow Condensed	MediumItalic	OFL	110340	ofl/barlowcondensed/BarlowCondensed-MediumItalic.ttf
+Barlow Condensed	Regular	OFL	102480	ofl/barlowcondensed/BarlowCondensed-Regular.ttf
+Barlow Condensed	SemiBold	OFL	109428	ofl/barlowcondensed/BarlowCondensed-SemiBold.ttf
+Barlow Condensed	SemiBoldItalic	OFL	112272	ofl/barlowcondensed/BarlowCondensed-SemiBoldItalic.ttf
+Barlow Condensed	Thin	OFL	100364	ofl/barlowcondensed/BarlowCondensed-Thin.ttf
+Barlow Condensed	ThinItalic	OFL	107076	ofl/barlowcondensed/BarlowCondensed-ThinItalic.ttf
+Fjalla One	Regular	OFL	209052	ofl/fjallaone/FjallaOne-Regular.ttf
+Anton	Regular	OFL	170812	ofl/anton/Anton-Regular.ttf
+Rajdhani	Bold	OFL	400680	ofl/rajdhani/Rajdhani-Bold.ttf
+Rajdhani	Light	OFL	383928	ofl/rajdhani/Rajdhani-Light.ttf
+Rajdhani	Medium	OFL	384348	ofl/rajdhani/Rajdhani-Medium.ttf
+Rajdhani	Regular	OFL	377860	ofl/rajdhani/Rajdhani-Regular.ttf
+Rajdhani	SemiBold	OFL	390340	ofl/rajdhani/Rajdhani-SemiBold.ttf
+Mukta	Bold	OFL	418416	ofl/mukta/Mukta-Bold.ttf
+Mukta	ExtraBold	OFL	423168	ofl/mukta/Mukta-ExtraBold.ttf
+Mukta	ExtraLight	OFL	410644	ofl/mukta/Mukta-ExtraLight.ttf
+Mukta	Light	OFL	405188	ofl/mukta/Mukta-Light.ttf
+Mukta	Medium	OFL	419736	ofl/mukta/Mukta-Medium.ttf
+Mukta	Regular	OFL	432248	ofl/mukta/Mukta-Regular.ttf
+Mukta	SemiBold	OFL	411160	ofl/mukta/Mukta-SemiBold.ttf
+Instrument Serif	Italic	OFL	71592	ofl/instrumentserif/InstrumentSerif-Italic.ttf
+Instrument Serif	Regular	OFL	70012	ofl/instrumentserif/InstrumentSerif-Regular.ttf
+DM Serif Display	Italic	OFL	71208	ofl/dmserifdisplay/DMSerifDisplay-Italic.ttf
+DM Serif Display	Regular	OFL	76580	ofl/dmserifdisplay/DMSerifDisplay-Regular.ttf
+Alfa Slab One	Regular	OFL	97376	ofl/alfaslabone/AlfaSlabOne-Regular.ttf
+Alegreya Sans	Black	OFL	267756	ofl/alegreyasans/AlegreyaSans-Black.ttf
+Alegreya Sans	BlackItalic	OFL	275540	ofl/alegreyasans/AlegreyaSans-BlackItalic.ttf
+Alegreya Sans	Bold	OFL	266856	ofl/alegreyasans/AlegreyaSans-Bold.ttf
+Alegreya Sans	BoldItalic	OFL	274552	ofl/alegreyasans/AlegreyaSans-BoldItalic.ttf
+Alegreya Sans	ExtraBold	OFL	267996	ofl/alegreyasans/AlegreyaSans-ExtraBold.ttf
+Alegreya Sans	ExtraBoldItalic	OFL	276772	ofl/alegreyasans/AlegreyaSans-ExtraBoldItalic.ttf
+Alegreya Sans	Italic	OFL	271096	ofl/alegreyasans/AlegreyaSans-Italic.ttf
+Alegreya Sans	Light	OFL	261552	ofl/alegreyasans/AlegreyaSans-Light.ttf
+Alegreya Sans	LightItalic	OFL	266452	ofl/alegreyasans/AlegreyaSans-LightItalic.ttf
+Alegreya Sans	Medium	OFL	264612	ofl/alegreyasans/AlegreyaSans-Medium.ttf
+Alegreya Sans	MediumItalic	OFL	272856	ofl/alegreyasans/AlegreyaSans-MediumItalic.ttf
+Alegreya Sans	Regular	OFL	263804	ofl/alegreyasans/AlegreyaSans-Regular.ttf
+Alegreya Sans	Thin	OFL	254864	ofl/alegreyasans/AlegreyaSans-Thin.ttf
+Alegreya Sans	ThinItalic	OFL	264544	ofl/alegreyasans/AlegreyaSans-ThinItalic.ttf
+Barlow Semi Condensed	Black	OFL	113212	ofl/barlowsemicondensed/BarlowSemiCondensed-Black.ttf
+Barlow Semi Condensed	BlackItalic	OFL	115460	ofl/barlowsemicondensed/BarlowSemiCondensed-BlackItalic.ttf
+Barlow Semi Condensed	Bold	OFL	111772	ofl/barlowsemicondensed/BarlowSemiCondensed-Bold.ttf
+Barlow Semi Condensed	BoldItalic	OFL	115020	ofl/barlowsemicondensed/BarlowSemiCondensed-BoldItalic.ttf
+Barlow Semi Condensed	ExtraBold	OFL	112096	ofl/barlowsemicondensed/BarlowSemiCondensed-ExtraBold.ttf
+Barlow Semi Condensed	ExtraBoldItalic	OFL	115372	ofl/barlowsemicondensed/BarlowSemiCondensed-ExtraBoldItalic.ttf
+Barlow Semi Condensed	ExtraLight	OFL	103908	ofl/barlowsemicondensed/BarlowSemiCondensed-ExtraLight.ttf
+Barlow Semi Condensed	ExtraLightItalic	OFL	109664	ofl/barlowsemicondensed/BarlowSemiCondensed-ExtraLightItalic.ttf
+Barlow Semi Condensed	Italic	OFL	111340	ofl/barlowsemicondensed/BarlowSemiCondensed-Italic.ttf
+Barlow Semi Condensed	Light	OFL	104704	ofl/barlowsemicondensed/BarlowSemiCondensed-Light.ttf
+Barlow Semi Condensed	LightItalic	OFL	110304	ofl/barlowsemicondensed/BarlowSemiCondensed-LightItalic.ttf
+Barlow Semi Condensed	Medium	OFL	105560	ofl/barlowsemicondensed/BarlowSemiCondensed-Medium.ttf
+Barlow Semi Condensed	MediumItalic	OFL	111772	ofl/barlowsemicondensed/BarlowSemiCondensed-MediumItalic.ttf
+Barlow Semi Condensed	Regular	OFL	105776	ofl/barlowsemicondensed/BarlowSemiCondensed-Regular.ttf
+Barlow Semi Condensed	SemiBold	OFL	109772	ofl/barlowsemicondensed/BarlowSemiCondensed-SemiBold.ttf
+Barlow Semi Condensed	SemiBoldItalic	OFL	114036	ofl/barlowsemicondensed/BarlowSemiCondensed-SemiBoldItalic.ttf
+Barlow Semi Condensed	Thin	OFL	103072	ofl/barlowsemicondensed/BarlowSemiCondensed-Thin.ttf
+Barlow Semi Condensed	ThinItalic	OFL	109068	ofl/barlowsemicondensed/BarlowSemiCondensed-ThinItalic.ttf
+Hind Siliguri	Bold	OFL	287660	ofl/hindsiliguri/HindSiliguri-Bold.ttf
+Hind Siliguri	Light	OFL	259344	ofl/hindsiliguri/HindSiliguri-Light.ttf
+Hind Siliguri	Medium	OFL	266516	ofl/hindsiliguri/HindSiliguri-Medium.ttf
+Hind Siliguri	Regular	OFL	250052	ofl/hindsiliguri/HindSiliguri-Regular.ttf
+Hind Siliguri	SemiBold	OFL	272740	ofl/hindsiliguri/HindSiliguri-SemiBold.ttf
+DM Serif Text	Italic	OFL	71156	ofl/dmseriftext/DMSerifText-Italic.ttf
+DM Serif Text	Regular	OFL	78376	ofl/dmseriftext/DMSerifText-Regular.ttf
+Pacifico	Regular	OFL	329380	ofl/pacifico/Pacifico-Regular.ttf
+Slabo 27px	Regular	OFL	56088	ofl/slabo27px/Slabo27px-Regular.ttf
+Abril Fatface	Regular	OFL	67364	ofl/abrilfatface/AbrilFatface-Regular.ttf
+Chakra Petch	Bold	OFL	78384	ofl/chakrapetch/ChakraPetch-Bold.ttf
+Chakra Petch	BoldItalic	OFL	80828	ofl/chakrapetch/ChakraPetch-BoldItalic.ttf
+Chakra Petch	ExtraLight	OFL	79000	ofl/chakrapetch/ChakraPetch-ExtraLight.ttf
+Chakra Petch	ExtraLightItalic	OFL	81312	ofl/chakrapetch/ChakraPetch-ExtraLightItalic.ttf
+Chakra Petch	Italic	OFL	80764	ofl/chakrapetch/ChakraPetch-Italic.ttf
+Chakra Petch	Light	OFL	78936	ofl/chakrapetch/ChakraPetch-Light.ttf
+Chakra Petch	LightItalic	OFL	81240	ofl/chakrapetch/ChakraPetch-LightItalic.ttf
+Chakra Petch	Medium	OFL	78600	ofl/chakrapetch/ChakraPetch-Medium.ttf
+Chakra Petch	MediumItalic	OFL	80960	ofl/chakrapetch/ChakraPetch-MediumItalic.ttf
+Chakra Petch	Regular	OFL	78488	ofl/chakrapetch/ChakraPetch-Regular.ttf
+Chakra Petch	SemiBold	OFL	78604	ofl/chakrapetch/ChakraPetch-SemiBold.ttf
+Chakra Petch	SemiBoldItalic	OFL	81000	ofl/chakrapetch/ChakraPetch-SemiBoldItalic.ttf
+Lobster	Regular	OFL	406076	ofl/lobster/Lobster-Regular.ttf
+PT Sans Narrow	Narrow-Web-Bold	OFL	487720	ofl/ptsansnarrow/PT_Sans-Narrow-Web-Bold.ttf
+PT Sans Narrow	Narrow-Web-Regular	OFL	396212	ofl/ptsansnarrow/PT_Sans-Narrow-Web-Regular.ttf
+Questrial	Regular	OFL	184176	ofl/questrial/Questrial-Regular.ttf
+Zilla Slab	Bold	OFL	273044	ofl/zillaslab/ZillaSlab-Bold.ttf
+Zilla Slab	BoldItalic	OFL	280236	ofl/zillaslab/ZillaSlab-BoldItalic.ttf
+Zilla Slab	Italic	OFL	277732	ofl/zillaslab/ZillaSlab-Italic.ttf
+Zilla Slab	Light	OFL	265056	ofl/zillaslab/ZillaSlab-Light.ttf
+Zilla Slab	LightItalic	OFL	270260	ofl/zillaslab/ZillaSlab-LightItalic.ttf
+Zilla Slab	Medium	OFL	268184	ofl/zillaslab/ZillaSlab-Medium.ttf
+Zilla Slab	MediumItalic	OFL	276812	ofl/zillaslab/ZillaSlab-MediumItalic.ttf
+Zilla Slab	Regular	OFL	270104	ofl/zillaslab/ZillaSlab-Regular.ttf
+Zilla Slab	SemiBold	OFL	270088	ofl/zillaslab/ZillaSlab-SemiBold.ttf
+Zilla Slab	SemiBoldItalic	OFL	277604	ofl/zillaslab/ZillaSlab-SemiBoldItalic.ttf
+Great Vibes	Regular	OFL	457588	ofl/greatvibes/GreatVibes-Regular.ttf
+Lilita One	Regular	OFL	28092	ofl/lilitaone/LilitaOne-Regular.ttf
+Marcellus	Regular	OFL	46004	ofl/marcellus/Marcellus-Regular.ttf
+Spectral	Bold	OFL	273220	ofl/spectral/Spectral-Bold.ttf
+Spectral	BoldItalic	OFL	284356	ofl/spectral/Spectral-BoldItalic.ttf
+Spectral	ExtraBold	OFL	260528	ofl/spectral/Spectral-ExtraBold.ttf
+Spectral	ExtraBoldItalic	OFL	273528	ofl/spectral/Spectral-ExtraBoldItalic.ttf
+Spectral	ExtraLight	OFL	244808	ofl/spectral/Spectral-ExtraLight.ttf
+Spectral	ExtraLightItalic	OFL	267536	ofl/spectral/Spectral-ExtraLightItalic.ttf
+Spectral	Italic	OFL	270468	ofl/spectral/Spectral-Italic.ttf
+Spectral	Light	OFL	269312	ofl/spectral/Spectral-Light.ttf
+Spectral	LightItalic	OFL	282836	ofl/spectral/Spectral-LightItalic.ttf
+Spectral	Medium	OFL	272920	ofl/spectral/Spectral-Medium.ttf
+Spectral	MediumItalic	OFL	284312	ofl/spectral/Spectral-MediumItalic.ttf
+Spectral	Regular	OFL	261088	ofl/spectral/Spectral-Regular.ttf
+Spectral	SemiBold	OFL	273068	ofl/spectral/Spectral-SemiBold.ttf
+Spectral	SemiBoldItalic	OFL	284032	ofl/spectral/Spectral-SemiBoldItalic.ttf
+Be Vietnam Pro	Black	OFL	142612	ofl/bevietnampro/BeVietnamPro-Black.ttf
+Be Vietnam Pro	BlackItalic	OFL	140468	ofl/bevietnampro/BeVietnamPro-BlackItalic.ttf
+Be Vietnam Pro	Bold	OFL	140300	ofl/bevietnampro/BeVietnamPro-Bold.ttf
+Be Vietnam Pro	BoldItalic	OFL	137748	ofl/bevietnampro/BeVietnamPro-BoldItalic.ttf
+Be Vietnam Pro	ExtraBold	OFL	139680	ofl/bevietnampro/BeVietnamPro-ExtraBold.ttf
+Be Vietnam Pro	ExtraBoldItalic	OFL	138076	ofl/bevietnampro/BeVietnamPro-ExtraBoldItalic.ttf
+Be Vietnam Pro	ExtraLight	OFL	134464	ofl/bevietnampro/BeVietnamPro-ExtraLight.ttf
+Be Vietnam Pro	ExtraLightItalic	OFL	131492	ofl/bevietnampro/BeVietnamPro-ExtraLightItalic.ttf
+Be Vietnam Pro	Italic	OFL	137244	ofl/bevietnampro/BeVietnamPro-Italic.ttf
+Be Vietnam Pro	Light	OFL	136772	ofl/bevietnampro/BeVietnamPro-Light.ttf
+Be Vietnam Pro	LightItalic	OFL	136084	ofl/bevietnampro/BeVietnamPro-LightItalic.ttf
+Be Vietnam Pro	Medium	OFL	135980	ofl/bevietnampro/BeVietnamPro-Medium.ttf
+Be Vietnam Pro	MediumItalic	OFL	138280	ofl/bevietnampro/BeVietnamPro-MediumItalic.ttf
+Be Vietnam Pro	Regular	OFL	132948	ofl/bevietnampro/BeVietnamPro-Regular.ttf
+Be Vietnam Pro	SemiBold	OFL	136736	ofl/bevietnampro/BeVietnamPro-SemiBold.ttf
+Be Vietnam Pro	SemiBoldItalic	OFL	134740	ofl/bevietnampro/BeVietnamPro-SemiBoldItalic.ttf
+Be Vietnam Pro	Thin	OFL	127040	ofl/bevietnampro/BeVietnamPro-Thin.ttf
+Be Vietnam Pro	ThinItalic	OFL	129556	ofl/bevietnampro/BeVietnamPro-ThinItalic.ttf
+IBM Plex Sans Arabic	Bold	OFL	246992	ofl/ibmplexsansarabic/IBMPlexSansArabic-Bold.ttf
+IBM Plex Sans Arabic	ExtraLight	OFL	241652	ofl/ibmplexsansarabic/IBMPlexSansArabic-ExtraLight.ttf
+IBM Plex Sans Arabic	Light	OFL	238564	ofl/ibmplexsansarabic/IBMPlexSansArabic-Light.ttf
+IBM Plex Sans Arabic	Medium	OFL	242100	ofl/ibmplexsansarabic/IBMPlexSansArabic-Medium.ttf
+IBM Plex Sans Arabic	Regular	OFL	235924	ofl/ibmplexsansarabic/IBMPlexSansArabic-Regular.ttf
+IBM Plex Sans Arabic	SemiBold	OFL	244616	ofl/ibmplexsansarabic/IBMPlexSansArabic-SemiBold.ttf
+IBM Plex Sans Arabic	Thin	OFL	242204	ofl/ibmplexsansarabic/IBMPlexSansArabic-Thin.ttf
+Varela Round	Regular	OFL	132748	ofl/varelaround/VarelaRound-Regular.ttf
+Bungee	Regular	OFL	118996	ofl/bungee/Bungee-Regular.ttf
+DM Mono	Italic	OFL	51408	ofl/dmmono/DMMono-Italic.ttf
+DM Mono	Light	OFL	49752	ofl/dmmono/DMMono-Light.ttf
+DM Mono	LightItalic	OFL	51744	ofl/dmmono/DMMono-LightItalic.ttf
+DM Mono	Medium	OFL	50360	ofl/dmmono/DMMono-Medium.ttf
+DM Mono	MediumItalic	OFL	52552	ofl/dmmono/DMMono-MediumItalic.ttf
+DM Mono	Regular	OFL	49744	ofl/dmmono/DMMono-Regular.ttf
+Neuton	Bold	OFL	60344	ofl/neuton/Neuton-Bold.ttf
+Neuton	ExtraBold	OFL	61840	ofl/neuton/Neuton-ExtraBold.ttf
+Neuton	ExtraLight	OFL	53996	ofl/neuton/Neuton-ExtraLight.ttf
+Neuton	Italic	OFL	63292	ofl/neuton/Neuton-Italic.ttf
+Neuton	Light	OFL	54056	ofl/neuton/Neuton-Light.ttf
+Neuton	Regular	OFL	64628	ofl/neuton/Neuton-Regular.ttf
+Saira Condensed	Black	OFL	96880	ofl/sairacondensed/SairaCondensed-Black.ttf
+Saira Condensed	Bold	OFL	96428	ofl/sairacondensed/SairaCondensed-Bold.ttf
+Saira Condensed	ExtraBold	OFL	96580	ofl/sairacondensed/SairaCondensed-ExtraBold.ttf
+Saira Condensed	ExtraLight	OFL	92824	ofl/sairacondensed/SairaCondensed-ExtraLight.ttf
+Saira Condensed	Light	OFL	95044	ofl/sairacondensed/SairaCondensed-Light.ttf
+Saira Condensed	Medium	OFL	96240	ofl/sairacondensed/SairaCondensed-Medium.ttf
+Saira Condensed	Regular	OFL	95068	ofl/sairacondensed/SairaCondensed-Regular.ttf
+Saira Condensed	SemiBold	OFL	96028	ofl/sairacondensed/SairaCondensed-SemiBold.ttf
+Saira Condensed	Thin	OFL	92424	ofl/sairacondensed/SairaCondensed-Thin.ttf
+Viga	Regular	OFL	28436	ofl/viga/Viga-Regular.ttf
+Bungee Inline	Regular	OFL	152376	ofl/bungeeinline/BungeeInline-Regular.ttf
+Sanchez	Italic	OFL	75212	ofl/sanchez/Sanchez-Italic.ttf
+Sanchez	Regular	OFL	72552	ofl/sanchez/Sanchez-Regular.ttf
+Indie Flower	Regular	OFL	108196	ofl/indieflower/IndieFlower-Regular.ttf
+Doppio One	Regular	OFL	55704	ofl/doppioone/DoppioOne-Regular.ttf
+Slabo 13px	Regular	OFL	55796	ofl/slabo13px/Slabo13px-Regular.ttf
+Oleo Script	Bold	OFL	34628	ofl/oleoscript/OleoScript-Bold.ttf
+Oleo Script	Regular	OFL	34980	ofl/oleoscript/OleoScript-Regular.ttf
+Amiri	Bold	OFL	413480	ofl/amiri/Amiri-Bold.ttf
+Amiri	BoldItalic	OFL	409692	ofl/amiri/Amiri-BoldItalic.ttf
+Amiri	Italic	OFL	428532	ofl/amiri/Amiri-Italic.ttf
+Amiri	Regular	OFL	431116	ofl/amiri/Amiri-Regular.ttf
+Kalam	Bold	OFL	460896	ofl/kalam/Kalam-Bold.ttf
+Kalam	Light	OFL	437512	ofl/kalam/Kalam-Light.ttf
+Kalam	Regular	OFL	427360	ofl/kalam/Kalam-Regular.ttf
+News Cycle	Bold	OFL	60516	ofl/newscycle/NewsCycle-Bold.ttf
+News Cycle	Regular	OFL	179600	ofl/newscycle/NewsCycle-Regular.ttf
+Righteous	Regular	OFL	43104	ofl/righteous/Righteous-Regular.ttf
+Sarabun	Bold	OFL	89804	ofl/sarabun/Sarabun-Bold.ttf
+Sarabun	BoldItalic	OFL	92948	ofl/sarabun/Sarabun-BoldItalic.ttf
+Sarabun	ExtraBold	OFL	89884	ofl/sarabun/Sarabun-ExtraBold.ttf
+Sarabun	ExtraBoldItalic	OFL	92820	ofl/sarabun/Sarabun-ExtraBoldItalic.ttf
+Sarabun	ExtraLight	OFL	90484	ofl/sarabun/Sarabun-ExtraLight.ttf
+Sarabun	ExtraLightItalic	OFL	93612	ofl/sarabun/Sarabun-ExtraLightItalic.ttf
+Sarabun	Italic	OFL	93248	ofl/sarabun/Sarabun-Italic.ttf
+Sarabun	Light	OFL	90440	ofl/sarabun/Sarabun-Light.ttf
+Sarabun	LightItalic	OFL	93296	ofl/sarabun/Sarabun-LightItalic.ttf
+Sarabun	Medium	OFL	90292	ofl/sarabun/Sarabun-Medium.ttf
+Sarabun	MediumItalic	OFL	93428	ofl/sarabun/Sarabun-MediumItalic.ttf
+Sarabun	Regular	OFL	90220	ofl/sarabun/Sarabun-Regular.ttf
+Sarabun	SemiBold	OFL	90200	ofl/sarabun/Sarabun-SemiBold.ttf
+Sarabun	SemiBoldItalic	OFL	93352	ofl/sarabun/Sarabun-SemiBoldItalic.ttf
+Sarabun	Thin	OFL	90588	ofl/sarabun/Sarabun-Thin.ttf
+Sarabun	ThinItalic	OFL	93616	ofl/sarabun/Sarabun-ThinItalic.ttf
+Montserrat Alternates	Black	OFL	221652	ofl/montserratalternates/MontserratAlternates-Black.ttf
+Montserrat Alternates	BlackItalic	OFL	224064	ofl/montserratalternates/MontserratAlternates-BlackItalic.ttf
+Montserrat Alternates	Bold	OFL	214248	ofl/montserratalternates/MontserratAlternates-Bold.ttf
+Montserrat Alternates	BoldItalic	OFL	216520	ofl/montserratalternates/MontserratAlternates-BoldItalic.ttf
+Montserrat Alternates	ExtraBold	OFL	214904	ofl/montserratalternates/MontserratAlternates-ExtraBold.ttf
+Montserrat Alternates	ExtraBoldItalic	OFL	217160	ofl/montserratalternates/MontserratAlternates-ExtraBoldItalic.ttf
+Montserrat Alternates	ExtraLight	OFL	212840	ofl/montserratalternates/MontserratAlternates-ExtraLight.ttf
+Montserrat Alternates	ExtraLightItalic	OFL	214572	ofl/montserratalternates/MontserratAlternates-ExtraLightItalic.ttf
+Montserrat Alternates	Italic	OFL	215828	ofl/montserratalternates/MontserratAlternates-Italic.ttf
+Montserrat Alternates	Light	OFL	212192	ofl/montserratalternates/MontserratAlternates-Light.ttf
+Montserrat Alternates	LightItalic	OFL	214004	ofl/montserratalternates/MontserratAlternates-LightItalic.ttf
+Montserrat Alternates	Medium	OFL	213000	ofl/montserratalternates/MontserratAlternates-Medium.ttf
+Montserrat Alternates	MediumItalic	OFL	214960	ofl/montserratalternates/MontserratAlternates-MediumItalic.ttf
+Montserrat Alternates	Regular	OFL	215068	ofl/montserratalternates/MontserratAlternates-Regular.ttf
+Montserrat Alternates	SemiBold	OFL	213876	ofl/montserratalternates/MontserratAlternates-SemiBold.ttf
+Montserrat Alternates	SemiBoldItalic	OFL	216132	ofl/montserratalternates/MontserratAlternates-SemiBoldItalic.ttf
+Montserrat Alternates	Thin	OFL	212056	ofl/montserratalternates/MontserratAlternates-Thin.ttf
+Montserrat Alternates	ThinItalic	OFL	213840	ofl/montserratalternates/MontserratAlternates-ThinItalic.ttf
+Cardo	Bold	OFL	348320	ofl/cardo/Cardo-Bold.ttf
+Cardo	Italic	OFL	262388	ofl/cardo/Cardo-Italic.ttf
+Cardo	Regular	OFL	400468	ofl/cardo/Cardo-Regular.ttf
+Bree Serif	Regular	OFL	46572	ofl/breeserif/BreeSerif-Regular.ttf
+Titan One	Regular	OFL	55712	ofl/titanone/TitanOne-Regular.ttf
+Quattrocento	Bold	OFL	164948	ofl/quattrocento/Quattrocento-Bold.ttf
+Quattrocento	Regular	OFL	158200	ofl/quattrocento/Quattrocento-Regular.ttf
+Hammersmith One	Regular	OFL	102884	ofl/hammersmithone/HammersmithOne-Regular.ttf
+IBM Plex Sans Condensed	Bold	OFL	112228	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-Bold.ttf
+IBM Plex Sans Condensed	BoldItalic	OFL	117024	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-BoldItalic.ttf
+IBM Plex Sans Condensed	ExtraLight	OFL	114064	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-ExtraLight.ttf
+IBM Plex Sans Condensed	ExtraLightItalic	OFL	118400	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-ExtraLightItalic.ttf
+IBM Plex Sans Condensed	Italic	OFL	117128	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-Italic.ttf
+IBM Plex Sans Condensed	Light	OFL	112100	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-Light.ttf
+IBM Plex Sans Condensed	LightItalic	OFL	117032	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-LightItalic.ttf
+IBM Plex Sans Condensed	Medium	OFL	111176	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-Medium.ttf
+IBM Plex Sans Condensed	MediumItalic	OFL	115728	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-MediumItalic.ttf
+IBM Plex Sans Condensed	Regular	OFL	111236	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-Regular.ttf
+IBM Plex Sans Condensed	SemiBold	OFL	111476	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-SemiBold.ttf
+IBM Plex Sans Condensed	SemiBoldItalic	OFL	116012	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-SemiBoldItalic.ttf
+IBM Plex Sans Condensed	Thin	OFL	115048	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-Thin.ttf
+IBM Plex Sans Condensed	ThinItalic	OFL	119360	ofl/ibmplexsanscondensed/IBMPlexSansCondensed-ThinItalic.ttf
+Hind Madurai	Bold	OFL	142576	ofl/hindmadurai/HindMadurai-Bold.ttf
+Hind Madurai	Light	OFL	127664	ofl/hindmadurai/HindMadurai-Light.ttf
+Hind Madurai	Medium	OFL	137784	ofl/hindmadurai/HindMadurai-Medium.ttf
+Hind Madurai	Regular	OFL	136868	ofl/hindmadurai/HindMadurai-Regular.ttf
+Hind Madurai	SemiBold	OFL	139348	ofl/hindmadurai/HindMadurai-SemiBold.ttf
+Amatic SC	Bold	OFL	156180	ofl/amaticsc/AmaticSC-Bold.ttf
+Amatic SC	Regular	OFL	151624	ofl/amaticsc/AmaticSC-Regular.ttf
+Martel	Bold	OFL	170240	ofl/martel/Martel-Bold.ttf
+Martel	DemiBold	OFL	170100	ofl/martel/Martel-DemiBold.ttf
+Martel	ExtraBold	OFL	170900	ofl/martel/Martel-ExtraBold.ttf
+Martel	Heavy	OFL	164364	ofl/martel/Martel-Heavy.ttf
+Martel	Light	OFL	170540	ofl/martel/Martel-Light.ttf
+Martel	Regular	OFL	170196	ofl/martel/Martel-Regular.ttf
+Martel	UltraLight	OFL	168700	ofl/martel/Martel-UltraLight.ttf
+Philosopher	Bold	OFL	110068	ofl/philosopher/Philosopher-Bold.ttf
+Philosopher	BoldItalic	OFL	118380	ofl/philosopher/Philosopher-BoldItalic.ttf
+Philosopher	Italic	OFL	118000	ofl/philosopher/Philosopher-Italic.ttf
+Philosopher	Regular	OFL	111676	ofl/philosopher/Philosopher-Regular.ttf
+Bangers	Regular	OFL	93148	ofl/bangers/Bangers-Regular.ttf
+Rowdies	Bold	OFL	76280	ofl/rowdies/Rowdies-Bold.ttf
+Rowdies	Light	OFL	76152	ofl/rowdies/Rowdies-Light.ttf
+Rowdies	Regular	OFL	76352	ofl/rowdies/Rowdies-Regular.ttf
+Limelight	Regular	OFL	132292	ofl/limelight/Limelight-Regular.ttf
+Didact Gothic	Regular	OFL	194200	ofl/didactgothic/DidactGothic-Regular.ttf
+Tenor Sans	Regular	OFL	131896	ofl/tenorsans/TenorSans-Regular.ttf
+Paytone One	Regular	OFL	114648	ofl/paytoneone/PaytoneOne-Regular.ttf
+Patua One	Regular	OFL	35624	ofl/patuaone/PatuaOne-Regular.ttf
+Allura	Regular	OFL	246632	ofl/allura/Allura-Regular.ttf
+Noticia Text	Bold	OFL	113244	ofl/noticiatext/NoticiaText-Bold.ttf
+Noticia Text	BoldItalic	OFL	86044	ofl/noticiatext/NoticiaText-BoldItalic.ttf
+Noticia Text	Italic	OFL	87392	ofl/noticiatext/NoticiaText-Italic.ttf
+Noticia Text	Regular	OFL	115288	ofl/noticiatext/NoticiaText-Regular.ttf
+Khand	Bold	OFL	358664	ofl/khand/Khand-Bold.ttf
+Khand	Light	OFL	306384	ofl/khand/Khand-Light.ttf
+Khand	Medium	OFL	329932	ofl/khand/Khand-Medium.ttf
+Khand	Regular	OFL	316808	ofl/khand/Khand-Regular.ttf
+Khand	SemiBold	OFL	348692	ofl/khand/Khand-SemiBold.ttf
+Kaushan Script	Regular	OFL	210672	ofl/kaushanscript/KaushanScript-Regular.ttf
+Courgette	Regular	OFL	122072	ofl/courgette/Courgette-Regular.ttf
+Alata	Regular	OFL	349132	ofl/alata/Alata-Regular.ttf
+Creepster	Regular	OFL	62724	ofl/creepster/Creepster-Regular.ttf
+Chelsea Market	Regular	OFL	172924	ofl/chelseamarket/ChelseaMarket-Regular.ttf
+Quattrocento Sans	Bold	OFL	100560	ofl/quattrocentosans/QuattrocentoSans-Bold.ttf
+Quattrocento Sans	BoldItalic	OFL	100748	ofl/quattrocentosans/QuattrocentoSans-BoldItalic.ttf
+Quattrocento Sans	Italic	OFL	108700	ofl/quattrocentosans/QuattrocentoSans-Italic.ttf
+Quattrocento Sans	Regular	OFL	98340	ofl/quattrocentosans/QuattrocentoSans-Regular.ttf
+Sacramento	Regular	OFL	79696	ofl/sacramento/Sacramento-Regular.ttf
+Cookie	Regular	OFL	43800	ofl/cookie/Cookie-Regular.ttf
+Crete Round	Italic	OFL	67264	ofl/creteround/CreteRound-Italic.ttf
+Crete Round	Regular	OFL	59312	ofl/creteround/CreteRound-Regular.ttf
+Passion One	Black	OFL	24288	ofl/passionone/PassionOne-Black.ttf
+Passion One	Bold	OFL	24716	ofl/passionone/PassionOne-Bold.ttf
+Passion One	Regular	OFL	24940	ofl/passionone/PassionOne-Regular.ttf
+Old Standard TT	Bold	OFL	267128	ofl/oldstandardtt/OldStandard-Bold.ttf
+Old Standard TT	Italic	OFL	272692	ofl/oldstandardtt/OldStandard-Italic.ttf
+Old Standard TT	Regular	OFL	249668	ofl/oldstandardtt/OldStandard-Regular.ttf
+Rubik Mono One	Regular	OFL	141088	ofl/rubikmonoone/RubikMonoOne-Regular.ttf
+Krub	Bold	OFL	89564	ofl/krub/Krub-Bold.ttf
+Krub	BoldItalic	OFL	92728	ofl/krub/Krub-BoldItalic.ttf
+Krub	ExtraLight	OFL	90732	ofl/krub/Krub-ExtraLight.ttf
+Krub	ExtraLightItalic	OFL	93724	ofl/krub/Krub-ExtraLightItalic.ttf
+Krub	Italic	OFL	92976	ofl/krub/Krub-Italic.ttf
+Krub	Light	OFL	90084	ofl/krub/Krub-Light.ttf
+Krub	LightItalic	OFL	93048	ofl/krub/Krub-LightItalic.ttf
+Krub	Medium	OFL	89836	ofl/krub/Krub-Medium.ttf
+Krub	MediumItalic	OFL	92900	ofl/krub/Krub-MediumItalic.ttf
+Krub	Regular	OFL	89912	ofl/krub/Krub-Regular.ttf
+Krub	SemiBold	OFL	89748	ofl/krub/Krub-SemiBold.ttf
+Krub	SemiBoldItalic	OFL	92832	ofl/krub/Krub-SemiBoldItalic.ttf
+Gruppo	Regular	OFL	76204	ofl/gruppo/Gruppo-Regular.ttf
+Quantico	Bold	OFL	20896	ofl/quantico/Quantico-Bold.ttf
+Quantico	BoldItalic	OFL	20660	ofl/quantico/Quantico-BoldItalic.ttf
+Quantico	Italic	OFL	22144	ofl/quantico/Quantico-Italic.ttf
+Quantico	Regular	OFL	20940	ofl/quantico/Quantico-Regular.ttf
+PT Sans Caption	Caption-Web-Bold	OFL	398780	ofl/ptsanscaption/PT_Sans-Caption-Web-Bold.ttf
+PT Sans Caption	Caption-Web-Regular	OFL	387192	ofl/ptsanscaption/PT_Sans-Caption-Web-Regular.ttf
+Francois One	Regular	OFL	79356	ofl/francoisone/FrancoisOne-Regular.ttf
+Yeseva One	Regular	OFL	108016	ofl/yesevaone/YesevaOne-Regular.ttf
+Concert One	Regular	OFL	71028	ofl/concertone/ConcertOne-Regular.ttf
+Unna	Bold	OFL	79556	ofl/unna/Unna-Bold.ttf
+Unna	BoldItalic	OFL	84916	ofl/unna/Unna-BoldItalic.ttf
+Unna	Italic	OFL	80320	ofl/unna/Unna-Italic.ttf
+Unna	Regular	OFL	71164	ofl/unna/Unna-Regular.ttf
+Yantramanav	Black	OFL	159196	ofl/yantramanav/Yantramanav-Black.ttf
+Yantramanav	Bold	OFL	158048	ofl/yantramanav/Yantramanav-Bold.ttf
+Yantramanav	Light	OFL	160820	ofl/yantramanav/Yantramanav-Light.ttf
+Yantramanav	Medium	OFL	154352	ofl/yantramanav/Yantramanav-Medium.ttf
+Yantramanav	Regular	OFL	153872	ofl/yantramanav/Yantramanav-Regular.ttf
+Yantramanav	Thin	OFL	160744	ofl/yantramanav/Yantramanav-Thin.ttf
+Fugaz One	Regular	OFL	27868	ofl/fugazone/FugazOne-Regular.ttf
+Playball	Regular	OFL	190720	ofl/playball/Playball-Regular.ttf
+Encode Sans Condensed	Black	OFL	166812	ofl/encodesanscondensed/EncodeSansCondensed-Black.ttf
+Encode Sans Condensed	Bold	OFL	167844	ofl/encodesanscondensed/EncodeSansCondensed-Bold.ttf
+Encode Sans Condensed	ExtraBold	OFL	169456	ofl/encodesanscondensed/EncodeSansCondensed-ExtraBold.ttf
+Encode Sans Condensed	ExtraLight	OFL	166844	ofl/encodesanscondensed/EncodeSansCondensed-ExtraLight.ttf
+Encode Sans Condensed	Light	OFL	168208	ofl/encodesanscondensed/EncodeSansCondensed-Light.ttf
+Encode Sans Condensed	Medium	OFL	169464	ofl/encodesanscondensed/EncodeSansCondensed-Medium.ttf
+Encode Sans Condensed	Regular	OFL	168396	ofl/encodesanscondensed/EncodeSansCondensed-Regular.ttf
+Encode Sans Condensed	SemiBold	OFL	170560	ofl/encodesanscondensed/EncodeSansCondensed-SemiBold.ttf
+Encode Sans Condensed	Thin	OFL	161668	ofl/encodesanscondensed/EncodeSansCondensed-Thin.ttf
+Lusitana	Bold	OFL	29284	ofl/lusitana/Lusitana-Bold.ttf
+Lusitana	Regular	OFL	30188	ofl/lusitana/Lusitana-Regular.ttf
+Playfair Display SC	Black	OFL	202412	ofl/playfairdisplaysc/PlayfairDisplaySC-Black.ttf
+Playfair Display SC	BlackItalic	OFL	199512	ofl/playfairdisplaysc/PlayfairDisplaySC-BlackItalic.ttf
+Playfair Display SC	Bold	OFL	204568	ofl/playfairdisplaysc/PlayfairDisplaySC-Bold.ttf
+Playfair Display SC	BoldItalic	OFL	206016	ofl/playfairdisplaysc/PlayfairDisplaySC-BoldItalic.ttf
+Playfair Display SC	Italic	OFL	202092	ofl/playfairdisplaysc/PlayfairDisplaySC-Italic.ttf
+Playfair Display SC	Regular	OFL	201772	ofl/playfairdisplaysc/PlayfairDisplaySC-Regular.ttf
+Forum	Regular	OFL	303316	ofl/forum/Forum-Regular.ttf
+Istok Web	Bold	OFL	224440	ofl/istokweb/IstokWeb-Bold.ttf
+Istok Web	BoldItalic	OFL	218164	ofl/istokweb/IstokWeb-BoldItalic.ttf
+Istok Web	Italic	OFL	218124	ofl/istokweb/IstokWeb-Italic.ttf
+Istok Web	Regular	OFL	315392	ofl/istokweb/IstokWeb-Regular.ttf
+Pinyon Script	Regular	OFL	151412	ofl/pinyonscript/PinyonScript-Regular.ttf
+Alex Brush	Regular	OFL	116244	ofl/alexbrush/AlexBrush-Regular.ttf
+Gilda Display	Regular	OFL	68020	ofl/gildadisplay/GildaDisplay-Regular.ttf
+Patrick Hand	Regular	OFL	214772	ofl/patrickhand/PatrickHand-Regular.ttf
+Rammetto One	Regular	OFL	69392	ofl/rammettoone/RammettoOne-Regular.ttf
+Blinker	Black	OFL	80932	ofl/blinker/Blinker-Black.ttf
+Blinker	Bold	OFL	75824	ofl/blinker/Blinker-Bold.ttf
+Blinker	ExtraBold	OFL	82624	ofl/blinker/Blinker-ExtraBold.ttf
+Blinker	ExtraLight	OFL	74664	ofl/blinker/Blinker-ExtraLight.ttf
+Blinker	Light	OFL	75880	ofl/blinker/Blinker-Light.ttf
+Blinker	Regular	OFL	74532	ofl/blinker/Blinker-Regular.ttf
+Blinker	SemiBold	OFL	81676	ofl/blinker/Blinker-SemiBold.ttf
+Blinker	Thin	OFL	73024	ofl/blinker/Blinker-Thin.ttf
+Bai Jamjuree	Bold	OFL	81840	ofl/baijamjuree/BaiJamjuree-Bold.ttf
+Bai Jamjuree	BoldItalic	OFL	87264	ofl/baijamjuree/BaiJamjuree-BoldItalic.ttf
+Bai Jamjuree	ExtraLight	OFL	81880	ofl/baijamjuree/BaiJamjuree-ExtraLight.ttf
+Bai Jamjuree	ExtraLightItalic	OFL	87492	ofl/baijamjuree/BaiJamjuree-ExtraLightItalic.ttf
+Bai Jamjuree	Italic	OFL	87608	ofl/baijamjuree/BaiJamjuree-Italic.ttf
+Bai Jamjuree	Light	OFL	82208	ofl/baijamjuree/BaiJamjuree-Light.ttf
+Bai Jamjuree	LightItalic	OFL	87664	ofl/baijamjuree/BaiJamjuree-LightItalic.ttf
+Bai Jamjuree	Medium	OFL	82292	ofl/baijamjuree/BaiJamjuree-Medium.ttf
+Bai Jamjuree	MediumItalic	OFL	87888	ofl/baijamjuree/BaiJamjuree-MediumItalic.ttf
+Bai Jamjuree	Regular	OFL	82112	ofl/baijamjuree/BaiJamjuree-Regular.ttf
+Bai Jamjuree	SemiBold	OFL	82316	ofl/baijamjuree/BaiJamjuree-SemiBold.ttf
+Bai Jamjuree	SemiBoldItalic	OFL	87760	ofl/baijamjuree/BaiJamjuree-SemiBoldItalic.ttf
+Glegoo	Bold	OFL	271068	ofl/glegoo/Glegoo-Bold.ttf
+Glegoo	Regular	OFL	271368	ofl/glegoo/Glegoo-Regular.ttf
+Racing Sans One	Regular	OFL	145796	ofl/racingsansone/RacingSansOne-Regular.ttf
+Poiret One	Regular	OFL	130176	ofl/poiretone/PoiretOne-Regular.ttf
+Suez One	Regular	OFL	70856	ofl/suezone/SuezOne-Regular.ttf
+Saira Semi Condensed	Black	OFL	97020	ofl/sairasemicondensed/SairaSemiCondensed-Black.ttf
+Saira Semi Condensed	Bold	OFL	96500	ofl/sairasemicondensed/SairaSemiCondensed-Bold.ttf
+Saira Semi Condensed	ExtraBold	OFL	97340	ofl/sairasemicondensed/SairaSemiCondensed-ExtraBold.ttf
+Saira Semi Condensed	ExtraLight	OFL	93336	ofl/sairasemicondensed/SairaSemiCondensed-ExtraLight.ttf
+Saira Semi Condensed	Light	OFL	95612	ofl/sairasemicondensed/SairaSemiCondensed-Light.ttf
+Saira Semi Condensed	Medium	OFL	95548	ofl/sairasemicondensed/SairaSemiCondensed-Medium.ttf
+Saira Semi Condensed	Regular	OFL	95184	ofl/sairasemicondensed/SairaSemiCondensed-Regular.ttf
+Saira Semi Condensed	SemiBold	OFL	96160	ofl/sairasemicondensed/SairaSemiCondensed-SemiBold.ttf
+Saira Semi Condensed	Thin	OFL	92828	ofl/sairasemicondensed/SairaSemiCondensed-Thin.ttf
+Damion	Regular	OFL	75756	ofl/damion/Damion-Regular.ttf

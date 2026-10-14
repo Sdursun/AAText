@@ -229,7 +229,7 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  dosyasına yazar. Taramanın kendisi hiçbir şeyi değiştirmez.
   İndir          Google Fonts'tan (github.com/google/fonts) ücretsiz
                  fontlar; liste AAText deposunda tutulur
-                 (fonts/catalog.txt: Türkçe harfleri olan 40 kadar aile,
+                 (fonts/catalog.txt: Türkçe harfleri olan 150 kadar aile,
                  ör. Ubuntu, PT Sans, Lato, Fira Sans, IBM Plex ve
                  Times New Roman, Courier New, Calibri, Cambria ile aynı
                  genişlikteki Tinos/Cousine/Carlito/Caladea). "Listeyi

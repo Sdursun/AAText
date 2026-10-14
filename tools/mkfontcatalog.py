@@ -7,8 +7,10 @@ offers, from the google/fonts repository on GitHub.
 
 Only families with static .ttf files (no variable fonts) and the
 latin-ext subset (Turkish and other European letters) are listed.
-FAMILIES below is the selection; add a directory of google/fonts there
-and run the script again.
+FAMILIES below is the selection (the first 39 picked by hand, then the
+most popular families on fonts.google.com that qualify); add a
+directory of google/fonts there and run the script again. Families
+with files over MAX_FILE (CJK fonts) are skipped.
 
 Catalog format (ISO-8859-1 safe ASCII, one font file per line):
   # comment
@@ -17,20 +19,49 @@ Catalog format (ISO-8859-1 safe ASCII, one font file per line):
 """
 import json
 import sys
+import time
 import urllib.request
 
 BASE = 'https://raw.githubusercontent.com/google/fonts/main/'
 
 FAMILIES = '''
-ufl/ubuntu ufl/ubuntumono ufl/ubuntucondensed
-ofl/ptsans ofl/ptserif ofl/ptmono ofl/lato ofl/firasans ofl/firasanscondensed
-ofl/firamono ofl/ibmplexserif ofl/ibmplexmono ofl/titilliumweb ofl/poppins
-ofl/barlow ofl/oxygen ofl/cantarell ofl/spacemono ofl/courierprime
+ufl/ubuntu ufl/ubuntumono ufl/ubuntucondensed ofl/ptsans ofl/ptserif
+ofl/ptmono ofl/lato ofl/firasans ofl/firasanscondensed ofl/firamono
+ofl/ibmplexserif ofl/ibmplexmono ofl/titilliumweb ofl/poppins ofl/barlow
+ofl/oxygen ofl/cantarell ofl/spacemono ofl/courierprime
 ofl/atkinsonhyperlegible ofl/crimsontext ofl/anonymouspro ofl/vt323
 ofl/pressstart2p ofl/carlito ofl/caladea ofl/tinos ofl/cousine
 ofl/gentiumbookplus ofl/andika ofl/hind ofl/kanit ofl/abeezee ofl/play
-ofl/russoone ofl/audiowide ofl/silkscreen
+ofl/russoone ofl/audiowide ofl/silkscreen ofl/bebasneue ofl/archivoblack
+ofl/prompt ofl/asapcondensed ofl/blackopsone ofl/barlowcondensed
+ofl/fjallaone ofl/anton ofl/rajdhani ofl/mukta ofl/instrumentserif
+ofl/dmserifdisplay ofl/alfaslabone ofl/alegreyasans ofl/barlowsemicondensed
+ofl/mplusrounded1c ofl/hindsiliguri ofl/dmseriftext ofl/pacifico
+ofl/slabo27px ofl/abrilfatface ofl/chakrapetch ofl/lobster ofl/ptsansnarrow
+ofl/zenkakugothicnew ofl/questrial ofl/mplus1p ofl/zillaslab ofl/greatvibes
+ofl/lilitaone ofl/marcellus ofl/spectral ofl/bevietnampro
+ofl/ibmplexsansarabic ofl/varelaround ofl/bungee ofl/dmmono ofl/neuton
+ofl/sairacondensed ofl/viga ofl/bungeeinline ofl/sanchez ofl/indieflower
+ofl/doppioone ofl/slabo13px ofl/oleoscript ofl/zenmarugothic ofl/amiri
+ofl/kalam ofl/newscycle ofl/righteous ofl/sarabun ofl/montserratalternates
+ofl/cardo ofl/breeserif ofl/titanone ofl/quattrocento ofl/shipporimincho
+ofl/hammersmithone ofl/lineseedjp ofl/ibmplexsanscondensed ofl/hindmadurai
+ofl/amaticsc ofl/sawarabigothic ofl/martel ofl/gothica1 ofl/philosopher
+ofl/bangers ofl/rowdies ofl/limelight ofl/didactgothic ofl/tenorsans
+ofl/paytoneone ofl/patuaone ofl/allura ofl/noticiatext ofl/khand
+ofl/kaushanscript ofl/courgette ofl/alata ofl/creepster ofl/chelseamarket
+ofl/quattrocentosans ofl/sacramento ofl/cookie ofl/creteround
+ofl/passionone ofl/oldstandardtt ofl/sawarabimincho ofl/rubikmonoone
+ofl/krub ofl/gruppo ofl/quantico ofl/ptsanscaption ofl/francoisone
+ofl/yesevaone ofl/zenoldmincho ofl/concertone ofl/unna ofl/yantramanav
+ofl/fugazone ofl/playball ofl/encodesanscondensed ofl/delagothicone
+ofl/lusitana ofl/playfairdisplaysc ofl/forum ofl/istokweb ofl/pinyonscript
+ofl/alexbrush ofl/gildadisplay ofl/patrickhand ofl/rammettoone ofl/blinker
+apache/kosugimaru ofl/baijamjuree ofl/glegoo ofl/racingsansone
+ofl/poiretone ofl/suezone ofl/sairasemicondensed ofl/damion
 '''.split()
+
+MAX_FILE = 1500 * 1024
 
 LICENCE = {'ofl': 'OFL', 'ufl': 'UFL', 'apache': 'Apache'}
 
@@ -38,8 +69,15 @@ LICENCE = {'ofl': 'OFL', 'ufl': 'UFL', 'apache': 'Apache'}
 def get(token, url, raw=False):
     req = urllib.request.Request(url, headers={
         'Authorization': 'Bearer ' + token, 'User-Agent': 'aatext-catalog'})
-    with urllib.request.urlopen(req) as r:
-        data = r.read()
+    for attempt in range(5):            # GitHub times out now and then
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                data = r.read()
+            break
+        except OSError:
+            if attempt == 4:
+                raise
+            time.sleep(5)
     return data if raw else json.loads(data)
 
 
@@ -51,14 +89,20 @@ def main(token):
     for d in FAMILIES:
         meta = get(token, BASE + d + '/METADATA.pb', raw=True).decode('utf-8')
         if 'latin-ext' not in meta:
-            sys.exit(f'{d}: no latin-ext')
+            print(f'{d}: no latin-ext, skipped', file=sys.stderr)
+            continue
         family = next(l.split('"')[1] for l in meta.splitlines()
                       if l.startswith('name:'))
         items = get(token, 'https://api.github.com/repos/google/fonts/contents/' + d)
         files = sorted((i for i in items if i['name'].lower().endswith('.ttf')
                         and '[' not in i['name']), key=lambda i: i['name'])
         if not files:
-            sys.exit(f'{d}: no static .ttf')
+            print(f'{d}: no static .ttf, skipped', file=sys.stderr)
+            continue
+        # CJK and other big families (several MB a file) are left out
+        if max(i['size'] for i in files) > MAX_FILE:
+            print(f'{d}: files over {MAX_FILE} bytes, skipped', file=sys.stderr)
+            continue
         for i in files:
             stem = i['name'][:-4]
             style = stem.split('-', 1)[1] if '-' in stem else 'Regular'

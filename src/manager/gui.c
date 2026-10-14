@@ -1111,8 +1111,8 @@ static Object *DiagPage(void)
 /* Download tab: fonts from the catalog (fonts/catalog.txt)             */
 /* ------------------------------------------------------------------ */
 
-#define MAX_CAT      1000
-#define MAX_CATTEXT  (128 * 1024)
+#define MAX_CAT      1500
+#define MAX_CATTEXT  (256 * 1024)
 #define DL_DIR       "T:AATextFonts"
 
 struct CatEntry
