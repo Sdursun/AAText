@@ -141,87 +141,11 @@ MSG_CHARSET_CYRILLIC
 ISO-8859-5 (Kiril)
 MSG_CHARSET_KOI8R
 KOI8-R (Rusça)
-MSG_TAB_DIAG
-Tanılama
-MSG_DIAG_INFO
-FONTS: içindeki .otag dosyalarını ve gösterdikleri font dosyalarını denetler. Tarama hiçbir şeyi değiştirmez.
-MSG_DIAG_SCAN
-Fontları tara
-MSG_DIAG_REPORT
-Raporu kaydet...
-MSG_DIAG_SUMMARY
-%ld font: %ld sorunsuz, %ld sorunlu
-MSG_DIAG_NOFONTS
-FONTS: okunamadı.
-MSG_DIAG_COL_FONT
-Font
-MSG_DIAG_COL_STATUS
-Durum
-MSG_DIAG_COL_FILE
-Font dosyası
-MSG_DIAG_OK
-Sorunsuz
-MSG_DIAG_MOVED
-Yeri değişmiş
-MSG_DIAG_MISSING
-Eksik
-MSG_DIAG_BADFILE
-Font değil
-MSG_DIAG_BADOTAG
-Bozuk .otag
-MSG_DIAG_OTHER
-Başka motor
-MSG_DIAG_ADV_OK
-Font dosyası .otag'da yazan yerde.
-MSG_DIAG_ADV_MOVED
-AAText onu orada bulur, diğer programlar bulamayabilir: ".otag'ı düzelt"i kullanın.
-MSG_DIAG_ADV_MISSING
-Font dosyası yok. Fontu yeniden kurun ya da .font ve .otag dosyalarını silin.
-MSG_DIAG_ADV_BADFILE
-Bu dosya bir TrueType ya da OpenType font değil.
-MSG_DIAG_ADV_BADOTAG
-.otag okunamıyor ya da bir font dosyası göstermiyor.
-MSG_DIAG_ADV_OTHER
-Başka bir font motoru için çizgisel font (%s); AAText ona dokunmaz.
-MSG_DIAG_SAVE_TITLE
-Font raporunu kaydet
-MSG_DIAG_SAVED
-Rapor kaydedildi: %s
-MSG_DIAG_LISTFULL
-Yalnızca ilk %ld font listelendi.
-MSG_DIAG_FIX
-.otag'ı düzelt...
-MSG_DIAG_FIX_ASK
-%s değiştirilsin mi?\n\nŞu anki font dosyası: %s\nyeni hali: %s\n\nOrijinali %s olarak saklanır.
-MSG_DIAG_FIX_GADS
-Değiştir|İptal
-MSG_DIAG_FIXED
-Düzeltildi. Orijinali: %s
-MSG_DIAG_FIX_NOTMOVED
-Yalnızca "Yeri değişmiş" fontlar düzeltilebilir.
-MSG_DIAG_FIX_BACKUP
-%s yedeği yazılamadı; hiçbir şey değiştirilmedi.
-MSG_DIAG_FIX_READ
-%s okunamadı ya da yeniden oluşturulamadı; hiçbir şey değiştirilmedi.
-MSG_DIAG_FIX_WRITE
-%s yazılamadı. Orijinali: %s
-MSG_DIAG_NOENGINE
-%s.library kurulu değil: bu fontu hiçbir program açamaz.
-MSG_DIAG_L_OTAG
-.otag dosyası
-MSG_DIAG_L_WANT
-.otag'daki font dosyası
-MSG_DIAG_L_FOUND
-Bulunduğu yer
-MSG_DIAG_L_ENGINE
-OT_Engine
-MSG_DIAG_ENGINEFMT
-%s (%s.library %s)
-MSG_DIAG_ENGINENONE
-%s (%s.library kurulu değil)
 MSG_DIAG_MANAGER
-_Font kur...
+_Fontlar (AATextManager)...
 MSG_DIAG_NOMANAGER
 %s başlatılamadı.
 MSG_AGA
 Paletli (AGA) ekranlarda yumuşatma
+MSG_MANAGER_NOTE
+Font kurma, onarma ve tanılama: AATextManager.

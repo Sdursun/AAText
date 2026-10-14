@@ -179,8 +179,7 @@ dist:
 # both programs have a main.c
 GUI_TARGET := $(BUILDDIR)/AATextPrefs
 GUI_SRCS   := src/prefsgui/main.c src/prefsgui/strings.c src/prefs.c \
-              src/prefswrite.c src/aaclient.c src/charsets.c src/otag.c src/fontfile.c src/fontscan.c \
-              src/otagfile.c
+              src/prefswrite.c src/aaclient.c src/charsets.c
 GUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/gui/%.o,$(GUI_SRCS))
 
 .PHONY: gui

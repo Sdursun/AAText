@@ -6,7 +6,8 @@
  * languages come from aatextprefs.catalog (locale.library). The IDs are
  * part of the catalog format: never renumber, only append. A "_" marks
  * a button's keyboard shortcut. Retired IDs, never to be reused:
- * 2 (Fonts tab), 18 (Test button), 22 (placeholder page).
+ * 2 (Fonts tab), 18 (Test button), 22 (placeholder page), 72-115
+ * (Diagnostics tab, moved to AATextManager in 0.24).
  * Translations: catalogs/<language>.ct, compiled by tools/mkcatalog.pl.
  */
 
@@ -80,48 +81,10 @@
     S(MSG_CHARSET_CP1250,   69, "Windows-1250 (Central European)") \
     S(MSG_CHARSET_CYRILLIC, 70, "ISO-8859-5 (Cyrillic)") \
     S(MSG_CHARSET_KOI8R,    71, "KOI8-R (Russian)") \
-    S(MSG_TAB_DIAG,         72, "Diagnostics") \
-    S(MSG_DIAG_INFO,        73, "Checks the .otag files in FONTS: and the font files they name. Scanning changes nothing.") \
-    S(MSG_DIAG_SCAN,        74, "Scan fonts") \
-    S(MSG_DIAG_REPORT,      75, "Save report...") \
-    S(MSG_DIAG_SUMMARY,     76, "%ld fonts: %ld OK, %ld with problems") \
-    S(MSG_DIAG_NOFONTS,     77, "Cannot read FONTS:.") \
-    S(MSG_DIAG_COL_FONT,    78, "Font") \
-    S(MSG_DIAG_COL_STATUS,  79, "Status") \
-    S(MSG_DIAG_COL_FILE,    80, "Font file") \
-    S(MSG_DIAG_OK,          81, "OK") \
-    S(MSG_DIAG_MOVED,       82, "Moved") \
-    S(MSG_DIAG_MISSING,     83, "Missing") \
-    S(MSG_DIAG_BADFILE,     84, "Not a font") \
-    S(MSG_DIAG_BADOTAG,     85, "Bad .otag") \
-    S(MSG_DIAG_OTHER,       86, "Other engine") \
-    S(MSG_DIAG_ADV_OK,      88, "The font file is where the .otag says.") \
-    S(MSG_DIAG_ADV_MOVED,   89, "AAText finds it there, other programs may not: use Fix .otag.") \
-    S(MSG_DIAG_ADV_MISSING, 90, "The font file is not there. Install the font again, or delete its .font and .otag.") \
-    S(MSG_DIAG_ADV_BADFILE, 91, "This file is not a TrueType or OpenType font.") \
-    S(MSG_DIAG_ADV_BADOTAG, 92, "The .otag cannot be read or names no font file.") \
-    S(MSG_DIAG_ADV_OTHER,   93, "An outline font for another font engine (%s); AAText leaves it alone.") \
-    S(MSG_DIAG_SAVE_TITLE,  94, "Save font report") \
-    S(MSG_DIAG_SAVED,       95, "Report saved: %s") \
-    S(MSG_DIAG_LISTFULL,    96, "Only the first %ld fonts are listed.") \
-    S(MSG_DIAG_FIX,         98, "Fix .otag...") \
-    S(MSG_DIAG_FIX_ASK,     99, "Change %s?\n\nFont file now: %s\nbecomes: %s\n\nThe original is kept as %s.") \
-    S(MSG_DIAG_FIX_GADS,   100, "Change|Cancel") \
-    S(MSG_DIAG_FIXED,      101, "Fixed. The original is in %s.") \
-    S(MSG_DIAG_FIX_NOTMOVED, 102, "Only fonts marked Moved can be fixed.") \
-    S(MSG_DIAG_FIX_BACKUP, 103, "Cannot write the backup %s; nothing was changed.") \
-    S(MSG_DIAG_FIX_READ,   104, "Cannot read or rebuild %s; nothing was changed.") \
-    S(MSG_DIAG_FIX_WRITE,  105, "Cannot write %s. The original is in %s.") \
-    S(MSG_DIAG_NOENGINE,   109, "%s.library is not installed: no program can open this font.") \
-    S(MSG_DIAG_L_OTAG,     110, ".otag file") \
-    S(MSG_DIAG_L_WANT,     111, "Font file in .otag") \
-    S(MSG_DIAG_L_FOUND,    112, "Found as") \
-    S(MSG_DIAG_L_ENGINE,   113, "OT_Engine") \
-    S(MSG_DIAG_ENGINEFMT,  114, "%s (%s.library %s)") \
-    S(MSG_DIAG_ENGINENONE, 115, "%s (%s.library not installed)") \
-    S(MSG_DIAG_MANAGER,    116, "_Install fonts...") \
+    S(MSG_DIAG_MANAGER,    116, "_Fonts (AATextManager)...") \
     S(MSG_DIAG_NOMANAGER,  117, "Cannot start %s.") \
-    S(MSG_AGA,             118, "Antialiasing on palette (AGA) screens")
+    S(MSG_AGA,             118, "Antialiasing on palette (AGA) screens") \
+    S(MSG_MANAGER_NOTE,    119, "Installing, repairing and checking fonts: AATextManager.")
 
 
 #define S(id, n, s) id = n,

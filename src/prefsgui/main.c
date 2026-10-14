@@ -71,7 +71,6 @@
 #include "../prefswrite.h"
 #include "../aaclient.h"
 #include "../charsets.h"
-#include "../fontscan.h"
 #include "strings.h"
 
 static const char version[] __attribute__((used)) =
@@ -98,8 +97,7 @@ enum
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
     GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
     GID_PICKFILE, GID_KERNING,
-    GID_SCAN, GID_SCANSUM, GID_FONTLIST, GID_DETAIL1, GID_DETAIL2, GID_DETAIL3,
-    GID_DETAIL4, GID_ADVICE, GID_REPORT, GID_FIX, GID_MANAGER,
+    GID_MANAGER,
     GID_COUNT
 };
 
@@ -112,7 +110,7 @@ static const UBYTE hint_order[4] =
 static struct Gadget *gads[GID_COUNT];
 static Object *winobj, *pages;
 static struct Window *win;
-static struct List tablist, hintlist, blacklb, runlist, charsetlist, fontlb;
+static struct List tablist, hintlist, blacklb, runlist, charsetlist;
 
 static struct AAPrefs cur;      /* what the window shows */
 static struct AAPrefs before;   /* AAText's settings when we started */
@@ -123,10 +121,6 @@ static char statustext[320];
 static char gammatext[8];
 static char fontinfo[80];
 static char cacheused[64];
-
-#define MAX_DIAG 300
-static struct AADiagEntry *diag;        /* last font scan, MAX_DIAG entries */
-static LONG numdiag = -1;               /* -1: not scanned yet */
 
 #define MAX_RUNNING 64
 static char runnames[MAX_RUNNING][AA_NAME_LEN];
@@ -201,10 +195,8 @@ static LONG PageOf(LONG gid)
         return 0;
     if ((gid >= GID_BLACKLIST && gid <= GID_RUNNING) || gid == GID_PICKFILE)
         return 1;
-    if (gid >= GID_AUTO && gid <= GID_CHARSET)
+    if ((gid >= GID_AUTO && gid <= GID_CHARSET) || gid == GID_MANAGER)
         return 2;
-    if (gid >= GID_SCAN && gid <= GID_MANAGER)
-        return 3;
     return -1;
 }
 
@@ -855,9 +847,6 @@ static void FreeLists(void)
     while ((n = RemHead(&charsetlist)))
         FreeChooserNode(n);
     FreeListBrowserList(&blacklb);
-    FreeListBrowserList(&fontlb);
-    FreeVec(diag);
-    diag = NULL;
 }
 
 static Object *ProgramsPage(void)
@@ -997,6 +986,19 @@ static Object *AdvancedPage(void)
         CHILD_WeightedHeight, 0,
 
         LAYOUT_AddChild, SpaceObject, End,     /* takes the spare height */
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddImage, LabelObject,
+                LABEL_Text, (ULONG)GetString(MSG_MANAGER_NOTE),
+            End,
+            LAYOUT_AddChild, SpaceObject, End,
+            LAYOUT_AddChild, gads[GID_MANAGER] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_MANAGER, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_DIAG_MANAGER),
+            End,
+            CHILD_WeightedWidth, 0,
+        End,
+        CHILD_WeightedHeight, 0,
     End;
 }
 
@@ -1008,194 +1010,6 @@ static LONG HintIndex(UBYTE hinting)
         if (hint_order[i] == hinting)
             return i;
     return 0;
-}
-
-/* ------------------------------------------------------------------ */
-/* Diagnostics tab                                                     */
-/* ------------------------------------------------------------------ */
-
-static char scansum[96];
-/* the read-only fields under the font list */
-static char detail1[AA_FONTFILE_LEN];   /* .otag file */
-static char detail2[AA_FONTFILE_LEN];   /* font file named in the .otag */
-static char detail3[AA_FONTFILE_LEN];   /* where it was found */
-static char detail4[80];                /* OT_Engine and its library */
-static char advice[128];
-
-static const LONG diag_msg[AA_DIAG_NUM] =
-{
-    MSG_DIAG_OK, MSG_DIAG_MOVED, MSG_DIAG_MISSING, MSG_DIAG_BADFILE,
-    MSG_DIAG_BADOTAG, MSG_DIAG_OTHER
-};
-
-static const LONG diag_advice[AA_DIAG_NUM] =
-{
-    MSG_DIAG_ADV_OK, MSG_DIAG_ADV_MOVED, MSG_DIAG_ADV_MISSING,
-    MSG_DIAG_ADV_BADFILE, MSG_DIAG_ADV_BADOTAG, MSG_DIAG_ADV_OTHER
-};
-
-/* English status names for the report, which goes into bug reports */
-static const char *const diag_name[AA_DIAG_NUM] =
-{
-    "ok", "moved", "missing", "not a font", "bad .otag", "other engine"
-};
-
-static struct ColumnInfo fontcols[] =
-{
-    { 32, NULL, 0 },
-    { 18, NULL, 0 },
-    { 50, NULL, 0 },
-    { -1, NULL, 0 }
-};
-
-/*
- * Show the selected font in the read-only fields under the list: its
- * .otag, the font file named there, where it really is, the OT_Engine
- * with its library, and what to do about it.
- */
-static void ShowDetail(void)
-{
-    ULONG sel = ~0UL;
-    struct AADiagEntry *e;
-    const char *arg;
-
-    detail1[0] = detail2[0] = detail3[0] = detail4[0] = advice[0] = 0;
-    if (gads[GID_FONTLIST])
-        GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_FONTLIST], &sel);
-    if ((LONG)sel >= 0 && (LONG)sel < numdiag)
-    {
-        e = &diag[sel];
-        snprintf(detail1, sizeof(detail1), "%s", e->otag);
-        snprintf(detail2, sizeof(detail2), "%s", e->want);
-        snprintf(detail3, sizeof(detail3), "%s", e->found);
-        if (e->engine[0] && e->enginever[0])
-            snprintf(detail4, sizeof(detail4), GetString(MSG_DIAG_ENGINEFMT),
-                     e->engine, e->engine, e->enginever);
-        else if (e->engine[0])
-            snprintf(detail4, sizeof(detail4),
-                     GetString(MSG_DIAG_ENGINENONE), e->engine, e->engine);
-
-        arg = e->status == AA_DIAG_OTHER ? e->engine : "";
-        snprintf(advice, sizeof(advice), GetString(diag_advice[e->status]),
-                 arg);
-        /* without the engine's library diskfont cannot make the font
-           for any program, even when the file is fine */
-        if (e->engine[0] && !e->enginever[0])
-            snprintf(advice, sizeof(advice), GetString(MSG_DIAG_NOENGINE),
-                     e->engine);
-    }
-    SetGad(GID_DETAIL1, STRINGA_TextVal, (ULONG)detail1);
-    SetGad(GID_DETAIL2, STRINGA_TextVal, (ULONG)detail2);
-    SetGad(GID_DETAIL3, STRINGA_TextVal, (ULONG)detail3);
-    SetGad(GID_DETAIL4, STRINGA_TextVal, (ULONG)detail4);
-    SetGad(GID_ADVICE, GA_Text, (ULONG)advice);
-    SetGad(GID_FIX, GA_Disabled, (LONG)sel < 0 || (LONG)sel >= numdiag ||
-           diag[sel].status != AA_DIAG_MOVED);
-}
-
-/* Show the scan results; sel is the entry to select, or -1. */
-static void ShowScan(LONG sel)
-{
-    LONG i, ok = 0;
-
-    SetGad(GID_FONTLIST, LISTBROWSER_Labels, ~0UL);
-    FreeListBrowserList(&fontlb);
-    for (i = 0; i < numdiag; i++)
-    {
-        struct AADiagEntry *e = &diag[i];
-        struct Node *n = AllocListBrowserNode(3,
-            LBNA_Column, 0, LBNCA_Text, (ULONG)e->name,
-            LBNA_Column, 1, LBNCA_Text, (ULONG)GetString(diag_msg[e->status]),
-            LBNA_Column, 2, LBNCA_Text,
-                (ULONG)(e->found[0] ? e->found : e->want),
-            TAG_DONE);
-
-        if (n)
-            AddTail(&fontlb, n);
-        if (e->status == AA_DIAG_OK || e->status == AA_DIAG_OTHER)
-            ok++;
-    }
-    SetGad2(GID_FONTLIST, LISTBROWSER_Labels, (ULONG)&fontlb,
-            LISTBROWSER_Selected, (ULONG)sel);
-
-    if (numdiag < 0)
-        snprintf(scansum, sizeof(scansum), "%s", GetString(MSG_DIAG_NOFONTS));
-    else if (numdiag == MAX_DIAG)
-        snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_LISTFULL),
-                 (long)MAX_DIAG);
-    else
-        snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_SUMMARY),
-                 (long)numdiag, (long)ok, (long)(numdiag - ok));
-    SetGad(GID_SCANSUM, GA_Text, (ULONG)scansum);
-    ShowDetail();
-}
-
-static void ScanFonts(void)
-{
-    if (!diag)
-        diag = AllocVec(MAX_DIAG * sizeof(*diag), MEMF_ANY);
-    if (!diag)
-        return;
-
-    SetAttrs(winobj, WA_BusyPointer, TRUE, TAG_DONE);
-    numdiag = aa_ScanFonts(diag, MAX_DIAG);
-    SetAttrs(winobj, WA_BusyPointer, FALSE, TAG_DONE);
-    ShowScan(-1);
-}
-
-/*
- * Point the selected moved font's .otag at the file where it was
- * found, after asking; the original is kept as .otag.bak.
- */
-static void FixSelected(void)
-{
-    static char backup[AA_FONTFILE_LEN + 4], msg[sizeof(statustext)];
-    struct EasyStruct es;
-    struct AADiagEntry *e;
-    ULONG sel = ~0UL, args[4];
-    LONG r;
-
-    GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_FONTLIST], &sel);
-    if ((LONG)sel < 0 || (LONG)sel >= numdiag ||
-        diag[sel].status != AA_DIAG_MOVED)
-    {
-        SetStatus(GetString(MSG_DIAG_FIX_NOTMOVED));
-        return;
-    }
-    e = &diag[sel];
-
-    snprintf(backup, sizeof(backup), "%s.bak", e->otag);
-    args[0] = (ULONG)e->otag;
-    args[1] = (ULONG)e->want;
-    args[2] = (ULONG)e->found;
-    args[3] = (ULONG)backup;
-    es.es_StructSize = sizeof(es);
-    es.es_Flags = 0;
-    es.es_Title = (UBYTE *)GetString(MSG_WINDOW_TITLE);
-    es.es_TextFormat = (UBYTE *)GetString(MSG_DIAG_FIX_ASK);
-    es.es_GadgetFormat = (UBYTE *)GetString(MSG_DIAG_FIX_GADS);
-    if (EasyRequestArgs(win, &es, NULL, args) != 1)
-        return;
-
-    r = aa_FixOTag(e, backup);
-    switch (r)
-    {
-        case AA_FIX_OK:
-            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIXED), backup);
-            break;
-        case AA_FIX_BACKUP:
-            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_BACKUP), backup);
-            break;
-        case AA_FIX_WRITE:
-            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_WRITE),
-                     e->otag, backup);
-            break;
-        default:
-            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_READ), e->otag);
-            break;
-    }
-    ShowScan(sel);
-    SetStatus(msg);
 }
 
 /*
@@ -1227,184 +1041,6 @@ static void StartManager(void)
         Close(out);
     snprintf(msg, sizeof(msg), GetString(MSG_DIAG_NOMANAGER), path);
     SetStatus(msg);
-}
-
-/* Plain text, English: meant to be attached to bug reports. */
-static BOOL WriteReport(const char *path)
-{
-    BPTR fh = Open((CONST_STRPTR)path, MODE_NEWFILE);
-    LONG i;
-    BOOL ok = TRUE;
-
-    if (!fh)
-        return FALSE;
-    FPrintf(fh, (CONST_STRPTR)"AAText font report (%s)\n",
-            (ULONG)(version + 6));
-    FPrintf(fh, (CONST_STRPTR)"%ld font(s) in FONTS:\n", (ULONG)numdiag);
-    for (i = 0; i < numdiag && ok; i++)
-    {
-        struct AADiagEntry *e = &diag[i];
-
-        FPrintf(fh, (CONST_STRPTR)"\n%s: %s\n  .otag:    %s\n",
-                (ULONG)e->name, (ULONG)diag_name[e->status], (ULONG)e->otag);
-        if (e->want[0])
-            FPrintf(fh, (CONST_STRPTR)"  in .otag: %s\n", (ULONG)e->want);
-        if (e->found[0] && strcmp(e->found, e->want))
-            FPrintf(fh, (CONST_STRPTR)"  found:    %s\n", (ULONG)e->found);
-        ok = FPrintf(fh, (CONST_STRPTR)"  engine:   %s (%s.library %s), "
-                     "face %ld, code page %s\n",
-                     (ULONG)(e->engine[0] ? e->engine : "?"),
-                     (ULONG)(e->engine[0] ? e->engine : "?"),
-                     (ULONG)(e->enginever[0] ? e->enginever : "not installed"),
-                     (ULONG)e->facenum,
-                     (ULONG)(e->codepage ? "in .otag" : "none")) >= 0;
-    }
-    if (!Close(fh))
-        ok = FALSE;
-    return ok;
-}
-
-static void SaveReport(void)
-{
-    static char path[AA_PATH_LEN];
-    struct FileRequester *fr;
-    char msg[AA_PATH_LEN + 40];
-
-    if (numdiag < 0)
-        ScanFonts();
-    if (numdiag < 0)
-        return;
-    fr = AllocAslRequestTags(ASL_FileRequest,
-                             ASLFR_Window, (ULONG)win,
-                             ASLFR_TitleText,
-                                 (ULONG)GetString(MSG_DIAG_SAVE_TITLE),
-                             ASLFR_InitialDrawer, (ULONG)"RAM:",
-                             ASLFR_InitialFile, (ULONG)"AAText-fonts.txt",
-                             ASLFR_DoSaveMode, TRUE,
-                             ASLFR_RejectIcons, TRUE,
-                             ASLFR_SleepWindow, TRUE,
-                             TAG_DONE);
-    if (!fr)
-        return;
-    if (AslRequest(fr, NULL) && fr->fr_File && fr->fr_File[0])
-    {
-        snprintf(path, sizeof(path), "%s", (char *)fr->fr_Drawer);
-        AddPart((STRPTR)path, fr->fr_File, sizeof(path));
-        snprintf(msg, sizeof(msg), GetString(WriteReport(path) ?
-                 MSG_DIAG_SAVED : MSG_WRITE_ERROR), path);
-        SetStatus(msg);
-    }
-    FreeAslRequest(fr);
-}
-
-/* A read-only text field for the font details: long paths can be
-   scrolled in it. */
-static struct Gadget *DetailField(ULONG id, char *text)
-{
-    return (struct Gadget *)StringObject,
-        GA_ID, id,
-        GA_ReadOnly, TRUE,
-        STRINGA_MaxChars, AA_FONTFILE_LEN,
-        STRINGA_TextVal, (ULONG)text,
-    End;
-}
-
-static Object *DiagPage(void)
-{
-    LONG lineh = previewfont ? previewfont->tf_YSize : 8;
-
-    fontcols[0].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FONT);
-    fontcols[1].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_STATUS);
-    fontcols[2].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FILE);
-
-    return VLayoutObject,
-        LAYOUT_SpaceOuter, TRUE,
-        LAYOUT_DeferLayout, TRUE,
-
-        LAYOUT_AddImage, LabelObject,
-            LABEL_Text, (ULONG)GetString(MSG_DIAG_INFO),
-        End,
-        CHILD_WeightedHeight, 0,
-
-        LAYOUT_AddChild, HLayoutObject,
-            LAYOUT_AddChild, gads[GID_SCAN] = (struct Gadget *)ButtonObject,
-                GA_ID, GID_SCAN, GA_RelVerify, TRUE,
-                GA_Text, (ULONG)GetString(MSG_DIAG_SCAN),
-            End,
-            CHILD_WeightedWidth, 0,
-            LAYOUT_AddChild, gads[GID_SCANSUM] = (struct Gadget *)ButtonObject,
-                GA_ID, GID_SCANSUM,
-                GA_ReadOnly, TRUE,
-                GA_Underscore, 0,
-                GA_Text, (ULONG)scansum,
-                BUTTON_BevelStyle, BVS_NONE,
-                BUTTON_Justification, BCJ_LEFT,
-            End,
-        End,
-        CHILD_WeightedHeight, 0,
-
-        LAYOUT_AddChild, gads[GID_FONTLIST] =
-                         (struct Gadget *)ListBrowserObject,
-            GA_ID, GID_FONTLIST,
-            GA_RelVerify, TRUE,
-            LISTBROWSER_Labels, (ULONG)&fontlb,
-            LISTBROWSER_ColumnInfo, (ULONG)fontcols,
-            LISTBROWSER_ColumnTitles, TRUE,
-            LISTBROWSER_ShowSelected, TRUE,
-            LISTBROWSER_HorizontalProp, TRUE,
-        End,
-        CHILD_MinHeight, lineh * 6 + 8,
-
-        LAYOUT_AddChild, VLayoutObject,
-            LAYOUT_AddChild, gads[GID_DETAIL1] = DetailField(GID_DETAIL1,
-                                                             detail1),
-            Label(GetString(MSG_DIAG_L_OTAG)),
-            LAYOUT_AddChild, gads[GID_DETAIL2] = DetailField(GID_DETAIL2,
-                                                             detail2),
-            Label(GetString(MSG_DIAG_L_WANT)),
-            LAYOUT_AddChild, gads[GID_DETAIL3] = DetailField(GID_DETAIL3,
-                                                             detail3),
-            Label(GetString(MSG_DIAG_L_FOUND)),
-            LAYOUT_AddChild, gads[GID_DETAIL4] = DetailField(GID_DETAIL4,
-                                                             detail4),
-            /* "OT_Engine": the "_" is part of the name, not a key */
-            CHILD_Label, LabelObject,
-                LABEL_Text, (ULONG)GetString(MSG_DIAG_L_ENGINE),
-                LABEL_Underscore, 0,
-            End,
-        End,
-        CHILD_WeightedHeight, 0,
-        LAYOUT_AddChild, gads[GID_ADVICE] = (struct Gadget *)ButtonObject,
-            GA_ID, GID_ADVICE,
-            GA_ReadOnly, TRUE,
-            GA_Underscore, 0,
-            GA_Text, (ULONG)advice,
-            BUTTON_BevelStyle, BVS_NONE,
-            BUTTON_Justification, BCJ_LEFT,
-        End,
-        CHILD_WeightedHeight, 0,
-
-        LAYOUT_AddChild, HLayoutObject,
-            LAYOUT_AddChild, gads[GID_FIX] = (struct Gadget *)ButtonObject,
-                GA_ID, GID_FIX, GA_RelVerify, TRUE,
-                GA_Disabled, TRUE,
-                GA_Text, (ULONG)GetString(MSG_DIAG_FIX),
-            End,
-            CHILD_WeightedWidth, 0,
-            LAYOUT_AddChild, SpaceObject, End,
-            LAYOUT_AddChild, gads[GID_MANAGER] = (struct Gadget *)ButtonObject,
-                GA_ID, GID_MANAGER, GA_RelVerify, TRUE,
-                GA_Text, (ULONG)GetString(MSG_DIAG_MANAGER),
-            End,
-            CHILD_WeightedWidth, 0,
-            LAYOUT_AddChild, gads[GID_REPORT] = (struct Gadget *)ButtonObject,
-                GA_ID, GID_REPORT, GA_RelVerify, TRUE,
-                GA_Text, (ULONG)GetString(MSG_DIAG_REPORT),
-            End,
-            CHILD_WeightedWidth, 0,
-        End,
-        CHILD_WeightedHeight, 0,
-    End;
 }
 
 static Object *AppearancePage(void)
@@ -1532,7 +1168,6 @@ static BOOL OpenWin(struct Screen *scr)
     AddTab(&tablist, MSG_TAB_APPEARANCE, 0);
     AddTab(&tablist, MSG_TAB_PROGRAMS, 1);
     AddTab(&tablist, MSG_TAB_ADVANCED, 2);
-    AddTab(&tablist, MSG_TAB_DIAG, 3);
     AddChoice(&hintlist, MSG_HINT_NORMAL);
     AddChoice(&hintlist, MSG_HINT_LIGHT);
     AddChoice(&hintlist, MSG_HINT_NONE);
@@ -1571,7 +1206,6 @@ static BOOL OpenWin(struct Screen *scr)
                     PAGE_Add, AppearancePage(),
                     PAGE_Add, ProgramsPage(),
                     PAGE_Add, AdvancedPage(),
-                    PAGE_Add, DiagPage(),
                 End,
             End,
 
@@ -1657,22 +1291,6 @@ static BOOL Action(ULONG id)
                 AddProgram((const char *)text);
             break;
         }
-
-        case GID_SCAN:
-            ScanFonts();
-            break;
-
-        case GID_FONTLIST:
-            ShowDetail();
-            break;
-
-        case GID_REPORT:
-            SaveReport();
-            break;
-
-        case GID_FIX:
-            FixSelected();
-            break;
 
         case GID_MANAGER:
             StartManager();
@@ -1844,7 +1462,6 @@ int main(int argc, char **argv)
     NewList(&blacklb);
     NewList(&runlist);
     NewList(&charsetlist);
-    NewList(&fontlb);
 
     if (argc)
     {

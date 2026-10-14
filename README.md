@@ -27,12 +27,12 @@ and MUI programs — everything that draws text through `graphics.library`.
 
   ![AATextPrefs: gamma, hinting, real widths and kerning with a live preview](docs/screenshots/aatextprefs.png)
 
-- **Font diagnostics.** AATextPrefs checks the `.otag` files in `FONTS:` and the
+- **Font diagnostics.** AATextManager checks the `.otag` files in `FONTS:` and the
   font files they name, finds fonts whose `.otag` points to a moved or missing
   file (e.g. after the boot volume was renamed) and can fix them, keeping a
   backup.
 
-  ![AATextPrefs Diagnostics: every .otag in FONTS: with its font file and status](docs/screenshots/diagnostics.png)
+  ![AATextManager Diagnostics: every .otag in FONTS: with its font file and status](docs/screenshots/diagnostics.png)
 
 - **Font installer.** AATextManager installs TrueType and OpenType fonts like
   FTManager, but writes the code page of a character set into the `.otag` (so
@@ -164,12 +164,12 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
 
   ![AATextPrefs: gamma, hinting, gerçek genişlikler ve kerning, canlı önizlemeyle](docs/screenshots/aatextprefs.png)
 
-- **Font tanılama.** AATextPrefs, `FONTS:` içindeki `.otag` dosyalarını ve
+- **Font tanılama.** AATextManager, `FONTS:` içindeki `.otag` dosyalarını ve
   gösterdikleri font dosyalarını denetler; `.otag`'ı yeri değişmiş ya da eksik
   bir dosyayı gösteren fontları (ör. açılış diski yeniden adlandırıldıktan
   sonra) bulur ve yedek alarak düzeltebilir.
 
-  ![AATextPrefs Tanılama: FONTS: içindeki her .otag, font dosyası ve durumuyla](docs/screenshots/diagnostics.png)
+  ![AATextManager Tanılama: FONTS: içindeki her .otag, font dosyası ve durumuyla](docs/screenshots/diagnostics.png)
 
 - **Font kurucu.** AATextManager, TrueType ve OpenType fontları FTManager gibi
   kurar, ama `.otag`'a bir karakter setinin kod sayfasını yazar (Türkçe ve

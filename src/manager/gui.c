@@ -7,6 +7,8 @@
  *            line per face), sizes, "replace", Install
  *   Repair   Check fonts lists the .otag files in FONTS: that can be
  *            repaired; Repair asks once, then repairs them all
+ *   Diagnostics  every .otag in FONTS: with its font file and status,
+ *            Fix .otag for a moved font file, a plain text report
  */
 
 #include <exec/types.h>
@@ -73,6 +75,8 @@ enum
     GID_TABS = 1, GID_CHARSET, GID_ENGINE,
     GID_FILES, GID_PREVIEW, GID_ADD, GID_REMOVE, GID_SIZES, GID_OVERWRITE, GID_INSTALL,
     GID_CHECK, GID_REPAIRLIST, GID_CHANGEENGINE, GID_REPAIR,
+    GID_DSCAN, GID_DSCANSUM, GID_DFONTLIST, GID_DDETAIL1, GID_DDETAIL2,
+    GID_DDETAIL3, GID_DDETAIL4, GID_DADVICE, GID_DFIX, GID_DREPORT,
     GID_STATUS,
     GID_COUNT
 };
@@ -91,11 +95,16 @@ struct FileEntry
 static struct Gadget *gads[GID_COUNT];
 static Object *winobj, *pages;
 static struct Window *win;
-static struct List tablist, charsetlist, enginelist, filelb, repairlb;
+static struct List tablist, charsetlist, enginelist, filelb, repairlb,
+                   diaglb;
 static struct FileEntry *files;
 static LONG numfiles;
 static struct AADiagEntry *diag;
 static LONG numdiag;
+/* the Diagnostics tab has its own scan: the Repair list points into diag */
+#define MAX_DIAG 300
+static struct AADiagEntry *dscan;       /* MAX_DIAG entries */
+static LONG numdscan = -1;              /* -1: not scanned yet */
 static char statustext[200];
 static char sizestext[80] = "8-16,18,20,24";
 
@@ -182,6 +191,8 @@ static LONG PageOf(LONG gid)
         return 0;
     if (gid >= GID_CHECK && gid <= GID_REPAIR)
         return 1;
+    if (gid >= GID_DSCAN && gid <= GID_DREPORT)
+        return 2;
     return -1;
 }
 
@@ -474,6 +485,9 @@ static LONG CheckFonts(void)
 
     SetGad(GID_REPAIRLIST, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&repairlb);
+    FreeListBrowserList(&diaglb);
+    FreeVec(dscan);
+    dscan = NULL;
     Repair_Settings(&r);
     Busy(TRUE);
     numdiag = aa_ScanFonts(diag, MAX_FONTS);
@@ -695,6 +709,364 @@ static Object *RepairPage(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* Diagnostics tab (until 0.23 in AATextPrefs)                         */
+/* ------------------------------------------------------------------ */
+
+static char scansum[96];
+/* the read-only fields under the font list */
+static char detail1[AA_FONTFILE_LEN];   /* .otag file */
+static char detail2[AA_FONTFILE_LEN];   /* font file named in the .otag */
+static char detail3[AA_FONTFILE_LEN];   /* where it was found */
+static char detail4[80];                /* OT_Engine and its library */
+static char advice[128];
+
+static const LONG diag_msg[AA_DIAG_NUM] =
+{
+    MSG_DIAG_OK, MSG_DIAG_MOVED, MSG_DIAG_MISSING, MSG_DIAG_BADFILE,
+    MSG_DIAG_BADOTAG, MSG_DIAG_OTHER
+};
+
+static const LONG diag_advice[AA_DIAG_NUM] =
+{
+    MSG_DIAG_ADV_OK, MSG_DIAG_ADV_MOVED, MSG_DIAG_ADV_MISSING,
+    MSG_DIAG_ADV_BADFILE, MSG_DIAG_ADV_BADOTAG, MSG_DIAG_ADV_OTHER
+};
+
+/* English status names for the report, which goes into bug reports */
+static const char *const diag_name[AA_DIAG_NUM] =
+{
+    "ok", "moved", "missing", "not a font", "bad .otag", "other engine"
+};
+
+static struct ColumnInfo diagcols[] =
+{
+    { 32, NULL, 0 },
+    { 18, NULL, 0 },
+    { 50, NULL, 0 },
+    { -1, NULL, 0 }
+};
+
+/*
+ * Show the selected font in the read-only fields under the list: its
+ * .otag, the font file named there, where it really is, the OT_Engine
+ * with its library, and what to do about it.
+ */
+static void DiagDetail(void)
+{
+    ULONG sel = ~0UL;
+    struct AADiagEntry *e;
+    const char *arg;
+
+    detail1[0] = detail2[0] = detail3[0] = detail4[0] = advice[0] = 0;
+    if (gads[GID_DFONTLIST])
+        GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_DFONTLIST], &sel);
+    if ((LONG)sel >= 0 && (LONG)sel < numdscan)
+    {
+        e = &dscan[sel];
+        snprintf(detail1, sizeof(detail1), "%s", e->otag);
+        snprintf(detail2, sizeof(detail2), "%s", e->want);
+        snprintf(detail3, sizeof(detail3), "%s", e->found);
+        if (e->engine[0] && e->enginever[0])
+            snprintf(detail4, sizeof(detail4), GetString(MSG_DIAG_ENGINEFMT),
+                     e->engine, e->engine, e->enginever);
+        else if (e->engine[0])
+            snprintf(detail4, sizeof(detail4),
+                     GetString(MSG_DIAG_ENGINENONE), e->engine, e->engine);
+
+        arg = e->status == AA_DIAG_OTHER ? e->engine : "";
+        snprintf(advice, sizeof(advice), GetString(diag_advice[e->status]),
+                 arg);
+        /* without the engine's library diskfont cannot make the font
+           for any program, even when the file is fine */
+        if (e->engine[0] && !e->enginever[0])
+            snprintf(advice, sizeof(advice), GetString(MSG_DIAG_NOENGINE),
+                     e->engine);
+    }
+    SetGad(GID_DDETAIL1, STRINGA_TextVal, (ULONG)detail1);
+    SetGad(GID_DDETAIL2, STRINGA_TextVal, (ULONG)detail2);
+    SetGad(GID_DDETAIL3, STRINGA_TextVal, (ULONG)detail3);
+    SetGad(GID_DDETAIL4, STRINGA_TextVal, (ULONG)detail4);
+    SetGad(GID_DADVICE, GA_Text, (ULONG)advice);
+    SetGad(GID_DFIX, GA_Disabled, (LONG)sel < 0 || (LONG)sel >= numdscan ||
+           dscan[sel].status != AA_DIAG_MOVED);
+}
+
+/* Show the scan results; sel is the entry to select, or -1. */
+static void DiagShow(LONG sel)
+{
+    LONG i, ok = 0;
+
+    SetGad(GID_DFONTLIST, LISTBROWSER_Labels, ~0UL);
+    FreeListBrowserList(&diaglb);
+    for (i = 0; i < numdscan; i++)
+    {
+        struct AADiagEntry *e = &dscan[i];
+        struct Node *n = AllocListBrowserNode(3,
+            LBNA_Column, 0, LBNCA_Text, (ULONG)e->name,
+            LBNA_Column, 1, LBNCA_Text, (ULONG)GetString(diag_msg[e->status]),
+            LBNA_Column, 2, LBNCA_Text,
+                (ULONG)(e->found[0] ? e->found : e->want),
+            TAG_DONE);
+
+        if (n)
+            AddTail(&diaglb, n);
+        if (e->status == AA_DIAG_OK || e->status == AA_DIAG_OTHER)
+            ok++;
+    }
+    SetGad2(GID_DFONTLIST, LISTBROWSER_Labels, (ULONG)&diaglb,
+            LISTBROWSER_Selected, (ULONG)sel);
+
+    if (numdscan < 0)
+        snprintf(scansum, sizeof(scansum), "%s", GetString(MSG_DIAG_NOFONTS));
+    else if (numdscan == MAX_DIAG)
+        snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_LISTFULL),
+                 (long)MAX_DIAG);
+    else
+        snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_SUMMARY),
+                 (long)numdscan, (long)ok, (long)(numdscan - ok));
+    SetGad(GID_DSCANSUM, GA_Text, (ULONG)scansum);
+    DiagDetail();
+}
+
+static void DiagScan(void)
+{
+    if (!dscan)
+        dscan = AllocVec(MAX_DIAG * sizeof(*dscan), MEMF_ANY);
+    if (!dscan)
+        return;
+
+    Busy(TRUE);
+    numdscan = aa_ScanFonts(dscan, MAX_DIAG);
+    Busy(FALSE);
+    DiagShow(-1);
+}
+
+/*
+ * Point the selected moved font's .otag at the file where it was
+ * found, after asking; the original is kept as .otag.bak.
+ */
+static void DiagFix(void)
+{
+    static char backup[AA_FONTFILE_LEN + 4], msg[sizeof(statustext)];
+    struct EasyStruct es;
+    struct AADiagEntry *e;
+    ULONG sel = ~0UL, args[4];
+    LONG r;
+
+    GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_DFONTLIST], &sel);
+    if ((LONG)sel < 0 || (LONG)sel >= numdscan ||
+        dscan[sel].status != AA_DIAG_MOVED)
+    {
+        SetStatus(GetString(MSG_DIAG_FIX_NOTMOVED));
+        return;
+    }
+    e = &dscan[sel];
+
+    snprintf(backup, sizeof(backup), "%s.bak", e->otag);
+    args[0] = (ULONG)e->otag;
+    args[1] = (ULONG)e->want;
+    args[2] = (ULONG)e->found;
+    args[3] = (ULONG)backup;
+    es.es_StructSize = sizeof(es);
+    es.es_Flags = 0;
+    es.es_Title = (UBYTE *)GetString(MSG_TITLE);
+    es.es_TextFormat = (UBYTE *)GetString(MSG_DIAG_FIX_ASK);
+    es.es_GadgetFormat = (UBYTE *)GetString(MSG_DIAG_FIX_GADS);
+    if (EasyRequestArgs(win, &es, NULL, args) != 1)
+        return;
+
+    r = aa_FixOTag(e, backup);
+    switch (r)
+    {
+        case AA_FIX_OK:
+            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIXED), backup);
+            break;
+        case AA_FIX_BACKUP:
+            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_BACKUP), backup);
+            break;
+        case AA_FIX_WRITE:
+            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_WRITE),
+                     e->otag, backup);
+            break;
+        default:
+            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_READ), e->otag);
+            break;
+    }
+    DiagShow(sel);
+    SetStatus(msg);
+}
+
+/* Plain text, English: meant to be attached to bug reports. */
+static BOOL DiagWrite(const char *path)
+{
+    BPTR fh = Open((CONST_STRPTR)path, MODE_NEWFILE);
+    LONG i;
+    BOOL ok = TRUE;
+
+    if (!fh)
+        return FALSE;
+    FPrintf(fh, (CONST_STRPTR)"AAText font report (%s)\n",
+            (ULONG)"AATextManager " AAMGR_VERSION);
+    FPrintf(fh, (CONST_STRPTR)"%ld font(s) in FONTS:\n", (ULONG)numdscan);
+    for (i = 0; i < numdscan && ok; i++)
+    {
+        struct AADiagEntry *e = &dscan[i];
+
+        FPrintf(fh, (CONST_STRPTR)"\n%s: %s\n  .otag:    %s\n",
+                (ULONG)e->name, (ULONG)diag_name[e->status], (ULONG)e->otag);
+        if (e->want[0])
+            FPrintf(fh, (CONST_STRPTR)"  in .otag: %s\n", (ULONG)e->want);
+        if (e->found[0] && strcmp(e->found, e->want))
+            FPrintf(fh, (CONST_STRPTR)"  found:    %s\n", (ULONG)e->found);
+        ok = FPrintf(fh, (CONST_STRPTR)"  engine:   %s (%s.library %s), "
+                     "face %ld, code page %s\n",
+                     (ULONG)(e->engine[0] ? e->engine : "?"),
+                     (ULONG)(e->engine[0] ? e->engine : "?"),
+                     (ULONG)(e->enginever[0] ? e->enginever : "not installed"),
+                     (ULONG)e->facenum,
+                     (ULONG)(e->codepage ? "in .otag" : "none")) >= 0;
+    }
+    if (!Close(fh))
+        ok = FALSE;
+    return ok;
+}
+
+static void DiagReport(void)
+{
+    static char path[AA_PATH_LEN];
+    struct FileRequester *fr;
+    char msg[AA_PATH_LEN + 40];
+
+    if (numdscan < 0)
+        DiagScan();
+    if (numdscan < 0)
+        return;
+    fr = AllocAslRequestTags(ASL_FileRequest,
+                             ASLFR_Window, (ULONG)win,
+                             ASLFR_TitleText,
+                                 (ULONG)GetString(MSG_DIAG_SAVE_TITLE),
+                             ASLFR_InitialDrawer, (ULONG)"RAM:",
+                             ASLFR_InitialFile, (ULONG)"AAText-fonts.txt",
+                             ASLFR_DoSaveMode, TRUE,
+                             ASLFR_RejectIcons, TRUE,
+                             ASLFR_SleepWindow, TRUE,
+                             TAG_DONE);
+    if (!fr)
+        return;
+    if (AslRequest(fr, NULL) && fr->fr_File && fr->fr_File[0])
+    {
+        snprintf(path, sizeof(path), "%s", (char *)fr->fr_Drawer);
+        AddPart((STRPTR)path, fr->fr_File, sizeof(path));
+        snprintf(msg, sizeof(msg), GetString(DiagWrite(path) ?
+                 MSG_DIAG_SAVED : MSG_DIAG_WRITEERR), path);
+        SetStatus(msg);
+    }
+    FreeAslRequest(fr);
+}
+
+/* A read-only text field for the font details: long paths can be
+   scrolled in it. */
+static struct Gadget *DetailField(ULONG id, char *text)
+{
+    return (struct Gadget *)StringObject,
+        GA_ID, id,
+        GA_ReadOnly, TRUE,
+        STRINGA_MaxChars, AA_FONTFILE_LEN,
+        STRINGA_TextVal, (ULONG)text,
+    End;
+}
+
+static Object *DiagPage(void)
+{
+    diagcols[0].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FONT);
+    diagcols[1].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_STATUS);
+    diagcols[2].ci_Title = (STRPTR)GetString(MSG_DIAG_COL_FILE);
+
+    return VLayoutObject,
+        LAYOUT_SpaceOuter, TRUE,
+        LAYOUT_DeferLayout, TRUE,
+
+        LAYOUT_AddImage, LabelObject,
+            LABEL_Text, (ULONG)GetString(MSG_DIAG_INFO),
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_DSCAN] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_DSCAN, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_DIAG_SCAN),
+            End,
+            CHILD_WeightedWidth, 0,
+            LAYOUT_AddChild, gads[GID_DSCANSUM] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_DSCANSUM,
+                GA_ReadOnly, TRUE,
+                GA_Underscore, 0,
+                GA_Text, (ULONG)scansum,
+                BUTTON_BevelStyle, BVS_NONE,
+                BUTTON_Justification, BCJ_LEFT,
+            End,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, gads[GID_DFONTLIST] =
+                         (struct Gadget *)ListBrowserObject,
+            GA_ID, GID_DFONTLIST,
+            GA_RelVerify, TRUE,
+            LISTBROWSER_Labels, (ULONG)&diaglb,
+            LISTBROWSER_ColumnInfo, (ULONG)diagcols,
+            LISTBROWSER_ColumnTitles, TRUE,
+            LISTBROWSER_ShowSelected, TRUE,
+            LISTBROWSER_HorizontalProp, TRUE,
+        End,
+        CHILD_MinHeight, 100,
+
+        LAYOUT_AddChild, VLayoutObject,
+            LAYOUT_AddChild, gads[GID_DDETAIL1] = DetailField(GID_DDETAIL1,
+                                                             detail1),
+            Label(GetString(MSG_DIAG_L_OTAG)),
+            LAYOUT_AddChild, gads[GID_DDETAIL2] = DetailField(GID_DDETAIL2,
+                                                             detail2),
+            Label(GetString(MSG_DIAG_L_WANT)),
+            LAYOUT_AddChild, gads[GID_DDETAIL3] = DetailField(GID_DDETAIL3,
+                                                             detail3),
+            Label(GetString(MSG_DIAG_L_FOUND)),
+            LAYOUT_AddChild, gads[GID_DDETAIL4] = DetailField(GID_DDETAIL4,
+                                                             detail4),
+            /* "OT_Engine": the "_" is part of the name, not a key */
+            CHILD_Label, LabelObject,
+                LABEL_Text, (ULONG)GetString(MSG_DIAG_L_ENGINE),
+                LABEL_Underscore, 0,
+            End,
+        End,
+        CHILD_WeightedHeight, 0,
+        LAYOUT_AddChild, gads[GID_DADVICE] = (struct Gadget *)ButtonObject,
+            GA_ID, GID_DADVICE,
+            GA_ReadOnly, TRUE,
+            GA_Underscore, 0,
+            GA_Text, (ULONG)advice,
+            BUTTON_BevelStyle, BVS_NONE,
+            BUTTON_Justification, BCJ_LEFT,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_DFIX] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_DFIX, GA_RelVerify, TRUE,
+                GA_Disabled, TRUE,
+                GA_Text, (ULONG)GetString(MSG_DIAG_FIX),
+            End,
+            CHILD_WeightedWidth, 0,
+            LAYOUT_AddChild, gads[GID_DREPORT] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_DREPORT, GA_RelVerify, TRUE,
+                GA_Text, (ULONG)GetString(MSG_DIAG_REPORT),
+            End,
+            CHILD_WeightedWidth, 0,
+        End,
+        CHILD_WeightedHeight, 0,
+    End;
+}
+
+/* ------------------------------------------------------------------ */
 /* Menu: update check                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -775,6 +1147,7 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
     LocalizeMenu();
     AddTab(&tablist, MSG_TAB_INSTALL, 0);
     AddTab(&tablist, MSG_TAB_REPAIR, 1);
+    AddTab(&tablist, MSG_TAB_DIAG, 2);
     for (i = 0; i < AA_NUM_CHARSETS; i++)
         AddChoice(&charsetlist, GetString(charset_msg[i]));
     AddChoice(&enginelist, GetString(MSG_ENGINE_AATEXT));
@@ -824,6 +1197,7 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
                 CLICKTAB_PageGroup, pages = PageObject,
                     PAGE_Add, InstallPage(),
                     PAGE_Add, RepairPage(),
+                    PAGE_Add, DiagPage(),
                 End,
             End,
 
@@ -855,6 +1229,10 @@ static void Action(ULONG id)
         case GID_INSTALL:   Install();      break;
         case GID_CHECK:     CheckFonts();   break;
         case GID_REPAIR:    RepairAll();    break;
+        case GID_DSCAN:     DiagScan();     break;
+        case GID_DFONTLIST: DiagDetail();   break;
+        case GID_DFIX:      DiagFix();      break;
+        case GID_DREPORT:   DiagReport();   break;
         case GID_CHARSET:
         case GID_ENGINE:
         case GID_CHANGEENGINE:
@@ -892,6 +1270,7 @@ int mgr_RunGUI(const char *language)
     NewList(&enginelist);
     NewList(&filelb);
     NewList(&repairlb);
+    NewList(&diaglb);
 
     files = AllocVec(MAX_FILES * sizeof(*files), MEMF_ANY | MEMF_CLEAR);
     diag = AllocVec(MAX_FONTS * sizeof(*diag), MEMF_ANY | MEMF_CLEAR);

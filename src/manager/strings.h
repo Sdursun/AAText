@@ -75,7 +75,47 @@
     S(MSG_UPD_NONET,        59, "No network: bsdsocket.library is not available\n(is the TCP/IP stack running?).") \
     S(MSG_UPD_NOSSL,        60, "The update check needs AmiSSL 5\n(amisslmaster.library, on Aminet: util/libs/AmiSSL-5).") \
     S(MSG_UPD_FAILED,       61, "The update check failed:\n%s") \
-    S(MSG_UPD_OK,           62, "OK")
+    S(MSG_UPD_OK,           62, "OK") \
+    S(MSG_TAB_DIAG,        63, "Diagnostics") \
+    S(MSG_DIAG_INFO,       64, "Checks the .otag files in FONTS: and the font files they name. Scanning changes nothing.") \
+    S(MSG_DIAG_SCAN,       65, "Scan fonts") \
+    S(MSG_DIAG_REPORT,     66, "Save report...") \
+    S(MSG_DIAG_SUMMARY,    67, "%ld fonts: %ld OK, %ld with problems") \
+    S(MSG_DIAG_NOFONTS,    68, "Cannot read FONTS:.") \
+    S(MSG_DIAG_COL_FONT,   69, "Font") \
+    S(MSG_DIAG_COL_STATUS, 70, "Status") \
+    S(MSG_DIAG_COL_FILE,   71, "Font file") \
+    S(MSG_DIAG_OK,         72, "OK") \
+    S(MSG_DIAG_MOVED,      73, "Moved") \
+    S(MSG_DIAG_MISSING,    74, "Missing") \
+    S(MSG_DIAG_BADFILE,    75, "Not a font") \
+    S(MSG_DIAG_BADOTAG,    76, "Bad .otag") \
+    S(MSG_DIAG_OTHER,      77, "Other engine") \
+    S(MSG_DIAG_ADV_OK,     78, "The font file is where the .otag says.") \
+    S(MSG_DIAG_ADV_MOVED,  79, "AAText finds it there, other programs may not: use Fix .otag.") \
+    S(MSG_DIAG_ADV_MISSING, 80, "The font file is not there. Install the font again, or delete its .font and .otag.") \
+    S(MSG_DIAG_ADV_BADFILE, 81, "This file is not a TrueType or OpenType font.") \
+    S(MSG_DIAG_ADV_BADOTAG, 82, "The .otag cannot be read or names no font file.") \
+    S(MSG_DIAG_ADV_OTHER,  83, "An outline font for another font engine (%s); AAText leaves it alone.") \
+    S(MSG_DIAG_SAVE_TITLE, 84, "Save font report") \
+    S(MSG_DIAG_SAVED,      85, "Report saved: %s") \
+    S(MSG_DIAG_LISTFULL,   86, "Only the first %ld fonts are listed.") \
+    S(MSG_DIAG_FIX,        87, "Fix .otag...") \
+    S(MSG_DIAG_FIX_ASK,    88, "Change %s?\n\nFont file now: %s\nbecomes: %s\n\nThe original is kept as %s.") \
+    S(MSG_DIAG_FIX_GADS,   89, "Change|Cancel") \
+    S(MSG_DIAG_FIXED,      90, "Fixed. The original is in %s.") \
+    S(MSG_DIAG_FIX_NOTMOVED, 91, "Only fonts marked Moved can be fixed.") \
+    S(MSG_DIAG_FIX_BACKUP, 92, "Cannot write the backup %s; nothing was changed.") \
+    S(MSG_DIAG_FIX_READ,   93, "Cannot read or rebuild %s; nothing was changed.") \
+    S(MSG_DIAG_FIX_WRITE,  94, "Cannot write %s. The original is in %s.") \
+    S(MSG_DIAG_NOENGINE,   95, "%s.library is not installed: no program can open this font.") \
+    S(MSG_DIAG_L_OTAG,     96, ".otag file") \
+    S(MSG_DIAG_L_WANT,     97, "Font file in .otag") \
+    S(MSG_DIAG_L_FOUND,    98, "Found as") \
+    S(MSG_DIAG_L_ENGINE,   99, "OT_Engine") \
+    S(MSG_DIAG_ENGINEFMT,  100, "%s (%s.library %s)") \
+    S(MSG_DIAG_ENGINENONE, 101, "%s (%s.library not installed)") \
+    S(MSG_DIAG_WRITEERR,   102, "Cannot write %s.")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };
