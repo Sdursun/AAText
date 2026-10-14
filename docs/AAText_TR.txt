@@ -55,6 +55,19 @@ Hangi dosya?
 Kurulum
 -------
 
+Kolay yol: Install-AAText'e çift tıklayın (OS 3.2 Installer). Hangi
+sürümün kurulacağını sorar (68060'ta 68060 seçili gelir; PiStorm/Emu68
+ve WinUAE'de 68020/030/040'ı seçin, "Hangi dosya?" bölümüne bakın) ve
+hangi parçaların kurulacağını: AATextPrefs, aatext.library ile
+AATextManager, Türkçe kataloglar, belgeler
+(LOCALE:Help/türkçe/AAText_TR.txt ve LOCALE:Help/english/AAText_EN.txt).
+S:User-Startup'a (;BEGIN AAText ile ;END AAText arasına)
+"Run >NIL: C:AAText" satırını ekler; kurulu bir sürümü yerinde
+günceller, ayarlarınız korunur. "Kaldır" seçeneği kurulan dosyaları ve
+S:User-Startup satırını yeniden siler.
+
+Elle kurulum:
+
 1. AAText'i (veya adını AAText olarak değiştirip AAText.060'ı) C:
    içine kopyalayın ve S:Startup-Sequence dosyasına, monitör
    sürücüleri yüklendikten sonra (RTG sistemi çalışıyor olmalı) ve

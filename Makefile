@@ -167,6 +167,10 @@ dist:
 	cp docs/ftcodepage.latin5 $(DISTDIR)/AAText/ftcodepage.latin5
 	chmod 644 $(DISTDIR)/AAText/ftcodepage.latin5
 	iconv -f UTF-8 -t ISO-8859-9 docs/AAText_TR.txt > $(DISTDIR)/AAText/AAText_TR.txt
+	# installer script (Turkish strings and paths in ISO-8859-9) and its icon
+	iconv -f UTF-8 -t ISO-8859-9 installer/Install-AAText > $(DISTDIR)/AAText/Install-AAText
+	cp $(INST_ICON) $(DISTDIR)/AAText/Install-AAText.info
+	chmod 644 $(DISTDIR)/AAText/Install-AAText $(DISTDIR)/AAText/Install-AAText.info
 	cp docs/AAText.readme $(DISTDIR)/AAText.readme
 	chmod 644 $(DISTDIR)/AAText/*.txt $(DISTDIR)/AAText/*.example $(DISTDIR)/AAText.readme
 	chmod 755 $(DISTDIR)/AAText/AAText $(DISTDIR)/AAText/AAText.060 $(DISTDIR)/AAText/AAText.debug \
@@ -248,7 +252,13 @@ $(MGR_CATALOG): catalogs/manager-turkish.ct src/manager/strings.h tools/mkcatalo
 # GlowIcon for AATextManager; the PNG art is drawn by
 # tools/mkmanagericon.py from the AATextPrefs icon
 MGR_ICON := build/icons/AATextManager.info
-icons: $(MGR_ICON)
+INST_ICON := build/icons/Install-AAText.info
+icons: $(MGR_ICON) $(INST_ICON)
+
+# project icon of the installer script, opened with the OS 3.2 Installer
+$(INST_ICON): icons/AATextManager.png icons/AATextManager_sel.png tools/mkicon.py
+	@mkdir -p $(dir $@)
+	python3 -I tools/mkicon.py project icons/AATextManager.png 		icons/AATextManager_sel.png --deftool SYS:System/Installer 		--tooltype APPNAME=AAText --tooltype MINUSER=NOVICE 		--tooltype DEFUSER=AVERAGE -o $@
 
 $(MGR_ICON): icons/AATextManager.png icons/AATextManager_sel.png tools/mkicon.py
 	@mkdir -p $(dir $@)

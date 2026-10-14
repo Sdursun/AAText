@@ -1,0 +1,174 @@
+; $VER: Install-AAText 1.0 (14.10.2026)
+;
+; Installer script for AAText (AmigaOS 3.2 SYS:System/Installer).
+; UTF-8 here; "make dist" converts it to ISO-8859-9 for the package.
+;
+; Installs: C:AAText (68020 or 68060 build), SYS:Prefs/AATextPrefs,
+; SYS:System/AATextManager with LIBS:aatext.library, the Turkish
+; catalogs, the documents in LOCALE:Help/türkçe and LOCALE:Help/english,
+; and "Run >NIL: C:AAText" in S:User-Startup. Settings
+; (ENVARC:AAText.prefs) are never touched.
+
+(set @app-name "AAText")
+(set #tr (= @language "türkçe"))
+
+(set #catdir "LOCALE:Catalogs/türkçe")
+(set #helptr "LOCALE:Help/türkçe")
+(set #helpen "LOCALE:Help/english")
+
+; --------------------------------------------------------------------
+; Install or remove
+
+(set #mode
+  (askchoice
+    (prompt (if #tr "AAText'i kurmak mı, kaldırmak mı istiyorsunuz?"
+                    "Do you want to install or remove AAText?"))
+    (help (if #tr "Kaldır: kurulan dosyaları ve S:User-Startup'taki AAText satırını siler. Ayarlarınız (ENVARC:AAText.prefs) kalır."
+                  "Remove: deletes the installed files and the AAText line in S:User-Startup. Your settings (ENVARC:AAText.prefs) are kept."))
+    (choices (if #tr "Kur ya da güncelle" "Install or update")
+             (if #tr "Kaldır" "Remove"))
+    (default 0)))
+
+(if (= #mode 1)
+(
+  ; ------------------------------------------------------------ remove
+  (run "C:AAText QUIT >NIL:")
+  (if (exists "C:AAText")
+    (delete "C:AAText"
+      (prompt (if #tr "C:AAText silinsin mi?" "Delete C:AAText?"))
+      (help @delete-help) (confirm)))
+  (if (exists "SYS:Prefs/AATextPrefs")
+    (delete "SYS:Prefs/AATextPrefs" (infos)
+      (prompt (if #tr "SYS:Prefs/AATextPrefs silinsin mi?" "Delete SYS:Prefs/AATextPrefs?"))
+      (help @delete-help) (confirm)))
+  (if (exists "SYS:System/AATextManager")
+    (delete "SYS:System/AATextManager" (infos)
+      (prompt (if #tr "SYS:System/AATextManager silinsin mi?" "Delete SYS:System/AATextManager?"))
+      (help @delete-help) (confirm)))
+  (if (exists "LIBS:aatext.library")
+    (delete "LIBS:aatext.library"
+      (prompt (if #tr "LIBS:aatext.library silinsin mi?" "Delete LIBS:aatext.library?"))
+      (help @delete-help) (confirm)))
+  (if (exists (tackon #catdir "aatextprefs.catalog"))
+    (delete (tackon #catdir "aatextprefs.catalog")))
+  (if (exists (tackon #catdir "aatextmanager.catalog"))
+    (delete (tackon #catdir "aatextmanager.catalog")))
+  (if (exists (tackon #helptr "AAText_TR.txt"))
+    (delete (tackon #helptr "AAText_TR.txt")))
+  (if (exists (tackon #helpen "AAText_EN.txt"))
+    (delete (tackon #helpen "AAText_EN.txt")))
+  ; the AAText block in S:User-Startup is replaced by a comment
+  (startup "AAText"
+    (prompt (if #tr "S:User-Startup'taki AAText satırı kaldırılsın mı?"
+                    "Remove the AAText line from S:User-Startup?"))
+    (help @startup-help)
+    (command "; AAText removed\n"))
+  (exit (if #tr "AAText kaldırıldı. Ayarlar (ENVARC:AAText.prefs) yerinde duruyor; değişiklik yeniden başlatınca tamamlanır."
+                "AAText has been removed. The settings (ENVARC:AAText.prefs) are kept; the change is complete after a reboot.")
+        (quiet))
+))
+
+; ---------------------------------------------------------------- install
+
+(if (exists "C:AAText")
+  (set #old (getversion "C:AAText"))
+  (set #old 0))
+(set #new (getversion "AAText"))
+(if #old
+  (message
+    (if #tr
+      (cat "Kurulu AAText: " (/ #old 65536) "." (BITAND #old 65535)
+           "\nYeni sürüm: " (/ #new 65536) "." (BITAND #new 65535)
+           "\n\nDosyalar güncellenecek, ayarlarınız korunur.")
+      (cat "Installed AAText: " (/ #old 65536) "." (BITAND #old 65535)
+           "\nNew version: " (/ #new 65536) "." (BITAND #new 65535)
+           "\n\nThe files will be updated, your settings are kept."))))
+
+(set #cpu (database "cpu"))
+(set #build
+  (askchoice
+    (prompt (if #tr (cat "Hangi AAText sürümü kurulsun? (işlemci: " #cpu ")")
+                    (cat "Which AAText build should be installed? (processor: " #cpu ")")))
+    (help (if #tr "68060 sürümü yalnızca FPU'lu gerçek bir 68060 içindir. PiStorm/Emu68, WinUAE, 68020/030/040 ve FPU'suz 68LC060 için 68020/030/040 sürümünü seçin."
+                  "The 68060 build is for a real 68060 with FPU only. For PiStorm/Emu68, WinUAE, 68020/030/040 and the 68LC060 without FPU choose the 68020/030/040 build."))
+    (choices "68020/030/040" "68060")
+    (default (if (= #cpu "68060") 1 0))))
+
+(set #parts
+  (askoptions
+    (prompt (if #tr "Hangi parçalar kurulsun? (AAText her zaman kurulur)"
+                    "Which parts should be installed? (AAText is always installed)"))
+    (help (if #tr "AATextPrefs: ayar programı (SYS:Prefs).\nAATextManager: font kurucu, onarım ve tanılama (SYS:System, LIBS:aatext.library ile).\nTürkçe kataloglar: Türkçe arayüz (LOCALE:Catalogs/türkçe).\nBelgeler: LOCALE:Help/türkçe ve LOCALE:Help/english."
+                  "AATextPrefs: the settings program (SYS:Prefs).\nAATextManager: font installer, repair and diagnostics (SYS:System, with LIBS:aatext.library).\nTurkish catalogs: Turkish user interface (LOCALE:Catalogs/türkçe).\nDocuments: LOCALE:Help/türkçe and LOCALE:Help/english."))
+    (choices "AATextPrefs"
+             "AATextManager + aatext.library"
+             (if #tr "Türkçe kataloglar" "Turkish catalogs")
+             (if #tr "Belgeler" "Documents"))
+    (default 15)))
+
+(copyfiles
+  (prompt (if #tr "AAText, C: içine kopyalanıyor." "Copying AAText to C:."))
+  (help @copyfiles-help)
+  (source (if (= #build 1) "AAText.060" "AAText"))
+  (dest "C:")
+  (newname "AAText"))
+(protect "C:AAText" "+e")
+(complete 20)
+
+(if (IN #parts 0)
+  (copyfiles
+    (prompt (if #tr "AATextPrefs, SYS:Prefs içine kopyalanıyor." "Copying AATextPrefs to SYS:Prefs."))
+    (help @copyfiles-help)
+    (source "AATextPrefs") (dest "SYS:Prefs") (infos)))
+(complete 40)
+
+(if (IN #parts 1)
+(
+  (copyfiles
+    (prompt (if #tr "AATextManager, SYS:System içine kopyalanıyor." "Copying AATextManager to SYS:System."))
+    (help @copyfiles-help)
+    (source "AATextManager") (dest "SYS:System") (infos))
+  (copylib
+    (prompt (if #tr "aatext.library, LIBS: içine kopyalanıyor." "Copying aatext.library to LIBS:."))
+    (help @copylib-help)
+    (source "Libs/aatext.library") (dest "LIBS:") (confirm))
+))
+(complete 60)
+
+(if (IN #parts 2)
+(
+  (if (not (exists #catdir)) (makedir #catdir))
+  (if (IN #parts 0)
+    (copyfiles (source "Catalogs/türkçe/aatextprefs.catalog") (dest #catdir)))
+  (if (IN #parts 1)
+    (copyfiles (source "Catalogs/türkçe/aatextmanager.catalog") (dest #catdir)))
+))
+(complete 70)
+
+(if (IN #parts 3)
+(
+  (if (not (exists #helptr)) (makedir #helptr))
+  (if (not (exists #helpen)) (makedir #helpen))
+  (copyfiles (source "AAText_TR.txt") (dest #helptr))
+  (copyfiles (source "AAText_EN.txt") (dest #helpen))
+))
+(complete 80)
+
+(startup "AAText"
+  (prompt (if #tr "AAText her açılışta başlasın diye S:User-Startup'a\n\n  Run >NIL: C:AAText\n\nsatırı eklensin mi?"
+                  "Add\n\n  Run >NIL: C:AAText\n\nto S:User-Startup, so AAText starts at every boot?"))
+  (help (if #tr "S:User-Startup, Workbench açılmadan (LoadWB) önce ve RTG sürücüleri yüklendikten sonra çalışır; AAText için doğru yer burasıdır."
+                "S:User-Startup runs before Workbench is loaded (LoadWB) and after the RTG drivers; that is the right place for AAText."))
+  (command "Run >NIL: C:AAText\n"))
+(complete 90)
+
+; a line added by hand earlier would start AAText twice
+(if (= 0 (run "C:Search >NIL: S:Startup-Sequence \"C:AAText\" QUIET"))
+  (message
+    (if #tr "S:Startup-Sequence içinde de C:AAText satırı var (elle eklenmiş olmalı). AAText'in iki kez başlamaması için o satırı silin."
+            "S:Startup-Sequence starts C:AAText too (added by hand?). Delete that line so AAText does not start twice.")))
+(complete 100)
+
+(exit (if #tr "AAText kuruldu. Bilgisayarı yeniden başlatın; AAText açılışta başlar.\n\nAyarlar: SYS:Prefs/AATextPrefs\nFont kurucu: SYS:System/AATextManager"
+              "AAText has been installed. Reboot; AAText starts at boot.\n\nSettings: SYS:Prefs/AATextPrefs\nFont installer: SYS:System/AATextManager")
+      (quiet))

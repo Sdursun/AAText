@@ -6,6 +6,8 @@ from PNG images, and dumps existing icons.
   mkicon.py dump  <file.info> [out.png]
   mkicon.py tool  <normal.png> [selected.png] -o <out.info>
                   [--tooltype TEXT ...] [--stack N]
+  mkicon.py project <normal.png> [selected.png] -o <out.info>
+                  --deftool PATH [--tooltype TEXT ...] [--stack N]
 
 PNG input: 8 bit RGB or RGBA, not interlaced. Pixels with alpha < 128
 are transparent. At most 255 colours (one palette entry is reserved for
@@ -279,7 +281,7 @@ def iff_chunk(cid, body):
     return cid + struct.pack('>I', len(body)) + body + (b'\0' if len(body) & 1 else b'')
 
 
-def build_tool(pngs, out, tooltypes, stack):
+def build_tool(pngs, out, tooltypes, stack, deftool=None):
     images = [png_read(p) for p in pngs]
     w, h = images[0][0], images[0][1]
     for iw, ih, _ in images:
@@ -304,11 +306,15 @@ def build_tool(pngs, out, tooltypes, stack):
                          0x0003, 0x0001,              # RELVERIFY|GADGIMMEDIATE, BOOLGADGET
                          1, 1 if sel else 0, 0, 0, 0, 0, 1)
     disk = struct.pack('>HH', 0xE310, 1) + gadget + \
-        struct.pack('>BBIIiiIII', 3, 0, 0, 1 if tooltypes else 0,
-                    -2147483648, -2147483648, 0, 0, stack)  # WBTOOL, NO_ICON_POSITION
+        struct.pack('>BBIIiiIII', 4 if deftool else 3, 0,
+                    1 if deftool else 0, 1 if tooltypes else 0,
+                    -2147483648, -2147483648, 0, 0, stack)  # WBPROJECT/WBTOOL, NO_ICON_POSITION
     body = disk + planar(w, h, images[0][2])
     if sel:
         body += planar(w, h, images[1][2])
+    if deftool:
+        s = deftool.encode('iso-8859-1') + b'\0'
+        body += struct.pack('>I', len(s)) + s
     if tooltypes:
         body += struct.pack('>I', (len(tooltypes) + 1) * 4)
         for t in tooltypes:
@@ -328,8 +334,8 @@ def main(argv):
     if len(argv) >= 2 and argv[0] == 'dump':
         dump(argv[1], argv[2] if len(argv) > 2 else None)
         return
-    if argv and argv[0] == 'tool':
-        pngs, out, tts, stack, i = [], None, [], 4096, 1
+    if argv and argv[0] in ('tool', 'project'):
+        pngs, out, tts, stack, deftool, i = [], None, [], 4096, None, 1
         while i < len(argv):
             a = argv[i]
             if a == '-o':
@@ -338,15 +344,18 @@ def main(argv):
             elif a == '--tooltype':
                 tts.append(argv[i + 1])
                 i += 1
+            elif a == '--deftool':
+                deftool = argv[i + 1]
+                i += 1
             elif a == '--stack':
                 stack = int(argv[i + 1])
                 i += 1
             else:
                 pngs.append(a)
             i += 1
-        if not out or not 1 <= len(pngs) <= 2:
+        if not out or not 1 <= len(pngs) <= 2 or (argv[0] == 'project') != bool(deftool):
             sys.exit(__doc__)
-        build_tool(pngs, out, tts, stack)
+        build_tool(pngs, out, tts, stack, deftool)
         return
     sys.exit(__doc__)
 

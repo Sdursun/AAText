@@ -60,7 +60,9 @@ Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 ## Download and installation
 
 Binary releases are on Aminet (`util/wb/AAText.lha`) and on the
-[Releases](https://github.com/Sdursun/AAText/releases) page. Copy `AAText` to
+[Releases](https://github.com/Sdursun/AAText/releases) page. Unpack the archive and
+double-click `Install-AAText` (the OS 3.2 Installer): it installs everything,
+adds AAText to `S:User-Startup` and can remove it again. By hand: copy `AAText` to
 `C:` and add `Run >NIL: C:AAText` to `S:Startup-Sequence`, after the monitor
 drivers are loaded and before `LoadWB` (not to `WBStartup`: AAText must run
 before Workbench opens its windows), then reboot; copy `AATextPrefs` (and its icon) to `SYS:Prefs`
@@ -183,7 +185,9 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
 
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
 
-**Kurulum:** `AAText` dosyasını `C:` içine kopyalayın,
+**Kurulum:** Arşivi açıp `Install-AAText`'e çift tıklayın (OS 3.2 Installer):
+her şeyi kurar, AAText'i `S:User-Startup`'a ekler ve yeniden kaldırabilir.
+Elle kurulum: `AAText` dosyasını `C:` içine kopyalayın,
 `S:Startup-Sequence` dosyasına monitör sürücüleri yüklendikten sonra ve
 `LoadWB`'den önce `Run >NIL: C:AAText` satırını ekleyin (`WBStartup`'a değil:
 AAText, Workbench pencerelerini açmadan önce çalışıyor olmalı) ve sistemi

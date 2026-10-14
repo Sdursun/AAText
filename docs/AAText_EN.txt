@@ -53,6 +53,18 @@ Which file?
 Installation
 ------------
 
+The easy way: double-click Install-AAText (the OS 3.2 Installer). It
+asks which build to install (68060 is preselected on a 68060; choose
+68020/030/040 on PiStorm/Emu68 and WinUAE, see "Which file?"), and
+which parts: AATextPrefs, AATextManager with aatext.library, the
+Turkish catalogs, the documents (LOCALE:Help/english/AAText_EN.txt and
+LOCALE:Help/türkçe/AAText_TR.txt). It adds "Run >NIL: C:AAText" to
+S:User-Startup (between ;BEGIN AAText and ;END AAText), and updates an
+installed version in place; your settings are kept. Its "Remove" choice
+deletes the installed files and the S:User-Startup line again.
+
+By hand:
+
 1. Copy AAText (or AAText.060, renamed to AAText) to C: and add this
    line to S:Startup-Sequence, after the monitor drivers are loaded
    (the RTG system must be running) and before LoadWB:
