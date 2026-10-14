@@ -21,6 +21,7 @@
 #include "otagfile.h"
 #include "fontinfo.h"
 #include "fontinstall.h"
+#include "startup.h"
 
 /* stub.s references these; the patch itself is not linked here. */
 volatile LONG aa_UseCount;
@@ -68,6 +69,125 @@ int main(int argc, char **argv)
         printf("cannot read %s\n", argv[1]);
         return 10;
     }
+    /*
+     * "startup" [dir]: the S:Startup-Sequence edit (STARTUP=ADD/REMOVE)
+     * on texts, then on a real file in dir (backup, swap, protection).
+     */
+    if (strcmp(argv[2], "startup") == 0)
+    {
+        static const struct
+        {
+            const char *in;
+            BOOL add;
+            LONG result;
+            const char *out;
+        } t[] =
+        {
+            /* after IPrefs (the OS 3.2 layout), case and paths ignored */
+            { "AddDataTypes REFRESH QUIET\nc:iprefs\nConClip\nLoadWB\n",
+              TRUE, AA_SS_ADDED,
+              "AddDataTypes REFRESH QUIET\nc:iprefs\nRun >NIL: C:AAText\n"
+              "ConClip\nLoadWB\n" },
+            /* no IPrefs: before LoadWB */
+            { "SetPatch QUIET\n  LoadWB DELAY\nEndCLI\n", TRUE, AA_SS_ADDED,
+              "SetPatch QUIET\nRun >NIL: C:AAText\n  LoadWB DELAY\nEndCLI\n" },
+            /* a comment does not count, IPrefs commented out neither */
+            { ";IPrefs\nIPrefs\n; run >NIL: c:aatext\nLoadWB", TRUE,
+              AA_SS_ADDED,
+              ";IPrefs\nIPrefs\nRun >NIL: C:AAText\n; run >NIL: c:aatext\n"
+              "LoadWB" },
+            /* started already (by hand, other spelling): left alone */
+            { "IPrefs\nrun >nil: c:aatext PREFS=x\nLoadWB\n", TRUE,
+              AA_SS_PRESENT, NULL },
+            { "IPrefs\n  SYS:C/AAText  \nLoadWB\n", TRUE, AA_SS_PRESENT, NULL },
+            /* AATextPrefs is another program */
+            { "IPrefs\nRun >NIL: SYS:Prefs/AATextPrefs\n", TRUE, AA_SS_ADDED,
+              "IPrefs\nRun >NIL: C:AAText\nRun >NIL: SYS:Prefs/AATextPrefs\n" },
+            /* IPrefs as the last line without a line feed */
+            { "IPrefs", TRUE, AA_SS_ADDED, "IPrefs\nRun >NIL: C:AAText\n" },
+            { "Echo hello\n", TRUE, AA_SS_NOPLACE, NULL },
+            /* REMOVE: every line that runs AAText, comments stay */
+            { "IPrefs\nRun >NIL: C:AAText\n;Run >NIL: C:AAText\nrun <>nil: "
+              "aatext\nLoadWB\n", FALSE, AA_SS_REMOVED,
+              "IPrefs\n;Run >NIL: C:AAText\nLoadWB\n" },
+            { "IPrefs\nLoadWB\n", FALSE, AA_SS_ABSENT, NULL },
+        };
+        static char out[1024];
+        LONG i, len, bad = 0;
+
+        for (i = 0; i < (LONG)(sizeof(t) / sizeof(t[0])); i++)
+        {
+            LONG r = aa_StartupEdit(t[i].in, strlen(t[i].in), t[i].add, out,
+                                    sizeof(out), &len);
+            BOOL ok = r == t[i].result &&
+                      (!t[i].out || ((LONG)strlen(t[i].out) == len &&
+                                     !memcmp(out, t[i].out, len)));
+
+            printf("case %ld: %ld -> %s\n", (long)i, (long)r,
+                   ok ? "OK" : "FAIL");
+            if (!ok && t[i].out)
+                printf("  got \"%.*s\"\n", (int)len, out);
+            bad += !ok;
+        }
+
+        /* a real file: add, add again, remove; backup made once */
+        if (argc > 3)
+        {
+            static char path[256], bak[300], buf[1024];
+            static const char orig[] = "SetPatch QUIET\nIPrefs\nLoadWB\n";
+            FILE *f;
+            size_t n;
+
+            sprintf(path, "%sStartup-Sequence", argv[3]);
+            sprintf(bak, "%s.AAText-bak", path);
+            f = fopen(path, "wb");
+            fwrite(orig, 1, sizeof(orig) - 1, f);
+            fclose(f);
+            if (aa_StartupFile(path, TRUE) != AA_SS_ADDED ||
+                aa_StartupFile(path, TRUE) != AA_SS_PRESENT)
+                bad++;
+            f = fopen(path, "rb");
+            n = f ? fread(buf, 1, sizeof(buf), f) : 0;
+            if (f)
+                fclose(f);
+            {
+                static const char want[] =
+                    "SetPatch QUIET\nIPrefs\nRun >NIL: C:AAText\nLoadWB\n";
+
+                if (n != sizeof(want) - 1 || memcmp(buf, want, n))
+                    n = ~(size_t)0;
+            }
+            if (n == ~(size_t)0)
+            {
+                printf("file after ADD: \"%.*s\"\n", (int)n, buf);
+                bad++;
+            }
+            f = fopen(bak, "rb");
+            n = f ? fread(buf, 1, sizeof(buf), f) : 0;
+            if (f)
+                fclose(f);
+            if (n != sizeof(orig) - 1 || memcmp(buf, orig, n))
+            {
+                printf("backup wrong\n");
+                bad++;
+            }
+            if (aa_StartupFile(path, FALSE) != AA_SS_REMOVED)
+                bad++;
+            f = fopen(path, "rb");
+            n = f ? fread(buf, 1, sizeof(buf), f) : 0;
+            if (f)
+                fclose(f);
+            if (n != sizeof(orig) - 1 || memcmp(buf, orig, n))
+            {
+                printf("file after REMOVE: \"%.*s\"\n", (int)n, buf);
+                bad++;
+            }
+            printf("file: %s\n", bad ? "FAIL" : "OK");
+        }
+        printf("startup: %s\n", bad ? "FAILED" : "all OK");
+        return bad ? 10 : 0;
+    }
+
     /* "charsets": the charset keyword and a few known mappings per set */
     if (strcmp(argv[2], "charsets") == 0)
     {

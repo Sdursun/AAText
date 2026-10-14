@@ -48,6 +48,12 @@ V="vamos -C 68020 -m 8192 -V movedfonts:$M -a FONTS:movedfonts:"
 run moved-volume    tests/data/empty.prefs auto MovedTest.font
 rm -rf $M
 
+# S:Startup-Sequence line (AAText STARTUP=ADD/REMOVE), texts and a file
+M=$(mktemp -d)
+V="vamos -C 68020 -m 8192 -V ss:$M"
+run startup         tests/data/empty.prefs startup ss:
+rm -rf $M
+
 # font installer: into an empty directory, compared with FTManager's
 # .otag for Verdana
 M=$(mktemp -d)

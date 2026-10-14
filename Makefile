@@ -53,7 +53,8 @@ FT_LINK  = $(FT_LIB)
 endif
 
 SRCS_C := src/main.c src/patch.c src/render.c src/metrics.c src/prefs.c \
-          src/glyphs.c src/otag.c src/aaclient.c src/debug.c src/charsets.c src/fontfile.c
+          src/glyphs.c src/otag.c src/aaclient.c src/debug.c src/charsets.c src/fontfile.c \
+          src/startup.c
 SRCS_S := src/stub.s src/cgx.s
 OBJS   := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SRCS_C)) \
           $(patsubst src/%.s,$(BUILDDIR)/%.o,$(SRCS_S))
@@ -117,7 +118,7 @@ clean:
 TEST_OBJS := $(BUILDDIR)/prefs.o $(BUILDDIR)/glyphs.o $(BUILDDIR)/metrics.o \
              $(BUILDDIR)/otag.o $(BUILDDIR)/debug.o $(BUILDDIR)/charsets.o $(BUILDDIR)/fontfile.o $(BUILDDIR)/fontscan.o \
              $(BUILDDIR)/otagfile.o $(BUILDDIR)/fontinfo.o $(BUILDDIR)/fontinstall.o \
-             $(BUILDDIR)/stub.o
+             $(BUILDDIR)/startup.o $(BUILDDIR)/stub.o
 
 .PHONY: test
 test: $(BUILDDIR)/fttest

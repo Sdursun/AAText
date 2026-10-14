@@ -61,10 +61,16 @@ ve WinUAE'de 68020/030/040'ı seçin, "Hangi dosya?" bölümüne bakın) ve
 hangi parçaların kurulacağını: AATextPrefs, aatext.library ile
 AATextManager, Türkçe kataloglar, belgeler
 (LOCALE:Help/türkçe/AAText_TR.txt ve LOCALE:Help/english/AAText_EN.txt).
-S:User-Startup'a (;BEGIN AAText ile ;END AAText arasına)
-"Run >NIL: C:AAText" satırını ekler; kurulu bir sürümü yerinde
-günceller, ayarlarınız korunur. "Kaldır" seçeneği kurulan dosyaları ve
-S:User-Startup satırını yeniden siler.
+Sorduktan sonra S:Startup-Sequence'te IPrefs satırının hemen altına
+"Run >NIL: C:AAText" satırını ekler (orijinal
+S:Startup-Sequence.AAText-bak olarak saklanır; AAText'i zaten başlatan
+bir satır varsa dosyaya dokunulmaz); bu mümkün değilse satırı
+S:User-Startup'a ekler. Kurulu bir sürümü yerinde günceller, ayarlarınız
+korunur. "Kaldır" seçeneği kurulan dosyaları ve bu satırı yeniden siler;
+"aatext" motoruyla kurulan fontlar ona ihtiyaç duyduğu için
+LIBS:aatext.library'ye dokunmaz.
+
+Aynısı Shell'den: "AAText STARTUP=ADD" ve "AAText STARTUP=REMOVE".
 
 Elle kurulum:
 
@@ -110,6 +116,10 @@ Kullanım
   AAText RELOAD       Çalışan kopya ayar dosyasını yeniden okur
   AAText STATUS       Çalışan kopyanın sürümünü, ayarlarını ve önbellek
                       kullanımını gösterir
+  AAText STARTUP=ADD  "Run >NIL: C:AAText" satırını S:Startup-Sequence'te
+                      IPrefs'in altına ekler (yedekle; AAText zaten
+                      başlatılıyorsa bir şey yapmaz); STARTUP=REMOVE
+                      satırı yeniden kaldırır
 
 AAText'i ikinci kez başlatmak - Shell'den ya da ikonuna çift
 tıklayarak - çalışan kopyayı durdurur; böylece ikon bir aç/kapa

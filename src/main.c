@@ -32,6 +32,7 @@
 #include "aamsg.h"
 #include "aaclient.h"
 #include "debug.h"
+#include "startup.h"
 
 #include <string.h>
 
@@ -258,6 +259,43 @@ static BOOL ArgIs(const char *arg, const char *name)
     return *arg == 0 && *name == 0;
 }
 
+/*
+ * STARTUP=ADD|REMOVE: the AAText line in S:Startup-Sequence (for the
+ * installer). Return code 0 when done or nothing was to do, 10 when the
+ * file was left unchanged because of a problem.
+ */
+static LONG StartupCommand(const char *what)
+{
+    static const char *const msg[] =
+    {
+        "AAText: \"" AA_STARTUP_LINE "\" added to S:Startup-Sequence "
+            "(the original is in S:Startup-Sequence.AAText-bak).\n",
+        "AAText: S:Startup-Sequence starts AAText already.\n",
+        "AAText: AAText removed from S:Startup-Sequence "
+            "(the original is in S:Startup-Sequence.AAText-bak).\n",
+        "AAText: S:Startup-Sequence does not start AAText.\n",
+        "AAText: S:Startup-Sequence has no IPrefs or LoadWB line; "
+            "nothing changed.\n",
+        "AAText: cannot read S:Startup-Sequence; nothing changed.\n",
+        "AAText: cannot write S:Startup-Sequence.AAText-bak; "
+            "nothing changed.\n",
+        "AAText: cannot write S:Startup-Sequence; nothing changed.\n"
+    };
+    LONG r;
+
+    if (ArgIs(what, "ADD"))
+        r = aa_StartupFile("S:Startup-Sequence", TRUE);
+    else if (ArgIs(what, "REMOVE"))
+        r = aa_StartupFile("S:Startup-Sequence", FALSE);
+    else
+    {
+        Msg("AAText: STARTUP must be ADD or REMOVE.\n");
+        return RETURN_ERROR;
+    }
+    Msg(msg[r]);
+    return r <= AA_SS_ABSENT ? RETURN_OK : RETURN_ERROR;
+}
+
 /* A font (name as in the TextFont, size) to set up at startup. */
 struct FontRef
 {
@@ -392,10 +430,10 @@ int main(int argc, char **argv)
 
     if (from_shell)
     {
-        LONG args[5] = { 0, 0, 0, 0, 0 };
+        LONG args[6] = { 0, 0, 0, 0, 0, 0 };
         struct RDArgs *rda =
-            ReadArgs((CONST_STRPTR)"PREFS/K,TEST/K,QUIT/S,RELOAD/S,STATUS/S",
-                     args, NULL);
+            ReadArgs((CONST_STRPTR)"PREFS/K,TEST/K,QUIT/S,RELOAD/S,STATUS/S,"
+                     "STARTUP/K", args, NULL);
 
         if (!rda)
         {
@@ -434,6 +472,13 @@ int main(int argc, char **argv)
         quit = args[2];
         reload = args[3];
         status = args[4];
+        if (args[5])
+        {
+            LONG rc = StartupCommand((const char *)args[5]);
+
+            FreeArgs(rda);
+            return rc;
+        }
         FreeArgs(rda);
     }
 

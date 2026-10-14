@@ -59,9 +59,16 @@ asks which build to install (68060 is preselected on a 68060; choose
 which parts: AATextPrefs, AATextManager with aatext.library, the
 Turkish catalogs, the documents (LOCALE:Help/english/AAText_EN.txt and
 LOCALE:Help/türkçe/AAText_TR.txt). It adds "Run >NIL: C:AAText" to
-S:User-Startup (between ;BEGIN AAText and ;END AAText), and updates an
-installed version in place; your settings are kept. Its "Remove" choice
-deletes the installed files and the S:User-Startup line again.
+S:Startup-Sequence right after IPrefs, after asking (the original is
+kept as S:Startup-Sequence.AAText-bak; a line that starts AAText
+already is left alone); if that is not possible, to S:User-Startup.
+It updates an installed version in place; your settings are kept. Its
+"Remove" choice deletes the installed files and the line again; it
+leaves LIBS:aatext.library, which fonts installed with the engine
+"aatext" need.
+
+The same from the Shell: "AAText STARTUP=ADD" and
+"AAText STARTUP=REMOVE".
 
 By hand:
 
@@ -105,6 +112,9 @@ Usage
   AAText PREFS=file   Start with another settings file
   AAText RELOAD       Running copy: read the settings file again
   AAText STATUS       Running copy: show version, settings and cache use
+  AAText STARTUP=ADD  "Run >NIL: C:AAText" into S:Startup-Sequence after
+                      IPrefs (with backup; nothing if AAText is started
+                      already); STARTUP=REMOVE takes it out again
 
 Starting AAText a second time - from Shell or by double-clicking its
 icon - stops the running copy, so the icon works as an on/off switch.

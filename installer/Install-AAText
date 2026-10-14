@@ -6,8 +6,9 @@
 ; Installs: C:AAText (68020 or 68060 build), SYS:Prefs/AATextPrefs,
 ; SYS:System/AATextManager with LIBS:aatext.library, the Turkish
 ; catalogs, the documents in LOCALE:Help/türkçe and LOCALE:Help/english,
-; and "Run >NIL: C:AAText" in S:User-Startup. Settings
-; (ENVARC:AAText.prefs) are never touched.
+; and "Run >NIL: C:AAText" in S:Startup-Sequence right after IPrefs
+; (C:AAText STARTUP=ADD; S:User-Startup if that is not possible).
+; Settings (ENVARC:AAText.prefs) are never touched.
 
 (set @app-name "AAText")
 (set #tr (= @language "türkçe"))
@@ -34,6 +35,13 @@
   ; ------------------------------------------------------------ remove
   (run "C:AAText QUIT >NIL:")
   (if (exists "C:AAText")
+    (if (askbool
+          (prompt (if #tr "AAText'i başlatan satır S:Startup-Sequence'ten kaldırılsın mı?\n(Yedek: S:Startup-Sequence.AAText-bak)"
+                          "Remove the line that starts AAText from S:Startup-Sequence?\n(Backup: S:Startup-Sequence.AAText-bak)"))
+          (help @startup-help)
+          (default 1))
+      (run "C:AAText >NIL: STARTUP=REMOVE")))
+  (if (exists "C:AAText")
     (delete "C:AAText"
       (prompt (if #tr "C:AAText silinsin mi?" "Delete C:AAText?"))
       (help @delete-help) (confirm)))
@@ -45,10 +53,8 @@
     (delete "SYS:System/AATextManager" (infos)
       (prompt (if #tr "SYS:System/AATextManager silinsin mi?" "Delete SYS:System/AATextManager?"))
       (help @delete-help) (confirm)))
-  (if (exists "LIBS:aatext.library")
-    (delete "LIBS:aatext.library"
-      (prompt (if #tr "LIBS:aatext.library silinsin mi?" "Delete LIBS:aatext.library?"))
-      (help @delete-help) (confirm)))
+  ; LIBS:aatext.library stays: fonts installed with the engine "aatext"
+  ; (also the screen font) cannot be opened without it
   (if (exists (tackon #catdir "aatextprefs.catalog"))
     (delete (tackon #catdir "aatextprefs.catalog")))
   (if (exists (tackon #catdir "aatextmanager.catalog"))
@@ -57,12 +63,13 @@
     (delete (tackon #helptr "AAText_TR.txt")))
   (if (exists (tackon #helpen "AAText_EN.txt"))
     (delete (tackon #helpen "AAText_EN.txt")))
-  ; the AAText block in S:User-Startup is replaced by a comment
-  (startup "AAText"
-    (prompt (if #tr "S:User-Startup'taki AAText satırı kaldırılsın mı?"
-                    "Remove the AAText line from S:User-Startup?"))
-    (help @startup-help)
-    (command "; AAText removed\n"))
+  ; an AAText block in S:User-Startup (older installers) becomes a comment
+  (if (= 0 (run "C:Search >NIL: S:User-Startup \";BEGIN AAText\" QUIET"))
+    (startup "AAText"
+      (prompt (if #tr "S:User-Startup'taki AAText satırı kaldırılsın mı?"
+                      "Remove the AAText line from S:User-Startup?"))
+      (help @startup-help)
+      (command "; AAText removed\n")))
   (exit (if #tr "AAText kaldırıldı. Ayarlar (ENVARC:AAText.prefs) yerinde duruyor; değişiklik yeniden başlatınca tamamlanır."
                 "AAText has been removed. The settings (ENVARC:AAText.prefs) are kept; the change is complete after a reboot.")
         (quiet))
@@ -154,19 +161,35 @@
 ))
 (complete 80)
 
-(startup "AAText"
-  (prompt (if #tr "AAText her açılışta başlasın diye S:User-Startup'a\n\n  Run >NIL: C:AAText\n\nsatırı eklensin mi?"
-                  "Add\n\n  Run >NIL: C:AAText\n\nto S:User-Startup, so AAText starts at every boot?"))
-  (help (if #tr "S:User-Startup, Workbench açılmadan (LoadWB) önce ve RTG sürücüleri yüklendikten sonra çalışır; AAText için doğru yer burasıdır."
-                "S:User-Startup runs before Workbench is loaded (LoadWB) and after the RTG drivers; that is the right place for AAText."))
-  (command "Run >NIL: C:AAText\n"))
-(complete 90)
+; S:Startup-Sequence, right after IPrefs (C:AAText edits it with a backup;
+; a line that starts AAText already is left alone)
+(set #ss 0)
+(if (askbool
+      (prompt (if #tr "AAText her açılışta başlasın diye S:Startup-Sequence'te IPrefs satırının altına\n\n  Run >NIL: C:AAText\n\nsatırı eklensin mi? AAText'i zaten başlatan bir satır varsa dosyaya dokunulmaz.\n(Yedek: S:Startup-Sequence.AAText-bak)"
+                      "Add\n\n  Run >NIL: C:AAText\n\nto S:Startup-Sequence right after IPrefs, so AAText starts at every boot? If a line starts AAText already, the file is left alone.\n(Backup: S:Startup-Sequence.AAText-bak)"))
+      (help (if #tr "AAText, Workbench pencerelerini açmadan (LoadWB) önce ve RTG sürücüleri ile IPrefs'ten sonra çalışmalıdır. Hayır derseniz satır S:User-Startup'a eklenir."
+                    "AAText must run before Workbench opens its windows (LoadWB) and after the RTG drivers and IPrefs. If you say no, the line goes to S:User-Startup instead."))
+      (default 1))
+  (if (= 0 (run "C:AAText >NIL: STARTUP=ADD"))
+    (set #ss 1)
+    (message
+      (if #tr "S:Startup-Sequence'te IPrefs ya da LoadWB satırı bulunamadı ya da dosya yazılamadı; dosya değiştirilmedi. Satır S:User-Startup'a eklenecek."
+              "S:Startup-Sequence has no IPrefs or LoadWB line, or cannot be written; it was not changed. The line goes to S:User-Startup instead."))))
 
-; a line added by hand earlier would start AAText twice
-(if (= 0 (run "C:Search >NIL: S:Startup-Sequence \"C:AAText\" QUIET"))
-  (message
-    (if #tr "S:Startup-Sequence içinde de C:AAText satırı var (elle eklenmiş olmalı). AAText'in iki kez başlamaması için o satırı silin."
-            "S:Startup-Sequence starts C:AAText too (added by hand?). Delete that line so AAText does not start twice.")))
+(if #ss
+  ; an AAText block of an older installer would start it a second time
+  (if (= 0 (run "C:Search >NIL: S:User-Startup \";BEGIN AAText\" QUIET"))
+    (startup "AAText"
+      (prompt (if #tr "AAText artık S:Startup-Sequence'ten başlıyor; S:User-Startup'taki eski AAText satırı kaldırılsın mı?"
+                      "AAText is started from S:Startup-Sequence now; remove the old AAText line from S:User-Startup?"))
+      (help @startup-help)
+      (command "; AAText is started in S:Startup-Sequence\n")))
+  (startup "AAText"
+    (prompt (if #tr "AAText her açılışta başlasın diye S:User-Startup'a\n\n  Run >NIL: C:AAText\n\nsatırı eklensin mi?"
+                    "Add\n\n  Run >NIL: C:AAText\n\nto S:User-Startup, so AAText starts at every boot?"))
+    (help (if #tr "S:User-Startup, Workbench açılmadan (LoadWB) önce ve RTG sürücüleri yüklendikten sonra çalışır."
+                  "S:User-Startup runs before Workbench is loaded (LoadWB) and after the RTG drivers."))
+    (command "Run >NIL: C:AAText\n")))
 (complete 100)
 
 (exit (if #tr "AAText kuruldu. Bilgisayarı yeniden başlatın; AAText açılışta başlar.\n\nAyarlar: SYS:Prefs/AATextPrefs\nFont kurucu: SYS:System/AATextManager"
