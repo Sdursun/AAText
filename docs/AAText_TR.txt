@@ -1,4 +1,4 @@
-AAText 0.22 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.23 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -384,6 +384,9 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.23  Pencereden kısmen taşan simge etiketleri kaydırınca artık bozuk
+      görünmüyor (karışık harfler ya da siyah şerit).
 
 0.22  AATextManager: font önizlemesi paletli (AGA) ekranlarda da çalışır,
       karışıma en yakın palet renkleriyle.
