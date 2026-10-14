@@ -177,3 +177,30 @@ Kalanlar:
   (ara ton yok, keskin), 16 renkli gri ekranda yumuşatılmış (102/170
   grileri); 76 çağrı palet yolundan, 12 menü öğesi, hata yok. Gerçek bir
   RTG'siz Amiga'da (kütüphane hiç yokken) denenmedi.
+
+## 9. A1200 testi (14.10.2026, AAText 0.21)
+
+A1200, PiStorm/Emu68 (68040 öykünmesi), AmigaOS 3.2 (Kickstart 47.115),
+Workbench AGA 724×566 16 renk (paletinde 121/174 grileri ve koyu
+tonlar var), `aga on`, `real on`.
+
+- Ekran başlığı ve ikon etiketleri (Arial 16, gerçek ölçü) gri tonlarla
+  yumuşatılmış; Shell fontu bitmap (`courier_iso-8859-9`, `.otag` yok),
+  dokunulmadı.
+- Hız, `textbench Arial.font 16 500` (43 karakter, çağrı başına):
+
+| Durum | JAM1 | JAM2 |
+|---|---|---|
+| `aga on` | 2,37 ms | 0,97 ms |
+| `aga off` (1 bitlik TrueType çizimi) | 4,50 ms | 3,40 ms |
+| AAText kapalı (orijinal `Text()`) | 2,53 ms | 0,88 ms |
+
+  PiStorm'da `aga on`, AAText'siz çizim kadar hızlı. Gerçek ölçü
+  modunun 1 bitlik yedek yolu paletli ekranda belirgin yavaş
+  (`BltTemplate` + chip RAM tamponu); ayrıca bakılmalı.
+- AATextManager AGA ekranda: önizleme kutusunda "RTG ekran gerekir"
+  notu doğru çıktı.
+- Güncelleme denetimi (genet + lwip-amiga, AmiSSL 5.27): denetim ~1 sn,
+  1 MB paket indirme ~2 sn, dosya birebir (LhA testi temiz).
+- Denenmedi: menüler (MagicMenu çalışıyor; menüsü ekran görüntüsüne
+  yansımıyor), hızlandırıcısız 68020/030.
