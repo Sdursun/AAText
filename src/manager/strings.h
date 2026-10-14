@@ -127,7 +127,23 @@
     S(MSG_SET_SAVE,        111, "Sa_ve settings") \
     S(MSG_SET_SAVED,       112, "Settings saved (ENVARC:AATextManager.prefs).") \
     S(MSG_SET_SAVEERR,     113, "Cannot write ENV:/ENVARC:AATextManager.prefs.") \
-    S(MSG_SET_NOTE,        114, "Directories in FONTS: are written as FONTS:..., others with their volume name.")
+    S(MSG_SET_NOTE,        114, "Directories in FONTS: are written as FONTS:..., others with their volume name.") \
+    S(MSG_TAB_DOWNLOAD,    115, "Download") \
+    S(MSG_DL_INFO,         116, "Free fonts (Google Fonts, github.com/google/fonts). Selected files are downloaded to T: and installed.") \
+    S(MSG_DL_FILTER,       117, "Search") \
+    S(MSG_DL_LOAD,         118, "_Load list") \
+    S(MSG_DL_PREVIEW,      119, "Pre_view") \
+    S(MSG_DL_INSTALL,      120, "_Download and install") \
+    S(MSG_DL_COL_LIC,      121, "Licence") \
+    S(MSG_DL_COL_SIZE,     122, "Size") \
+    S(MSG_DL_LOADING,      123, "Loading the font list...") \
+    S(MSG_DL_LOADED,       124, "%ld fonts in the list; select one or more (Shift-click).") \
+    S(MSG_DL_LOADFAIL,     125, "Cannot load the font list: %s") \
+    S(MSG_DL_GETTING,      126, "Downloading %ld/%ld: %s") \
+    S(MSG_DL_GETFAIL,      127, "Cannot download %s: %s") \
+    S(MSG_DL_NONE,         128, "Select fonts in the list first.") \
+    S(MSG_DL_NONET,        129, "No network: bsdsocket.library is not available (is TCP/IP running?).") \
+    S(MSG_DL_NOSSL,        130, "Downloading needs AmiSSL 5 (Aminet: util/libs/AmiSSL-5).")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

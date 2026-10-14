@@ -32,4 +32,26 @@ struct AAUpdate
  */
 LONG upd_Check(const char *myversion, struct AAUpdate *u);
 
+/*
+ * Downloads over HTTPS for the font catalog (same libraries and
+ * certificate check as the update check). net_Open() returns 0, or
+ * UPD_NONET, UPD_NOSSL, UPD_FAILED (n->error). Blocking.
+ */
+struct AANet
+{
+    void *ctx;              /* SSL_CTX */
+    BOOL opened;            /* AmiSSL opened */
+    const char *version;    /* for the User-Agent */
+    char error[160];        /* why the last call failed */
+};
+
+LONG net_Open(struct AANet *n, const char *myversion);
+void net_Close(struct AANet *n);
+
+/* url into mem (max bytes, NUL-terminated); bytes read or -1 (n->error) */
+LONG net_GetMem(struct AANet *n, const char *url, char *mem, LONG max);
+
+/* url into the file path (deleted again on failure) */
+BOOL net_GetFile(struct AANet *n, const char *url, const char *path);
+
 #endif

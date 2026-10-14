@@ -227,6 +227,17 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  program açamaz; alttaki satır bunu söyler.
                  "Raporu kaydet..." listeyi hata bildirimleri için bir metin
                  dosyasına yazar. Taramanın kendisi hiçbir şeyi değiştirmez.
+  İndir          Google Fonts'tan (github.com/google/fonts) ücretsiz
+                 fontlar; liste AAText deposunda tutulur
+                 (fonts/catalog.txt: Türkçe harfleri olan 40 kadar aile,
+                 ör. Ubuntu, PT Sans, Lato, Fira Sans, IBM Plex ve
+                 Times New Roman, Courier New, Calibri, Cambria ile aynı
+                 genişlikteki Tinos/Cousine/Carlito/Caladea). "Listeyi
+                 yükle", aileye göre arama, bir ya da birkaç dosya seçimi
+                 (Shift ile), "Önizle" son tıklananı gösterir, "İndir ve
+                 kur" dosyaları T:AATextFonts'a indirip Kur sekmesindeki
+                 gibi kurar (karakter seti, motor, boyutlar, "yerine
+                 yaz"). Çalışan bir TCP/IP yığını ve AmiSSL 5 gerekir.
   Ayarlar        font dosyalarının kopyalanacağı yerler: .ttf, .otf ve
                  .ttc/.otc için birer dizin (varsayılan FONTS:_ttf/;
                  "Seç..." dizin seçiciyi açar) ve varsayılan karakter

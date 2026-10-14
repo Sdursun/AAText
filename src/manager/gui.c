@@ -9,6 +9,8 @@
  *            repaired; Repair asks once, then repairs them all
  *   Diagnostics  every .otag in FONTS: with its font file and status,
  *            Fix .otag for a moved font file, a plain text report
+ *   Download fonts from the catalog (fonts/catalog.txt on GitHub): list,
+ *            search, preview, download to T: and install
  *   Settings the directories font files are copied to (by kind) and the
  *            character set the window starts with (settings.c)
  */
@@ -56,6 +58,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "manager.h"
 #include "strings.h"
@@ -80,6 +83,8 @@ enum
     GID_CHECK, GID_REPAIRLIST, GID_CHANGEENGINE, GID_REPAIR,
     GID_DSCAN, GID_DSCANSUM, GID_DFONTLIST, GID_DDETAIL1, GID_DDETAIL2,
     GID_DDETAIL3, GID_DDETAIL4, GID_DADVICE, GID_DFIX, GID_DREPORT,
+    GID_DLFILTER, GID_DLLOAD, GID_DLLIST, GID_DLPREVIEWBOX, GID_DLPREVIEW,
+    GID_DLINSTALL,
     GID_TTFDIR, GID_TTFPICK, GID_OTFDIR, GID_OTFPICK, GID_TTCDIR,
     GID_TTCPICK, GID_DEFCHARSET, GID_SAVESET,
     GID_STATUS,
@@ -101,7 +106,7 @@ static struct Gadget *gads[GID_COUNT];
 static Object *winobj, *pages;
 static struct Window *win;
 static struct List tablist, charsetlist, defcharsetlist, enginelist, filelb, repairlb,
-                   diaglb;
+                   diaglb, dllb;
 static struct FileEntry *files;
 static LONG numfiles;
 static struct AADiagEntry *diag;
@@ -199,8 +204,10 @@ static LONG PageOf(LONG gid)
         return 1;
     if (gid >= GID_DSCAN && gid <= GID_DREPORT)
         return 2;
-    if (gid >= GID_TTFDIR && gid <= GID_SAVESET)
+    if (gid >= GID_DLFILTER && gid <= GID_DLINSTALL)
         return 3;
+    if (gid >= GID_TTFDIR && gid <= GID_SAVESET)
+        return 4;
     return -1;
 }
 
@@ -515,6 +522,7 @@ static LONG CheckFonts(void)
     SetGad(GID_REPAIRLIST, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&repairlb);
     FreeListBrowserList(&diaglb);
+    FreeListBrowserList(&dllb);
     FreeVec(dscan);
     dscan = NULL;
     Repair_Settings(&r);
@@ -1100,6 +1108,432 @@ static Object *DiagPage(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* Download tab: fonts from the catalog (fonts/catalog.txt)             */
+/* ------------------------------------------------------------------ */
+
+#define MAX_CAT      1000
+#define MAX_CATTEXT  (128 * 1024)
+#define DL_DIR       "T:AATextFonts"
+
+struct CatEntry
+{
+    char family[40];
+    char style[28];
+    char licence[8];
+    char size[12];          /* "331 KB" */
+    LONG bytes;
+    char path[120];         /* relative to catbase, or an https:// url */
+};
+
+static struct CatEntry *cat;
+static LONG numcat;
+static LONG *shown;         /* list row -> cat index */
+static LONG numshown;
+static char catbase[128];
+
+static struct ColumnInfo catcols[] =
+{
+    { 34, NULL, 0 }, { 30, NULL, 0 }, { 16, NULL, 0 }, { 20, NULL, 0 },
+    { -1, NULL, 0 }
+};
+
+/* Copy one tab-separated field; returns the start of the next one. */
+static char *Field(char *p, char *dst, LONG len)
+{
+    LONG n = 0;
+
+    while (*p && *p != '\t')
+    {
+        if (n < len - 1)
+            dst[n++] = *p;
+        p++;
+    }
+    dst[n] = 0;
+    return *p ? p + 1 : p;
+}
+
+static void ParseCatalog(char *text)
+{
+    char *line, *nl, num[16];
+    struct CatEntry *e;
+
+    numcat = 0;
+    catbase[0] = 0;
+    for (line = text; line && numcat < MAX_CAT; line = nl)
+    {
+        if ((nl = strchr(line, '\n')))
+            *nl++ = 0;
+        if (strchr(line, '\r'))
+            *strchr(line, '\r') = 0;
+        if (!line[0] || line[0] == '#')
+            continue;
+        if (!strncmp(line, "base ", 5))
+        {
+            snprintf(catbase, sizeof(catbase), "%s", line + 5);
+            continue;
+        }
+        e = &cat[numcat];
+        line = Field(line, e->family, sizeof(e->family));
+        line = Field(line, e->style, sizeof(e->style));
+        line = Field(line, e->licence, sizeof(e->licence));
+        line = Field(line, num, sizeof(num));
+        Field(line, e->path, sizeof(e->path));
+        if (!e->family[0] || !e->path[0])
+            continue;
+        e->bytes = atol(num);
+        snprintf(e->size, sizeof(e->size), "%ld KB",
+                 (long)((e->bytes + 1023) / 1024));
+        numcat++;
+    }
+}
+
+/* Case-insensitive "needle in hay" (ASCII is enough for family names) */
+static BOOL Contains(const char *hay, const char *needle)
+{
+    LONG n = strlen(needle);
+
+    for (; *hay; hay++)
+        if (!Strnicmp((CONST_STRPTR)hay, (CONST_STRPTR)needle, n))
+            return TRUE;
+    return !n;
+}
+
+/* The catalog rows whose family matches the search text */
+static void ShowCatalog(void)
+{
+    const char *filter = (const char *)GetGad(GID_DLFILTER, STRINGA_TextVal);
+    LONG i;
+
+    SetGad(GID_DLLIST, LISTBROWSER_Labels, ~0UL);
+    FreeListBrowserList(&dllb);
+    numshown = 0;
+    for (i = 0; i < numcat; i++)
+    {
+        struct CatEntry *e = &cat[i];
+        struct Node *n;
+
+        if (filter && !Contains(e->family, filter))
+            continue;
+        n = AllocListBrowserNode(4,
+            LBNA_Column, 0, LBNCA_Text, (ULONG)e->family,
+            LBNA_Column, 1, LBNCA_Text, (ULONG)e->style,
+            LBNA_Column, 2, LBNCA_Text, (ULONG)e->licence,
+            LBNA_Column, 3, LBNCA_Text, (ULONG)e->size,
+            TAG_DONE);
+        if (!n)
+            break;
+        AddTail(&dllb, n);
+        shown[numshown++] = i;
+    }
+    SetGad(GID_DLLIST, LISTBROWSER_Labels, (ULONG)&dllb);
+}
+
+/* Explain why the network could not be opened */
+static void NetFailed(LONG r, struct AANet *n)
+{
+    char msg[sizeof(statustext)];
+
+    if (r == UPD_NONET)
+        SetStatus(GetString(MSG_DL_NONET));
+    else if (r == UPD_NOSSL)
+        SetStatus(GetString(MSG_DL_NOSSL));
+    else
+    {
+        snprintf(msg, sizeof(msg), GetString(MSG_DL_LOADFAIL), n->error);
+        SetStatus(msg);
+    }
+}
+
+static void LoadCatalog(void)
+{
+    static struct AANet net;
+    char msg[sizeof(statustext)];
+    char *text;
+    LONG len = -1, r;
+    BPTR fh;
+
+    if (!(text = AllocVec(MAX_CATTEXT, MEMF_ANY)))
+        return;
+    SetStatus(GetString(MSG_DL_LOADING));
+    Busy(TRUE);
+    if (strncmp(settings.catalog, "https://", 8))
+    {
+        /* a file (for testing a catalog before it is published) */
+        if ((fh = Open((CONST_STRPTR)settings.catalog, MODE_OLDFILE)))
+        {
+            len = Read(fh, text, MAX_CATTEXT - 1);
+            Close(fh);
+        }
+        strcpy(net.error, "cannot read the file");
+        if (len >= 0)
+            text[len] = 0;
+    }
+    else if ((r = net_Open(&net, AAMGR_VERSION)))
+    {
+        Busy(FALSE);
+        NetFailed(r, &net);
+        FreeVec(text);
+        return;
+    }
+    else
+    {
+        len = net_GetMem(&net, settings.catalog, text, MAX_CATTEXT);
+        net_Close(&net);
+    }
+    Busy(FALSE);
+    if (len < 0)
+    {
+        snprintf(msg, sizeof(msg), GetString(MSG_DL_LOADFAIL), net.error);
+        SetStatus(msg);
+    }
+    else
+    {
+        ParseCatalog(text);
+        ShowCatalog();
+        snprintf(msg, sizeof(msg), GetString(MSG_DL_LOADED), (long)numcat);
+        SetStatus(msg);
+    }
+    FreeVec(text);
+}
+
+/* T:AATextFonts/<file name> of a catalog entry */
+static void LocalPath(const struct CatEntry *e, char *buf, LONG len)
+{
+    snprintf(buf, len, "%s", DL_DIR);
+    AddPart((STRPTR)buf, FilePart((CONST_STRPTR)e->path), len);
+}
+
+static LONG SizeOf(const char *path)
+{
+    struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
+    BPTR l = Lock((CONST_STRPTR)path, ACCESS_READ);
+    LONG size = -1;
+
+    if (l && fib && Examine(l, fib))
+        size = fib->fib_Size;
+    if (l)
+        UnLock(l);
+    if (fib)
+        FreeDosObject(DOS_FIB, fib);
+    return size;
+}
+
+/*
+ * Make sure the entry is in T:AATextFonts (downloads it unless it is
+ * there with the catalog's size); FALSE with the reason in the status.
+ */
+static BOOL Fetch(struct AANet *net, const struct CatEntry *e, char *path,
+                  LONG len)
+{
+    static char url[300];
+    char msg[sizeof(statustext)];
+    BPTR l;
+
+    LocalPath(e, path, len);
+    if (e->bytes > 0 && SizeOf(path) == e->bytes)
+        return TRUE;
+    if (!(l = Lock((CONST_STRPTR)DL_DIR, ACCESS_READ)))
+        l = CreateDir((CONST_STRPTR)DL_DIR);
+    if (l)
+        UnLock(l);
+    if (!strncmp(e->path, "https://", 8))
+        snprintf(url, sizeof(url), "%s", e->path);
+    else
+        snprintf(url, sizeof(url), "%s%s", catbase, e->path);
+    if (net_GetFile(net, url, path))
+        return TRUE;
+    snprintf(msg, sizeof(msg), GetString(MSG_DL_GETFAIL),
+             FilePart((CONST_STRPTR)e->path), net->error);
+    SetStatus(msg);
+    return FALSE;
+}
+
+/* The row clicked last, as a catalog index, or -1 */
+static LONG CurrentEntry(void)
+{
+    LONG sel = (LONG)GetGad(GID_DLLIST, LISTBROWSER_Selected);
+
+    return sel >= 0 && sel < numshown ? shown[sel] : -1;
+}
+
+static void DlPreview(void)
+{
+    static struct AANet net;
+    static char path[256];
+    LONG i = CurrentEntry(), r;
+    BOOL ok;
+
+    if (i < 0)
+    {
+        SetStatus(GetString(MSG_DL_NONE));
+        return;
+    }
+    if ((r = net_Open(&net, AAMGR_VERSION)))
+    {
+        NetFailed(r, &net);
+        return;
+    }
+    Busy(TRUE);
+    ok = Fetch(&net, &cat[i], path, sizeof(path));
+    net_Close(&net);
+    if (ok)
+    {
+        pv_Render(win->WScreen, path, 0, GetString(MSG_PV_ALPHABET),
+                  GetString(MSG_PV_SENTENCE));
+        SetStatus("");
+    }
+    Busy(FALSE);
+    RefreshGList(gads[GID_DLPREVIEWBOX], win, NULL, 1);
+}
+
+static void DlInstall(void)
+{
+    static struct AAInstall in;
+    static struct AANet net;
+    static char path[256];
+    char msg[sizeof(statustext)], notopen[100] = "";
+    struct Node *n;
+    LONG row, todo = 0, done = 0, ok = 0, skipped = 0, failed = 0, r;
+    ULONG sel;
+
+    for (n = dllb.lh_Head; n->ln_Succ; n = n->ln_Succ)
+    {
+        sel = 0;
+        GetListBrowserNodeAttrs(n, LBNA_Selected, &sel, TAG_DONE);
+        todo += sel != 0;
+    }
+    if (!todo)
+    {
+        SetStatus(GetString(MSG_DL_NONE));
+        return;
+    }
+    aa_InstallDefaults(&in);
+    if (!mgr_ParseSizes((const char *)GetGad(GID_SIZES, STRINGA_TextVal), &in))
+    {
+        SetStatus(GetString(MSG_BADSIZES));
+        return;
+    }
+    in.charset = Charset();
+    in.engine = Engine();
+    in.overwrite = GetGad(GID_OVERWRITE, GA_Selected) != 0;
+    ReadDirs();
+    if ((r = net_Open(&net, AAMGR_VERSION)))
+    {
+        NetFailed(r, &net);
+        return;
+    }
+
+    Busy(TRUE);
+    for (n = dllb.lh_Head, row = 0; n->ln_Succ; n = n->ln_Succ, row++)
+    {
+        struct CatEntry *e = &cat[shown[row]];
+
+        sel = 0;
+        GetListBrowserNodeAttrs(n, LBNA_Selected, &sel, TAG_DONE);
+        if (!sel)
+            continue;
+        snprintf(msg, sizeof(msg), GetString(MSG_DL_GETTING), (long)++done,
+                 (long)todo, FilePart((CONST_STRPTR)e->path));
+        SetStatus(msg);
+        if (!Fetch(&net, e, path, sizeof(path)))
+        {
+            failed++;
+            continue;
+        }
+        in.source = path;
+        in.face = 0;
+        in.fontdir = settings.dir[mgr_DirKind(path)];
+        switch (aa_InstallFont(&in))
+        {
+            case AA_INSTALL_OK:
+                ok++;
+                if (!mgr_CheckFont(&in))
+                    snprintf(notopen, sizeof(notopen), GetString(MSG_NOTOPEN),
+                             in.name);
+                break;
+            case AA_INSTALL_EXISTS:
+                skipped++;
+                break;
+            default:
+                failed++;
+                break;
+        }
+        DeleteFile((CONST_STRPTR)path);     /* installed: a copy is in fontdir */
+    }
+    net_Close(&net);
+    Busy(FALSE);
+    snprintf(msg, sizeof(msg), GetString(MSG_INSTALLED), (long)ok,
+             (long)skipped, (long)failed);
+    if (notopen[0])
+        snprintf(msg + strlen(msg), sizeof(msg) - strlen(msg), " %s",
+                 notopen);
+    SetStatus(msg);
+}
+
+static Object *DownloadPage(void)
+{
+    catcols[0].ci_Title = (STRPTR)GetString(MSG_COL_FAMILY);
+    catcols[1].ci_Title = (STRPTR)GetString(MSG_COL_STYLE);
+    catcols[2].ci_Title = (STRPTR)GetString(MSG_DL_COL_LIC);
+    catcols[3].ci_Title = (STRPTR)GetString(MSG_DL_COL_SIZE);
+
+    return VLayoutObject,
+        LAYOUT_SpaceOuter, TRUE,
+        LAYOUT_DeferLayout, TRUE,
+        LAYOUT_AddImage, InfoLine(MSG_DL_INFO),
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_DLFILTER] = (struct Gadget *)StringObject,
+                GA_ID, GID_DLFILTER, GA_RelVerify, TRUE, GA_TabCycle, TRUE,
+                STRINGA_MaxChars, 39,
+            End,
+            CHILD_Label, LabelObject,
+                LABEL_Text, (ULONG)GetString(MSG_DL_FILTER),
+            End,
+            LAYOUT_AddChild, gads[GID_DLLOAD] = MakeButton(GID_DLLOAD,
+                                                           MSG_DL_LOAD),
+            CHILD_WeightedWidth, 0,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, gads[GID_DLLIST] = (struct Gadget *)ListBrowserObject,
+            GA_ID, GID_DLLIST,
+            GA_RelVerify, TRUE,
+            LISTBROWSER_Labels, (ULONG)&dllb,
+            LISTBROWSER_ColumnInfo, (ULONG)catcols,
+            LISTBROWSER_ColumnTitles, TRUE,
+            LISTBROWSER_MultiSelect, TRUE,
+            LISTBROWSER_ShowSelected, TRUE,
+        End,
+        CHILD_MinHeight, 90,
+
+        LAYOUT_AddChild, VLayoutObject,
+            LAYOUT_BevelStyle, BVS_GROUP,
+            LAYOUT_Label, (ULONG)GetString(MSG_PREVIEW),
+            LAYOUT_AddChild, gads[GID_DLPREVIEWBOX] =
+                             (struct Gadget *)SpaceObject,
+                GA_ID, GID_DLPREVIEWBOX,
+                SPACE_MinHeight, pv_NeededHeight(),
+                SPACE_RenderHook, (ULONG)&previewhook,
+            End,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_DLPREVIEW] = MakeButton(GID_DLPREVIEW,
+                                                              MSG_DL_PREVIEW),
+            CHILD_WeightedWidth, 0,
+            LAYOUT_AddChild, SpaceObject, End,
+            LAYOUT_AddChild, gads[GID_DLINSTALL] = MakeButton(GID_DLINSTALL,
+                                                              MSG_DL_INSTALL),
+            CHILD_WeightedWidth, 0,
+        End,
+        CHILD_WeightedHeight, 0,
+    End;
+}
+
+/* ------------------------------------------------------------------ */
 /* Settings tab                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -1300,7 +1734,8 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
     AddTab(&tablist, MSG_TAB_INSTALL, 0);
     AddTab(&tablist, MSG_TAB_REPAIR, 1);
     AddTab(&tablist, MSG_TAB_DIAG, 2);
-    AddTab(&tablist, MSG_TAB_SETTINGS, 3);
+    AddTab(&tablist, MSG_TAB_DOWNLOAD, 3);
+    AddTab(&tablist, MSG_TAB_SETTINGS, 4);
     for (i = 0; i < AA_NUM_CHARSETS; i++)
     {
         AddChoice(&charsetlist, GetString(charset_msg[i]));
@@ -1354,6 +1789,7 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
                     PAGE_Add, InstallPage(),
                     PAGE_Add, RepairPage(),
                     PAGE_Add, DiagPage(),
+                    PAGE_Add, DownloadPage(),
                     PAGE_Add, SettingsPage(),
                 End,
             End,
@@ -1394,6 +1830,10 @@ static void Action(ULONG id)
         case GID_OTFPICK:   PickDir(MGR_DIR_OTF); break;
         case GID_TTCPICK:   PickDir(MGR_DIR_TTC); break;
         case GID_SAVESET:   SaveSettings(); break;
+        case GID_DLLOAD:    LoadCatalog();  break;
+        case GID_DLFILTER:  ShowCatalog();  break;
+        case GID_DLPREVIEW: DlPreview();    break;
+        case GID_DLINSTALL: DlInstall();    break;
         case GID_CHARSET:
         case GID_ENGINE:
         case GID_CHANGEENGINE:
@@ -1419,6 +1859,8 @@ int mgr_RunGUI(const char *language)
         { MSG_ADD, GID_ADD }, { MSG_REMOVE, GID_REMOVE },
         { MSG_INSTALL, GID_INSTALL }, { MSG_CHECK, GID_CHECK },
         { MSG_REPAIR, GID_REPAIR }, { MSG_SET_SAVE, GID_SAVESET },
+        { MSG_DL_LOAD, GID_DLLOAD }, { MSG_DL_PREVIEW, GID_DLPREVIEW },
+        { MSG_DL_INSTALL, GID_DLINSTALL },
     };
     struct Screen *scr = NULL;
     ULONG sigmask = 0;
@@ -1432,11 +1874,14 @@ int mgr_RunGUI(const char *language)
     NewList(&filelb);
     NewList(&repairlb);
     NewList(&diaglb);
+    NewList(&dllb);
 
     files = AllocVec(MAX_FILES * sizeof(*files), MEMF_ANY | MEMF_CLEAR);
     diag = AllocVec(MAX_FONTS * sizeof(*diag), MEMF_ANY | MEMF_CLEAR);
     problems = AllocVec(MAX_FONTS * sizeof(*problems), MEMF_ANY | MEMF_CLEAR);
-    if (!files || !diag || !problems || !OpenLibs())
+    cat = AllocVec(MAX_CAT * sizeof(*cat), MEMF_ANY | MEMF_CLEAR);
+    shown = AllocVec(MAX_CAT * sizeof(*shown), MEMF_ANY | MEMF_CLEAR);
+    if (!files || !diag || !problems || !cat || !shown || !OpenLibs())
         goto out;
     InitStrings(language);
     pv_Init();              /* without it the box stays empty */
@@ -1520,6 +1965,8 @@ out:
     CloseLibs();
     if (problems)
         FreeVec(problems);
+    FreeVec(cat);
+    FreeVec(shown);
     if (diag)
         FreeVec(diag);
     if (files)

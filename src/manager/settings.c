@@ -23,6 +23,7 @@ void mgr_DefaultSettings(struct MgrSettings *s)
     for (i = 0; i < MGR_NUM_DIRS; i++)
         strcpy(s->dir[i], MGR_DIR_DEFAULT);
     s->charset = AA_CHARSET_LATIN1;
+    strcpy(s->catalog, MGR_CATALOG_URL);
 }
 
 static const char *const dirkeys[MGR_NUM_DIRS] = { "ttfdir", "otfdir", "ttcdir" };
@@ -57,6 +58,9 @@ static void ParseLine(struct MgrSettings *s, char *line)
         if (Stricmp((CONST_STRPTR)key, (CONST_STRPTR)dirkeys[i]) == 0 &&
             n < MGR_DIR_LEN)
             strcpy(s->dir[i], val);
+    if (Stricmp((CONST_STRPTR)key, (CONST_STRPTR)"catalog") == 0 &&
+        n < MGR_DIR_LEN)
+        strcpy(s->catalog, val);
     if (Stricmp((CONST_STRPTR)key, (CONST_STRPTR)"charset") == 0)
         for (i = 0; i < AA_NUM_CHARSETS; i++)
             if (Stricmp((CONST_STRPTR)val,
@@ -106,6 +110,9 @@ static BOOL SaveTo(const struct MgrSettings *s, const char *path)
         if (FPrintf(fh, (CONST_STRPTR)"%s %s\n", (ULONG)dirkeys[i],
                     (ULONG)s->dir[i]) < 0)
             ok = FALSE;
+    if (strcmp(s->catalog, MGR_CATALOG_URL) &&
+        FPrintf(fh, (CONST_STRPTR)"catalog %s\n", (ULONG)s->catalog) < 0)
+        ok = FALSE;
     if (FPrintf(fh, (CONST_STRPTR)"charset %s\n",
                 (ULONG)aa_CharsetNames[s->charset < AA_NUM_CHARSETS ?
                                        s->charset : 0]) < 0)

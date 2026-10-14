@@ -238,3 +238,35 @@ MSG_SET_SAVEERR
 ENV:/ENVARC:AATextManager.prefs yazılamadı.
 MSG_SET_NOTE
 FONTS: içindeki dizinler FONTS:... olarak, diğerleri disk adıyla yazılır.
+MSG_TAB_DOWNLOAD
+İndir
+MSG_DL_INFO
+Ücretsiz fontlar (Google Fonts, github.com/google/fonts). Seçilen dosyalar T:'ye indirilip kurulur.
+MSG_DL_FILTER
+Ara
+MSG_DL_LOAD
+_Listeyi yükle
+MSG_DL_PREVIEW
+Ö_nizle
+MSG_DL_INSTALL
+İndir ve _kur
+MSG_DL_COL_LIC
+Lisans
+MSG_DL_COL_SIZE
+Boyut
+MSG_DL_LOADING
+Font listesi yükleniyor...
+MSG_DL_LOADED
+Listede %ld font var; bir ya da birkaçını seçin (Shift ile).
+MSG_DL_LOADFAIL
+Font listesi yüklenemedi: %s
+MSG_DL_GETTING
+İndiriliyor %ld/%ld: %s
+MSG_DL_GETFAIL
+%s indirilemedi: %s
+MSG_DL_NONE
+Önce listeden font seçin.
+MSG_DL_NONET
+Ağ yok: bsdsocket.library bulunamadı (TCP/IP çalışıyor mu?).
+MSG_DL_NOSSL
+İndirmek için AmiSSL 5 gerekir (Aminet: util/libs/AmiSSL-5).

@@ -11,6 +11,7 @@
  *   otfdir  FONTS:_ttf/
  *   ttcdir  FONTS:_ttf/
  *   charset latin1
+ *   catalog https://...           (not in the window; for tests a file)
  */
 
 #include <exec/types.h>
@@ -19,6 +20,7 @@
 #define MGR_PREFS_ENVARC  "ENVARC:AATextManager.prefs"
 #define MGR_DIR_DEFAULT   "FONTS:_ttf/"
 #define MGR_DIR_LEN       256
+#define MGR_CATALOG_URL       "https://raw.githubusercontent.com/Sdursun/AAText/main/fonts/catalog.txt"
 
 enum { MGR_DIR_TTF, MGR_DIR_OTF, MGR_DIR_TTC, MGR_NUM_DIRS };
 
@@ -26,6 +28,7 @@ struct MgrSettings
 {
     char dir[MGR_NUM_DIRS][MGR_DIR_LEN];
     LONG charset;                   /* AA_CHARSET_* */
+    char catalog[MGR_DIR_LEN];      /* the Download tab's font list */
 };
 
 /* Defaults: FONTS:_ttf/ for all, ISO-8859-1. */

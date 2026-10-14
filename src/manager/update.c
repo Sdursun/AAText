@@ -129,11 +129,11 @@ static LONG Connect(const char *host)
 /*
  * GET https://host/path. The body goes to mem (room for max bytes,
  * NUL-terminated) or to the file fh. Returns the HTTP status (0 on
- * error, u->error set); a redirect's Location is left in location.
+ * error, error set); a redirect's Location is left in location.
  */
 static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
                      const char *myversion, char *mem, LONG max, BPTR fh,
-                     char *location, LONG loclen, struct AAUpdate *u)
+                     char *location, LONG loclen, char *error, LONG *gotlen)
 {
     static char buf[32768];         /* GitHub headers can exceed 4 KB */
     static char req[2400];
@@ -142,14 +142,16 @@ static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
     BOOL header = TRUE;
 
     location[0] = 0;
+    if (gotlen)
+        *gotlen = 0;
     if ((sock = Connect(host)) < 0)
     {
-        sprintf(u->error, "cannot connect to %s", host);
+        sprintf(error, "cannot connect to %s", host);
         return 0;
     }
     if (!(ssl = SSL_new(ctx)))
     {
-        strcpy(u->error, "SSL_new failed");
+        strcpy(error, "SSL_new failed");
         CloseSocket(sock);
         return 0;
     }
@@ -157,7 +159,7 @@ static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
     SSL_set_tlsext_host_name(ssl, host);
     if (SSL_connect(ssl) <= 0 || SSL_get_verify_result(ssl) != X509_V_OK)
     {
-        sprintf(u->error, "secure connection to %s failed (certificate?)",
+        sprintf(error, "secure connection to %s failed (certificate?)",
                 host);
         goto done;
     }
@@ -168,7 +170,7 @@ static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
             path, host, myversion);
     if (SSL_write(ssl, req, strlen(req)) <= 0)
     {
-        strcpy(u->error, "cannot send the request");
+        strcpy(error, "cannot send the request");
         goto done;
     }
 
@@ -220,21 +222,29 @@ static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
         {
             if (bodylen && Write(fh, body, bodylen) != bodylen)
             {
-                strcpy(u->error, "cannot write the file");
+                strcpy(error, "cannot write the file");
                 status = 0;
                 goto done;
             }
         }
-        else if (mem && got + bodylen < max)
+        else if (mem)
         {
+            if (got + bodylen >= max)
+            {
+                strcpy(error, "answer too long");
+                status = 0;
+                goto done;
+            }
             memcpy(mem + got, body, bodylen);
             got += bodylen;
             mem[got] = 0;
         }
+        if (gotlen)
+            *gotlen += bodylen;
     }
     if (header)
     {
-        sprintf(u->error, "no answer from %s", host);
+        sprintf(error, "no answer from %s", host);
         status = 0;
     }
 
@@ -248,16 +258,14 @@ done:
     return status;
 }
 
-LONG upd_Check(const char *myversion, struct AAUpdate *u)
+/* bsdsocket.library and AmiSSL 5, and a TLS context that checks the
+   server certificate; UPD_NONET, UPD_NOSSL, UPD_FAILED or 0 */
+static LONG OpenNet(SSL_CTX **ctxp, BOOL *opened)
 {
-    /* GitHub's download addresses are long (900+ characters) */
-    static char host[128], path[2048], url[2048], location[2048];
-    char *json = NULL;
-    SSL_CTX *ctx = NULL;
-    LONG result = UPD_FAILED, status, i;
-    BOOL opened = FALSE;
+    LONG i;
 
-    memset(u, 0, sizeof(*u));
+    *ctxp = NULL;
+    *opened = FALSE;
     SocketBase = OpenLibrary((CONST_STRPTR)"bsdsocket.library", 4);
     if (!SocketBase)
         return UPD_NONET;
@@ -271,11 +279,8 @@ LONG upd_Check(const char *myversion, struct AAUpdate *u)
                        AmiSSL_SocketBase, (ULONG)SocketBase,
                        AmiSSL_ErrNoPtr, (ULONG)&upd_errno,
                        TAG_DONE) != 0)
-    {
-        result = UPD_NOSSL;
-        goto out;
-    }
-    opened = TRUE;
+        return UPD_NOSSL;
+    *opened = TRUE;
 
     /* some entropy for OpenSSL on systems without a random source */
     {
@@ -289,19 +294,144 @@ LONG upd_Check(const char *myversion, struct AAUpdate *u)
         RAND_seed(seed, sizeof(seed));
     }
 
-    if (!(ctx = SSL_CTX_new(TLS_client_method())))
+    if (!(*ctxp = SSL_CTX_new(TLS_client_method())))
+        return UPD_FAILED;
+    SSL_CTX_set_default_verify_paths(*ctxp);
+    SSL_CTX_set_verify(*ctxp, SSL_VERIFY_PEER, NULL);
+    return 0;
+}
+
+static void CloseNet(SSL_CTX *ctx, BOOL opened)
+{
+    if (ctx)
+        SSL_CTX_free(ctx);
+    if (opened)
+        CloseAmiSSL();
+    if (AmiSSLMasterBase)
+        CloseLibrary(AmiSSLMasterBase);
+    if (SocketBase)
+        CloseLibrary(SocketBase);
+    AmiSSLMasterBase = AmiSSLBase = AmiSSLExtBase = NULL;
+    SocketBase = NULL;
+}
+
+/* ------------------------------------------------------------------ */
+/* Downloads for the font catalog                                       */
+/* ------------------------------------------------------------------ */
+
+LONG net_Open(struct AANet *n, const char *myversion)
+{
+    SSL_CTX *ctx;
+    LONG r;
+
+    memset(n, 0, sizeof(*n));
+    n->version = myversion;
+    r = OpenNet(&ctx, &n->opened);
+    n->ctx = ctx;
+    if (r)
     {
-        strcpy(u->error, "SSL_CTX_new failed");
+        if (r == UPD_FAILED)
+            strcpy(n->error, "SSL_CTX_new failed");
+        net_Close(n);
+    }
+    return r;
+}
+
+void net_Close(struct AANet *n)
+{
+    CloseNet((SSL_CTX *)n->ctx, n->opened);
+    n->ctx = NULL;
+    n->opened = FALSE;
+}
+
+/* GET url into mem (max bytes) or the file path, following redirects. */
+static BOOL NetGet(struct AANet *n, const char *url0, char *mem, LONG max,
+                   const char *path, LONG *got)
+{
+    static char host[128], upath[2048], url[2048], location[2048];
+    LONG status, i;
+
+    if (strlen(url0) >= sizeof(url))
+    {
+        strcpy(n->error, "address too long");
+        return FALSE;
+    }
+    strcpy(url, url0);
+    n->error[0] = 0;
+    for (i = 0; i < MAX_REDIRECTS; i++)
+    {
+        BPTR fh = 0;
+
+        if (!SplitUrl(url, host, sizeof(host), upath, sizeof(upath)))
+        {
+            strcpy(n->error, "unexpected address");
+            return FALSE;
+        }
+        if (path && !(fh = Open((CONST_STRPTR)path, MODE_NEWFILE)))
+        {
+            sprintf(n->error, "cannot write %s", path);
+            return FALSE;
+        }
+        status = HttpsGet((SSL_CTX *)n->ctx, host, upath, n->version, mem,
+                          max, fh, location, sizeof(location), n->error, got);
+        if (fh)
+            Close(fh);
+        if (status == 200)
+            return TRUE;
+        if (path)
+            DeleteFile((CONST_STRPTR)path);
+        if ((status == 301 || status == 302 || status == 303 ||
+             status == 307 || status == 308) && location[0] &&
+            strlen(location) < sizeof(url))
+        {
+            strcpy(url, location);
+            continue;
+        }
+        if (status)
+            sprintf(n->error, "%s answered %ld", host, (long)status);
+        return FALSE;
+    }
+    strcpy(n->error, "too many redirections");
+    return FALSE;
+}
+
+LONG net_GetMem(struct AANet *n, const char *url, char *mem, LONG max)
+{
+    LONG got = 0;
+
+    return NetGet(n, url, mem, max, NULL, &got) ? got : -1;
+}
+
+BOOL net_GetFile(struct AANet *n, const char *url, const char *path)
+{
+    return NetGet(n, url, NULL, 0, path, NULL);
+}
+
+/* ------------------------------------------------------------------ */
+
+LONG upd_Check(const char *myversion, struct AAUpdate *u)
+{
+    /* GitHub's download addresses are long (900+ characters) */
+    static char host[128], path[2048], url[2048], location[2048];
+    char *json = NULL;
+    SSL_CTX *ctx = NULL;
+    LONG result = UPD_FAILED, status, i;
+    BOOL opened = FALSE;
+
+    memset(u, 0, sizeof(*u));
+    if ((i = OpenNet(&ctx, &opened)))
+    {
+        if (i == UPD_FAILED)
+            strcpy(u->error, "SSL_CTX_new failed");
+        result = i;
         goto out;
     }
-    SSL_CTX_set_default_verify_paths(ctx);
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
 
     /* the latest release */
     if (!(json = AllocVec(MAX_JSON, MEMF_ANY | MEMF_CLEAR)))
         goto out;
     status = HttpsGet(ctx, API_HOST, API_PATH, myversion, json, MAX_JSON,
-                      0, location, sizeof(location), u);
+                      0, location, sizeof(location), u->error, NULL);
     if (status != 200)
     {
         if (status)
@@ -350,7 +480,7 @@ LONG upd_Check(const char *myversion, struct AAUpdate *u)
             break;
         }
         status = HttpsGet(ctx, host, path, myversion, NULL, 0, fh,
-                          location, sizeof(location), u);
+                          location, sizeof(location), u->error, NULL);
         Close(fh);
         if (status == 200)
         {
@@ -378,14 +508,6 @@ out:
         u->error[0] = 0;
     if (json)
         FreeVec(json);
-    if (ctx)
-        SSL_CTX_free(ctx);
-    if (opened)
-        CloseAmiSSL();
-    if (AmiSSLMasterBase)
-        CloseLibrary(AmiSSLMasterBase);
-    CloseLibrary(SocketBase);
-    AmiSSLMasterBase = AmiSSLBase = AmiSSLExtBase = NULL;
-    SocketBase = NULL;
+    CloseNet(ctx, opened);
     return result;
 }

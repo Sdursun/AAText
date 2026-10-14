@@ -218,6 +218,18 @@ ENV:ftcodepage.
                  font, and the line below says so.
                  "Save report..." writes the list to a text file for bug
                  reports. The scan itself changes nothing.
+  Download tab   free fonts from Google Fonts (github.com/google/fonts),
+                 from a list kept in the AAText repository
+                 (fonts/catalog.txt: about 40 families with Turkish
+                 letters, e.g. Ubuntu, PT Sans, Lato, Fira Sans, IBM
+                 Plex, Tinos/Cousine/Carlito/Caladea, which have the
+                 widths of Times New Roman, Courier New, Calibri and
+                 Cambria). "Load list", search by family, select one
+                 or more files (Shift-click), "Preview" shows the one
+                 clicked last, "Download and install" downloads them
+                 to T:AATextFonts and installs them like the Install
+                 tab (character set, engine, sizes, "replace"). Needs
+                 a running TCP/IP stack and AmiSSL 5.
   Settings tab   where font files are copied, one directory each for
                  .ttf, .otf and .ttc/.otc (default FONTS:_ttf/;
                  "Choose..." opens a drawer requester), and the
