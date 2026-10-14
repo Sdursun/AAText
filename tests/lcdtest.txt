@@ -1,0 +1,53 @@
+lcdtest - alt piksel (LCD) yumuşatma testi / subpixel antialiasing test
+=======================================================================
+
+Türkçe
+------
+
+AAText'e alt piksel (ClearType benzeri) yumuşatma eklemeye değer mi,
+bunu kendi monitörünüzde görmek için. Aynı iki satırı üç zeminde
+(pencere rengi, beyaz, koyu) beş şekilde çizer:
+
+  gray    gri tonlu yumuşatma (AAText'in bugün yaptığı)
+  RGB     alt piksel, sıra kırmızı-yeşil-mavi (çoğu monitör)
+  BGR     alt piksel, sıra mavi-yeşil-kırmızı
+  RGB f   RGB, renk saçağını azaltan LCD filtresiyle
+  BGR f   BGR, aynı filtreyle
+
+RTG ekran gerekir (15 bit ve üstü). Kullanım (Shell):
+
+  lcdtest                         varsayılan font, 13 piksel
+  lcdtest SIZE=16                 başka boyut
+  lcdtest FONT=FONTS:_ttf/verdana.ttf SIZE=12
+  lcdtest GAMMA=120               AAText.prefs'teki gamma * 100
+
+FONT verilmezse FONTS:_ttf/ içinde sırayla DejaVuSans, verdana, tahoma,
+arial aranır. Pencere kapatma düğmesiyle ya da Ctrl-C ile kapanır.
+
+Nasıl bakılır: ekran 1:1 gösterilmeli (monitör ya da TV görüntüyü
+büyütmemeli). Büyütülmüş ekranda ya da ekran görüntüsünü büyüterek
+bakınca alt piksel çizim her zaman renkli görünür; değerlendirme ancak
+gerçek ekranda gözle yapılabilir.
+
+  1. gray ile RGB: RGB daha keskin mi, yoksa harf kenarlarında renkli
+     (turuncu/mavi) saçak mı var?
+  2. RGB mi BGR mi daha temiz? (Yanlış sıra belirgin renkli görünür.)
+  3. Filtreli (f) satırlar filtresizlerden iyi mi?
+  4. Fark en çok hangi zeminde belli oluyor?
+
+
+English
+-------
+
+Shows whether subpixel (ClearType-like) antialiasing would be worth
+adding to AAText, on your own monitor. Draws the same two lines on
+three backgrounds (window colour, white, dark) in five ways: gray (what
+AAText does now), RGB, BGR, and RGB/BGR through an LCD filter that
+reduces colour fringes. Needs an RTG screen (15 bit or more).
+
+  lcdtest [FONT <file.ttf>] [SIZE <pixels>] [SECONDS <n>] [GAMMA <n>]
+
+Without FONT the first of DejaVuSans, verdana, tahoma, arial in
+FONTS:_ttf/ is used. Look at it on a screen that shows the Amiga's
+pixels 1:1; on a scaled screen, or in a magnified screenshot, subpixel
+text always looks coloured.

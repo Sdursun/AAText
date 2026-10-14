@@ -126,6 +126,13 @@ test: $(BUILDDIR)/fttest
 $(BUILDDIR)/fttest: tests/fttest.c $(TEST_OBJS) $(FT_LIB)
 	$(CC) $(CFLAGS) -o $@ tests/fttest.c $(TEST_OBJS) $(FT_LIB) $(LIBS)
 
+# lcdtest: subpixel (LCD) antialiasing test, see tests/lcdtest.c
+.PHONY: lcdtest
+lcdtest: $(BUILDDIR)/lcdtest
+
+$(BUILDDIR)/lcdtest: tests/lcdtest.c $(FT_LIB) $(BUILDDIR)/cgx.o
+	$(CC) $(CFLAGS) -o $@ tests/lcdtest.c $(BUILDDIR)/cgx.o $(FT_LIB) $(LIBS)
+
 # Release archive for Aminet: build/dist/AAText.lha + AAText.readme
 # (docs are UTF-8 in the repository; the Turkish one is converted to
 # ISO-8859-9, the usual Turkish character set on the Amiga)
