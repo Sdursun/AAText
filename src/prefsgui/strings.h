@@ -84,7 +84,8 @@
     S(MSG_DIAG_MANAGER,    116, "_Fonts (AATextManager)...") \
     S(MSG_DIAG_NOMANAGER,  117, "Cannot start %s.") \
     S(MSG_AGA,             118, "Antialiasing on palette (AGA) screens") \
-    S(MSG_MANAGER_NOTE,    119, "Installing, repairing and checking fonts: AATextManager.")
+    S(MSG_MANAGER_NOTE,    119, "Installing, repairing and checking fonts: AATextManager.") \
+    S(MSG_ANTIALIAS,       120, "Antialiasing (off: TrueType text with sharp edges)")
 
 
 #define S(id, n, s) id = n,

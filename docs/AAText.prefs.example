@@ -54,6 +54,10 @@
 # palette. Also the only mode that draws anything without RTG.
 #aga on
 
+# Antialiasing (default on). "off" still draws TrueType fonts through
+# AAText, in one colour with sharp edges; widths and layouts stay the same.
+#antialias off
+
 # Explicit mappings (rarely needed): draw a font with a TrueType file,
 # e.g. a bitmap font, or a font whose .otag is not found.
 #

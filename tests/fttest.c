@@ -710,6 +710,65 @@ int main(int argc, char **argv)
         aa_UnlockGlyphs();
         return 10;
     }
+    /*
+     * "mono" (prefs with "antialias off"): glyphs only 0 or 255; the
+     * advance table (layouts) the same as with antialiasing; with it
+     * switched on again, glyphs have grey edges.
+     */
+    if (strcmp(argv[2], "mono") == 0)
+    {
+        static WORD adv[256];
+        LONG c, bad = 0, ink = 0, grey = 0;
+
+        if (prefs.antialias)
+        {
+            printf("mono: the prefs must say \"antialias off\"\n");
+            return 10;
+        }
+        for (c = 0; c < 256; c++)
+            adv[c] = font->real ? font->adv[c] : 0;
+        for (c = 33; c < 127; c++)
+        {
+            struct AAGlyph *g = aa_GetGlyph(font, c);
+            LONG k;
+
+            for (k = 0; g && k < g->width * g->rows; k++)
+            {
+                if (g->data[k] && g->data[k] != 255)
+                    bad++;
+                ink += g->data[k] == 255;
+            }
+        }
+        printf("one colour: %ld grey pixels, %ld set -> %s\n", (long)bad,
+               (long)ink, (!bad && ink) ? "OK" : "FAIL");
+
+        prefs.antialias = TRUE;
+        aa_UnlockGlyphs();
+        aa_GlyphsReconfigure(&prefs);
+        aa_LockGlyphs();
+        if (!aa_PrepareFont(font, &tf))
+        {
+            printf("aa_PrepareFont failed\n");
+            return 10;
+        }
+        for (c = 33; c < 127; c++)
+        {
+            struct AAGlyph *g = aa_GetGlyph(font, c);
+            LONG k;
+
+            for (k = 0; g && k < g->width * g->rows; k++)
+                grey += g->data[k] && g->data[k] != 255;
+        }
+        for (c = 0; font->real && c < 256; c++)
+            if (adv[c] != font->adv[c])
+                bad++;
+        printf("antialiased again: %ld grey pixels; advances %s\n",
+               (long)grey, bad ? "differ -> FAIL" : "the same -> OK");
+        aa_UnlockGlyphs();
+        aa_GlyphsCleanup();
+        return (bad || !ink || !grey) ? 10 : 0;
+    }
+
     /* "capsize": like the user's Arial/14 (baseline 9, 'H' rows 3..9):
        a real metrics font must get a 7 pixel 'H' standing on row 9 */
     if (strcmp(argv[2], "capsize") == 0)

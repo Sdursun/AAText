@@ -136,6 +136,16 @@ static struct
     char   name[AA_LOOKUP_NAME];
 } aa_Lookup[AA_LOOKUP_SLOTS];
 static UBYTE aa_Hinting;
+/*
+ * Antialiasing off: glyphs are loaded with FreeType's hinting for one
+ * colour output (aa_MonoFlags) and their coverage is cut at 50% (our
+ * build has no "raster" module for FT_RENDER_MODE_MONO); the advance
+ * tables keep
+ * aa_LoadFlags, so widths and layouts do not change with the setting.
+ */
+static BOOL aa_AntiAlias = TRUE;
+static FT_Int32 aa_MonoFlags = FT_LOAD_TARGET_MONO | FT_LOAD_FORCE_AUTOHINT |
+                               FT_LOAD_NO_BITMAP;
 
 /*
  * FT_Load_Glyph() flags for every glyph load - rendering, real metrics
@@ -500,6 +510,7 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     aa_AutoReal = prefs->autoreal;
     aa_Kerning = prefs->kerning;
     aa_Hinting = prefs->hinting;
+    aa_AntiAlias = prefs->antialias;
 
     aa_HaveEnvCodePage = ReadEnvCodePage(aa_EnvCodePage);
     D(("AAText: ENV:ftcodepage %s\n",
@@ -612,6 +623,7 @@ void aa_GlyphsReconfigure(const struct AAPrefs *prefs)
     aa_CacheLimit = prefs->cachekb * 1024;
     aa_FontGen++;
     aa_Hinting = prefs->hinting;
+    aa_AntiAlias = prefs->antialias;
     if (aa_FTLib)
     {
         RunOnRenderStack(SetHintingOnStack, NULL);
@@ -1493,8 +1505,12 @@ static LONG RenderOnStack(APTR arg)
     if (!gi && r->code > ' ')
         stat_missing++;
 #endif
-    if (FT_Load_Glyph(face, gi, aa_LoadFlags) ||
-        FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL))
+    /* one colour: the autohinter's strong hinting (no font bytecode, which
+       may fail on the render stack); if that fails, the normal load */
+    if ((aa_AntiAlias || FT_Load_Glyph(face, gi, aa_MonoFlags)) &&
+        FT_Load_Glyph(face, gi, aa_LoadFlags))
+        return FALSE;
+    if (FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL))
         return FALSE;
 
     bm = &slot->bitmap;
@@ -1522,8 +1538,12 @@ static LONG RenderOnStack(APTR arg)
         const UBYTE *src = bm->buffer + y * bm->pitch;
         UBYTE *dst = g->data + y * w;
 
-        for (x = 0; x < w; x++)
-            dst[x] = aa_GammaLUT[src[x]];
+        if (!aa_AntiAlias)      /* one colour: half covered or more */
+            for (x = 0; x < w; x++)
+                dst[x] = src[x] >= 128 ? 255 : 0;
+        else
+            for (x = 0; x < w; x++)
+                dst[x] = aa_GammaLUT[src[x]];
     }
 
     r->glyph = g;

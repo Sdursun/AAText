@@ -58,6 +58,8 @@ struct AAPrefs
     BOOL  kerning;                  /* pair kerning in real metrics mode */
     BOOL  aga;                      /* antialiasing on palette (AGA)
                                        screens, default off */
+    BOOL  antialias;                /* off: TrueType glyphs drawn sharp
+                                       (one colour), default on */
     ULONG cachekb;                  /* glyph cache size in KB */
     char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];
     UWORD numblack;

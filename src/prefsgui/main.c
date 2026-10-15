@@ -96,7 +96,7 @@ enum
     GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
     GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
-    GID_PICKFILE, GID_KERNING,
+    GID_PICKFILE, GID_KERNING, GID_ANTIALIAS,
     GID_MANAGER,
     GID_COUNT
 };
@@ -191,7 +191,8 @@ static void CloseLibs(void)
 /* Tab page of a gadget (0-3), -1 for the gadgets outside the pages. */
 static LONG PageOf(LONG gid)
 {
-    if ((gid >= GID_GAMMA && gid <= GID_FONTINFO) || gid == GID_KERNING)
+    if ((gid >= GID_GAMMA && gid <= GID_FONTINFO) || gid == GID_KERNING ||
+        gid == GID_ANTIALIAS)
         return 0;
     if ((gid >= GID_BLACKLIST && gid <= GID_RUNNING) || gid == GID_PICKFILE)
         return 1;
@@ -234,7 +235,7 @@ static void SetGad2(LONG gid, Tag tag1, ULONG data1, Tag tag2, ULONG data2)
     }
     SetGadgetAttrsA(gads[gid], win, NULL, tags);
     if (gid == GID_REAL || gid == GID_KERNING || gid == GID_AUTO ||
-        gid == GID_OFFSCREEN || gid == GID_AGA)
+        gid == GID_OFFSCREEN || gid == GID_AGA || gid == GID_ANTIALIAS)
     {
         /* checkbox.gadget does not redraw itself on GA_Selected; erase
            first, or its (antialiased) label is drawn over itself */
@@ -409,6 +410,8 @@ static void ReadGadgets(void)
         cur.offscreen = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_AGA], &v))
         cur.aga = v != 0;
+    if (GetAttr(GA_Selected, (Object *)gads[GID_ANTIALIAS], &v))
+        cur.antialias = v != 0;
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
         cur.cachekb = v;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_CHARSET], &v))
@@ -1073,6 +1076,14 @@ static Object *AppearancePage(void)
         CHILD_WeightedHeight, 0,
         Label(GetString(MSG_GAMMA)),
 
+        LAYOUT_AddChild, gads[GID_ANTIALIAS] = (struct Gadget *)CheckBoxObject,
+            GA_ID, GID_ANTIALIAS,
+            GA_RelVerify, TRUE,
+            GA_Text, (ULONG)GetString(MSG_ANTIALIAS),
+            GA_Selected, cur.antialias,
+        End,
+        CHILD_WeightedHeight, 0,
+
         LAYOUT_AddChild, gads[GID_HINTING] = (struct Gadget *)ChooserObject,
             GA_ID, GID_HINTING,
             GA_RelVerify, TRUE,
@@ -1264,6 +1275,7 @@ static BOOL Action(ULONG id)
         case GID_AUTO:
         case GID_OFFSCREEN:
         case GID_AGA:
+        case GID_ANTIALIAS:
         case GID_CACHE:
         case GID_CHARSET:
             LiveApply();
@@ -1353,6 +1365,7 @@ static void ShowPrefs(void)
     SetGad(GID_AUTO, GA_Selected, cur.autodetect);
     SetGad(GID_OFFSCREEN, GA_Selected, cur.offscreen);
     SetGad(GID_AGA, GA_Selected, cur.aga);
+    SetGad(GID_ANTIALIAS, GA_Selected, cur.antialias);
     SetGad(GID_CACHE, INTEGER_Number, cur.cachekb);
     SetGad(GID_CHARSET, CHOOSER_Selected, cur.charset);
     ShowBlacklist();

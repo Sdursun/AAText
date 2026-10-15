@@ -15,6 +15,7 @@
  *   real on | off            (real metrics for detected fonts, default off)
  *   kerning on | off         (pair kerning in real metrics mode, default on)
  *   aga on | off             (antialiasing on palette screens, default off)
+ *   antialias on | off       (off: TrueType text drawn sharp, default on)
  */
 
 #include <exec/types.h>
@@ -229,6 +230,16 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
             PrefsError(lineno, "expected on or off");
         return;
     }
+    if (StrIEq(tok[0], "antialias"))
+    {
+        if (n == 2 && StrIEq(tok[1], "on"))
+            prefs->antialias = TRUE;
+        else if (n == 2 && StrIEq(tok[1], "off"))
+            prefs->antialias = FALSE;
+        else
+            PrefsError(lineno, "antialias must be on or off");
+        return;
+    }
     if (StrIEq(tok[0], "aga"))
     {
         if (n == 2 && StrIEq(tok[1], "on"))
@@ -341,6 +352,7 @@ void aa_DefaultPrefs(struct AAPrefs *prefs)
     prefs->autoreal = FALSE;
     prefs->kerning = TRUE;
     prefs->aga = FALSE;
+    prefs->antialias = TRUE;
     prefs->cachekb = AA_DEFAULT_CACHE_KB;
     prefs->numblack = 0;
 }

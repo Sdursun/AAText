@@ -29,6 +29,7 @@ run baseline        tests/test.prefs baseline
 run capsize         tests/capsize.prefs capsize
 run metrics         tests/real.prefs metrics
 run metrics-nokern  tests/realnokern.prefs metrics
+run mono            tests/mono.prefs mono
 run otag            tests/test.prefs otag tests/data/arial.otag
 run otagrw-ftm      tests/data/empty.prefs otagrw tests/data/verdanaregular.otag
 run otagrw-cff      tests/data/empty.prefs otagrw tests/data/sourcesans3regular.otag

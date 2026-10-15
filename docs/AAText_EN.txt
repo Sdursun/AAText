@@ -138,7 +138,8 @@ while you try it out.
   Use     keeps them until the next reboot (ENV: only)
   Cancel  returns AAText to the settings it had before
 
-  Appearance  gamma, hinting, real character widths, kerning, preview
+  Appearance  antialiasing on/off, gamma, hinting, real character
+              widths, kerning, preview
   Programs    the programs AAText leaves alone (blacklist): type a
               name, choose the program file with "Choose...", or pick
               one from "Add a running program...". The program need
@@ -191,7 +192,9 @@ ENV:ftcodepage.
                  as .bak), "Install". At the end diskfont opens each
                  font as a check. Select a font in the list to see
                  it in a few sizes below it (on palette screens in the
-                 nearest palette colours), before it is installed.
+                 nearest palette colours), before it is installed;
+                 "Antialiasing" under the preview shows it with or
+                 without (the preview only).
   Repair tab     "Check fonts" lists the fonts in FONTS: that can be
                  repaired: font file moved, no code page, engine
                  freetype2 (changed to the chosen engine if the box is
@@ -235,8 +238,10 @@ ENV:ftcodepage.
                  Plex, Tinos/Cousine/Carlito/Caladea, which have the
                  widths of Times New Roman, Courier New, Calibri and
                  Cambria). "Load list", search by family, select one
-                 or more files (Shift-click), "Preview" shows the one
-                 clicked last, "Download and install" downloads them
+                 or more files (Shift-click). One selected font is
+                 shown in the preview at once (downloaded first if
+                 needed); with several selected the preview stays
+                 empty. "Download and install" downloads them
                  to T:AATextFonts and installs them like the Install
                  tab (character set, engine, sizes, "replace"). Needs
                  a running TCP/IP stack and AmiSSL 5.
@@ -316,6 +321,11 @@ It is a plain text file with one setting per line; lines starting with
 
   cache 256         Memory for rendered characters in KB (32 - 16384,
                     default 256).
+
+  antialias off     TrueType text without antialiasing (default on):
+                    still drawn by AAText from the TrueType font, with
+                    its shapes and widths, but in one colour with sharp
+                    edges. Layouts stay the same when it is switched.
 
   offscreen on      Some programs (docks, gauges) draw text into a
                     hidden bitmap first. AAText cannot tell which screen

@@ -144,8 +144,8 @@ satırında görürsünüz.
   Kullan    ayarları bir sonraki açılışa kadar kullanır (sadece ENV:)
   İptal     AAText'i önceki ayarlarına döndürür
 
-  Görünüm     gamma, hinting, gerçek harf genişlikleri, kerning,
-              önizleme
+  Görünüm     yumuşatma açık/kapalı, gamma, hinting, gerçek harf
+              genişlikleri, kerning, önizleme
   Programlar  AAText'in dokunmayacağı programlar (kara liste): adı
               yazın, program dosyasını "Seç..." ile seçin ya da
               "Çalışan bir program ekle..." listesinden alın. Programın
@@ -196,7 +196,9 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  Sonunda diskfont her fontu denetim için açar. Listede bir
                  font seçilince altında birkaç boyutta önizlemesi
                  görünür (paletli ekranlarda en yakın palet
-                 renkleriyle), kurulmadan önce.
+                 renkleriyle), kurulmadan önce; önizlemenin altındaki
+                 "Yumuşatma" kutusu onu yumuşatmalı ya da yumuşatmasız
+                 gösterir (yalnızca önizlemede).
   Onar sekmesi   "Fontları denetle" FONTS:'taki onarılabilir fontları
                  listeler: font dosyası taşınmış, kod sayfası yok, motor
                  freetype2 (kutu işaretliyse seçilen motora çevrilir). Yükseklik sınır kutusuna göre (FTManager ya da
@@ -244,8 +246,9 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  Times New Roman, Courier New, Calibri, Cambria ile aynı
                  genişlikteki Tinos/Cousine/Carlito/Caladea). "Listeyi
                  yükle", aileye göre arama, bir ya da birkaç dosya seçimi
-                 (Shift ile), "Önizle" son tıklananı gösterir, "İndir ve
-                 kur" dosyaları T:AATextFonts'a indirip Kur sekmesindeki
+                 (Shift ile). Tek bir font seçilince önizlemesi hemen
+                 gösterilir (gerekirse önce indirilir); birden çok font
+                 seçiliyse önizleme boş kalır. "İndir ve kur" dosyaları T:AATextFonts'a indirip Kur sekmesindeki
                  gibi kurar (karakter seti, motor, boyutlar, "yerine
                  yaz"). Çalışan bir TCP/IP yığını ve AmiSSL 5 gerekir.
   Ayarlar        font dosyalarının kopyalanacağı yerler: .ttf, .otf ve
@@ -329,6 +332,12 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
 
   cache 256         Çizilmiş harfler için bellek, KB cinsinden
                     (32 - 16384, varsayılan 256).
+
+  antialias off     TrueType yazıyı yumuşatmasız çizer (varsayılan
+                    açık): yazı yine AAText tarafından TrueType fonttan,
+                    şekil ve genişlikleriyle çizilir, ama tek renkli ve
+                    keskin kenarlı. Açıp kapatınca pencere düzenleri
+                    değişmez.
 
   offscreen on      Bazı programlar (dock'lar, göstergeler) yazıyı önce
                     gizli bir bitmap'e çizer. AAText orada hangi ekran

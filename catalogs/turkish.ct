@@ -149,3 +149,5 @@ MSG_AGA
 Paletli (AGA) ekranlarda yumuşatma
 MSG_MANAGER_NOTE
 Font kurma, onarma ve tanılama: AATextManager.
+MSG_ANTIALIAS
+Yumuşatma (kapalıyken TrueType yazı keskin kenarlı)
