@@ -143,7 +143,8 @@
     S(MSG_DL_GETFAIL,      127, "Cannot download %s: %s") \
     S(MSG_DL_NONE,         128, "Select fonts in the list first.") \
     S(MSG_DL_NONET,        129, "No network: bsdsocket.library is not available (is TCP/IP running?).") \
-    S(MSG_DL_NOSSL,        130, "Downloading needs AmiSSL 5 (Aminet: util/libs/AmiSSL-5).")
+    S(MSG_DL_NOSSL,        130, "Downloading needs AmiSSL 5 (Aminet: util/libs/AmiSSL-5).") \
+    S(MSG_PV_AA,           131, "Antialiasing")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

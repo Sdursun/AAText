@@ -270,3 +270,5 @@ MSG_DL_NONET
 Ağ yok: bsdsocket.library bulunamadı (TCP/IP çalışıyor mu?).
 MSG_DL_NOSSL
 İndirmek için AmiSSL 5 gerekir (Aminet: util/libs/AmiSSL-5).
+MSG_PV_AA
+Yumuşatma

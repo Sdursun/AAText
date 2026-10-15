@@ -79,11 +79,11 @@ struct Library *WindowBase, *LayoutBase, *ClickTabBase, *ChooserBase,
 enum
 {
     GID_TABS = 1, GID_CHARSET, GID_ENGINE,
-    GID_FILES, GID_PREVIEW, GID_ADD, GID_REMOVE, GID_SIZES, GID_OVERWRITE, GID_INSTALL,
+    GID_FILES, GID_PREVIEW, GID_PVAA, GID_ADD, GID_REMOVE, GID_SIZES, GID_OVERWRITE, GID_INSTALL,
     GID_CHECK, GID_REPAIRLIST, GID_CHANGEENGINE, GID_REPAIR,
     GID_DSCAN, GID_DSCANSUM, GID_DFONTLIST, GID_DDETAIL1, GID_DDETAIL2,
     GID_DDETAIL3, GID_DDETAIL4, GID_DADVICE, GID_DFIX, GID_DREPORT,
-    GID_DLFILTER, GID_DLLOAD, GID_DLLIST, GID_DLPREVIEWBOX, GID_DLPREVIEW,
+    GID_DLFILTER, GID_DLLOAD, GID_DLLIST, GID_DLPREVIEWBOX, GID_DLAA,
     GID_DLINSTALL,
     GID_TTFDIR, GID_TTFPICK, GID_OTFDIR, GID_OTFPICK, GID_TTCDIR,
     GID_TTCPICK, GID_DEFCHARSET, GID_SAVESET,
@@ -635,6 +635,19 @@ static struct Gadget *MakeButton(ULONG id, LONG msg)
     End;
 }
 
+/* "Antialiasing" for the previews (both tabs show the same setting) */
+static BOOL pvaa = TRUE;
+
+static struct Gadget *AACheckBox(ULONG id)
+{
+    return (struct Gadget *)CheckBoxObject,
+        GA_ID, id,
+        GA_RelVerify, TRUE,
+        GA_Text, (ULONG)GetString(MSG_PV_AA),
+        GA_Selected, pvaa,
+    End;
+}
+
 static Object *InfoLine(LONG msg)
 {
     /* "FONTS:_ttf/": the "_" is part of the name, not a key */
@@ -681,6 +694,8 @@ static Object *InstallPage(void)
                 SPACE_MinWidth, 300,
                 SPACE_RenderHook, (ULONG)&previewhook,
             End,
+            LAYOUT_AddChild, gads[GID_PVAA] = AACheckBox(GID_PVAA),
+            CHILD_WeightedHeight, 0,
         End,
         CHILD_WeightedHeight, 0,
         LAYOUT_AddChild, gads[GID_SIZES] = (struct Gadget *)StringObject,
@@ -1348,24 +1363,53 @@ static BOOL Fetch(struct AANet *net, const struct CatEntry *e, char *path,
     return FALSE;
 }
 
-/* The row clicked last, as a catalog index, or -1 */
-static LONG CurrentEntry(void)
+/* The catalog index of the only selected row; -1 for none or several */
+static LONG OnlySelected(void)
 {
-    LONG sel = (LONG)GetGad(GID_DLLIST, LISTBROWSER_Selected);
+    struct Node *n;
+    LONG row, found = -1;
+    ULONG sel;
 
-    return sel >= 0 && sel < numshown ? shown[sel] : -1;
+    for (n = dllb.lh_Head, row = 0; n->ln_Succ; n = n->ln_Succ, row++)
+    {
+        sel = 0;
+        GetListBrowserNodeAttrs(n, LBNA_Selected, &sel, TAG_DONE);
+        if (!sel)
+            continue;
+        if (found >= 0)
+            return -1;
+        found = row;
+    }
+    return found >= 0 && found < numshown ? shown[found] : -1;
 }
 
+/*
+ * A click in the list: one font selected is downloaded (unless it is in
+ * T:AATextFonts already) and shown; with several, or none, the preview
+ * is cleared.
+ */
 static void DlPreview(void)
 {
     static struct AANet net;
     static char path[256];
-    LONG i = CurrentEntry(), r;
+    LONG i = OnlySelected(), r;
     BOOL ok;
 
     if (i < 0)
     {
-        SetStatus(GetString(MSG_DL_NONE));
+        pv_Render(win->WScreen, NULL, 0, NULL, NULL);
+        RefreshGList(gads[GID_DLPREVIEWBOX], win, NULL, 1);
+        return;
+    }
+    LocalPath(&cat[i], path, sizeof(path));
+    if (cat[i].bytes > 0 && SizeOf(path) == cat[i].bytes)
+    {
+        /* there already: no network needed */
+        Busy(TRUE);
+        pv_Render(win->WScreen, path, 0, GetString(MSG_PV_ALPHABET),
+                  GetString(MSG_PV_SENTENCE));
+        Busy(FALSE);
+        RefreshGList(gads[GID_DLPREVIEWBOX], win, NULL, 1);
         return;
     }
     if ((r = net_Open(&net, AAMGR_VERSION)))
@@ -1517,13 +1561,12 @@ static Object *DownloadPage(void)
                 SPACE_MinHeight, pv_NeededHeight(),
                 SPACE_RenderHook, (ULONG)&previewhook,
             End,
+            LAYOUT_AddChild, gads[GID_DLAA] = AACheckBox(GID_DLAA),
+            CHILD_WeightedHeight, 0,
         End,
         CHILD_WeightedHeight, 0,
 
         LAYOUT_AddChild, HLayoutObject,
-            LAYOUT_AddChild, gads[GID_DLPREVIEW] = MakeButton(GID_DLPREVIEW,
-                                                              MSG_DL_PREVIEW),
-            CHILD_WeightedWidth, 0,
             LAYOUT_AddChild, SpaceObject, End,
             LAYOUT_AddChild, gads[GID_DLINSTALL] = MakeButton(GID_DLINSTALL,
                                                               MSG_DL_INSTALL),
@@ -1832,7 +1875,17 @@ static void Action(ULONG id)
         case GID_SAVESET:   SaveSettings(); break;
         case GID_DLLOAD:    LoadCatalog();  break;
         case GID_DLFILTER:  ShowCatalog();  break;
-        case GID_DLPREVIEW: DlPreview();    break;
+        case GID_DLLIST:    DlPreview();    break;
+        case GID_PVAA:
+        case GID_DLAA:
+            pvaa = GetGad(id, GA_Selected) != 0;
+            pv_SetAntialias(pvaa);
+            SetGad(id == GID_PVAA ? GID_DLAA : GID_PVAA, GA_Selected, pvaa);
+            if (id == GID_PVAA)
+                ShowPreview();
+            else
+                DlPreview();
+            break;
         case GID_DLINSTALL: DlInstall();    break;
         case GID_CHARSET:
         case GID_ENGINE:
@@ -1859,7 +1912,7 @@ int mgr_RunGUI(const char *language)
         { MSG_ADD, GID_ADD }, { MSG_REMOVE, GID_REMOVE },
         { MSG_INSTALL, GID_INSTALL }, { MSG_CHECK, GID_CHECK },
         { MSG_REPAIR, GID_REPAIR }, { MSG_SET_SAVE, GID_SAVESET },
-        { MSG_DL_LOAD, GID_DLLOAD }, { MSG_DL_PREVIEW, GID_DLPREVIEW },
+        { MSG_DL_LOAD, GID_DLLOAD },
         { MSG_DL_INSTALL, GID_DLINSTALL },
     };
     struct Screen *scr = NULL;

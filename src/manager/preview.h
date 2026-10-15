@@ -30,6 +30,9 @@ void pv_Cleanup(void);
 BOOL pv_Render(struct Screen *scr, const char *path, LONG face,
                const char *alphabet, const char *sentence);
 
+/* Antialiased (default) or one colour, for the next pv_Render(). */
+void pv_SetAntialias(BOOL on);
+
 /* Draw the buffer into box of rp (from the render hook). */
 void pv_Draw(struct RastPort *rp, LONG left, LONG top, LONG width,
              LONG height, UBYTE bgpen, UBYTE textpen,

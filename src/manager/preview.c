@@ -26,6 +26,7 @@
 
 static struct Library *CyberGfxBase;
 static UBYTE *cov;              /* coverage 0-255, PV_WIDTH x PV_HEIGHT */
+static BOOL antialias = TRUE;   /* off: one colour, as AAText's "antialias off" */
 static UBYTE *rgb;              /* RTG: 3 bytes a pixel (with CGX only) */
 static UBYTE *pens;             /* palette screens: a pen per pixel */
 static struct BitMap *tbm;      /* WritePixelLine8()'s one line bitmap */
@@ -112,6 +113,9 @@ static void AddGlyph(FT_GlyphSlot g, LONG x, LONG y)
         for (c = 0; c < (LONG)b->width; c++)
         {
             LONG a = b->buffer[r * b->pitch + c], v;
+
+            if (!antialias)     /* as AAText: half covered or more */
+                a = a >= 128 ? 255 : 0;
             UBYTE *d;
 
             px = x + g->bitmap_left + c;
@@ -228,6 +232,11 @@ static UBYTE *LoadFile(const char *path, LONG *len)
     return buf;
 }
 
+void pv_SetAntialias(BOOL on)
+{
+    antialias = on;
+}
+
 BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum,
                const char *alphabet, const char *sentence)
 {
@@ -287,8 +296,15 @@ BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum,
             {
                 ULONG c = NextChar(&s);
 
-                if (FT_Load_Char(face, c, FT_LOAD_RENDER |
-                                 FT_LOAD_TARGET_LIGHT))
+                /* one colour as in AAText: hinted for it, rendered grey
+                   (AddGlyph cuts it at 50%); FT_LOAD_RENDER would give
+                   a 1 bit bitmap with this target */
+                if (antialias ?
+                        FT_Load_Char(face, c, FT_LOAD_RENDER |
+                                     FT_LOAD_TARGET_LIGHT) :
+                        (FT_Load_Char(face, c, FT_LOAD_TARGET_MONO |
+                                      FT_LOAD_FORCE_AUTOHINT) ||
+                         FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL)))
                     continue;
                 AddGlyph(face->glyph, x, y);
                 x += (face->glyph->advance.x + 32) >> 6;
