@@ -20,6 +20,10 @@
 
 #define FT_CONFIG_OPTION_DISABLE_STREAM_SUPPORT     /* memory fonts only */
 
+/* subpixel ("subpixel rgb|bgr"): ClearType style LCD rendering with
+   FreeType's light filter, as tests/lcdtest-ct showed on the A1200 */
+#define FT_CONFIG_OPTION_SUBPIXEL_RENDERING
+
 #undef TT_CONFIG_OPTION_EMBEDDED_BITMAPS          /* always use outlines */
 #undef TT_CONFIG_OPTION_COLOR_LAYERS
 #undef TT_CONFIG_OPTION_GX_VAR_SUPPORT

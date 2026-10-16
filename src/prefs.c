@@ -16,6 +16,7 @@
  *   kerning on | off         (pair kerning in real metrics mode, default on)
  *   aga on | off             (antialiasing on palette screens, default off)
  *   antialias on | off       (off: TrueType text drawn sharp, default on)
+ *   subpixel off | rgb | bgr (LCD antialiasing on RTG screens, default off)
  */
 
 #include <exec/types.h>
@@ -230,6 +231,18 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
             PrefsError(lineno, "expected on or off");
         return;
     }
+    if (StrIEq(tok[0], "subpixel"))
+    {
+        if (n == 2 && StrIEq(tok[1], "off"))
+            prefs->subpixel = AA_SUBPIXEL_OFF;
+        else if (n == 2 && StrIEq(tok[1], "rgb"))
+            prefs->subpixel = AA_SUBPIXEL_RGB;
+        else if (n == 2 && StrIEq(tok[1], "bgr"))
+            prefs->subpixel = AA_SUBPIXEL_BGR;
+        else
+            PrefsError(lineno, "subpixel must be off, rgb or bgr");
+        return;
+    }
     if (StrIEq(tok[0], "antialias"))
     {
         if (n == 2 && StrIEq(tok[1], "on"))
@@ -353,6 +366,7 @@ void aa_DefaultPrefs(struct AAPrefs *prefs)
     prefs->kerning = TRUE;
     prefs->aga = FALSE;
     prefs->antialias = TRUE;
+    prefs->subpixel = AA_SUBPIXEL_OFF;
     prefs->cachekb = AA_DEFAULT_CACHE_KB;
     prefs->numblack = 0;
 }

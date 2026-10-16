@@ -795,6 +795,87 @@ int main(int argc, char **argv)
         return (bad || !ink || !grey) ? 10 : 0;
     }
 
+    /*
+     * "lcd" (prefs with "subpixel rgb"): glyphs carry three values a
+     * pixel that differ at the edges; the advances are those of gray
+     * antialiasing; "bgr" stores the same values with R and B swapped.
+     */
+    if (strcmp(argv[2], "lcd") == 0)
+    {
+        static WORD adv[256];
+        static UBYTE rgbdata[4096];
+        LONG c, bad = 0, colour = 0, rgbsize = 0;
+        struct AAGlyph *g;
+
+        if (prefs.subpixel != AA_SUBPIXEL_RGB)
+        {
+            printf("lcd: the prefs must say \"subpixel rgb\"\n");
+            return 10;
+        }
+        for (c = 0; c < 256; c++)
+            adv[c] = font->real ? font->adv[c] : 0;
+        for (c = 33; c < 127; c++)
+        {
+            LONG k;
+
+            g = aa_GetGlyph(font, c);
+            if (!g || !g->lcd)
+            {
+                bad++;
+                continue;
+            }
+            for (k = 0; k < g->width * g->rows; k++)
+                colour += g->data[k * 3] != g->data[k * 3 + 2];
+        }
+        g = aa_GetGlyph(font, 'H');
+        if (g && g->width * g->rows * 3 <= (LONG)sizeof(rgbdata))
+        {
+            rgbsize = g->width * g->rows * 3;
+            memcpy(rgbdata, g->data, rgbsize);
+        }
+        printf("rgb: %ld glyphs not LCD, %ld coloured pixels -> %s\n",
+               (long)bad, (long)colour, (!bad && colour) ? "OK" : "FAIL");
+
+        /* the same font in BGR: R and B swapped */
+        prefs.subpixel = AA_SUBPIXEL_BGR;
+        aa_UnlockGlyphs();
+        aa_GlyphsReconfigure(&prefs);
+        aa_LockGlyphs();
+        if (!aa_PrepareFont(font, &tf))
+            return 10;
+        g = aa_GetGlyph(font, 'H');
+        if (!g || !g->lcd || g->width * g->rows * 3 != rgbsize)
+            bad++;
+        else
+        {
+            LONG k;
+
+            for (k = 0; k < rgbsize; k += 3)
+                if (g->data[k] != rgbdata[k + 2] ||
+                    g->data[k + 2] != rgbdata[k])
+                    bad++;
+        }
+        printf("bgr: %s\n", bad ? "FAIL" : "R and B swapped -> OK");
+
+        /* gray again: same advances, no LCD glyphs */
+        prefs.subpixel = AA_SUBPIXEL_OFF;
+        aa_UnlockGlyphs();
+        aa_GlyphsReconfigure(&prefs);
+        aa_LockGlyphs();
+        if (!aa_PrepareFont(font, &tf))
+            return 10;
+        g = aa_GetGlyph(font, 'H');
+        if (!g || g->lcd)
+            bad++;
+        for (c = 0; font->real && c < 256; c++)
+            if (adv[c] != font->adv[c])
+                bad++;
+        printf("gray again: %s\n", bad ? "FAIL" : "advances the same -> OK");
+        aa_UnlockGlyphs();
+        aa_GlyphsCleanup();
+        return (bad || !colour) ? 10 : 0;
+    }
+
     /* "capsize": like the user's Arial/14 (baseline 9, 'H' rows 3..9):
        a real metrics font must get a 7 pixel 'H' standing on row 9 */
     if (strcmp(argv[2], "capsize") == 0)

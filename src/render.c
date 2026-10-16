@@ -558,6 +558,79 @@ static const struct AABlend *BlendFor(const UBYTE *fg)
     return b;
 }
 
+/*
+ * Palette screens and the coverage maps behind them want one coverage
+ * value a pixel: set while they draw, LCD glyphs are blended with the
+ * mean of their three values. Glyph lock held.
+ */
+static BOOL aa_GrayCoverage;
+
+/*
+ * LCD glyph (subpixel): each channel mixed with its own coverage, so the
+ * subpixels of the screen get the third-of-a-pixel positions.
+ */
+static void BlendLCD(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
+                     LONG gx, LONG gy, const UBYTE *fg,
+                     const struct AABlend *bt, LONG italicbase)
+{
+    LONG y0 = 0, y1 = g->rows, x, y, gw = g->width;
+
+    if (gy < 0)
+        y0 = -gy;
+    if (gy + y1 > h)
+        y1 = h - gy;
+    for (y = y0; y < y1; y++)
+    {
+        LONG rx = gx + ItalicShift(gy + y, italicbase);
+        LONG x0 = rx < 0 ? -rx : 0;
+        LONG x1 = rx + gw > w ? w - rx : gw;
+        const UBYTE *src = g->data + (y * gw + x0) * 3;
+        UBYTE *dst = buf + ((gy + y) * w + rx + x0) * 3;
+
+        for (x = x0; x < x1; x++, src += 3, dst += 3)
+        {
+            LONG c;
+
+            if (!(src[0] | src[1] | src[2]))
+                continue;
+            for (c = 0; c < 3; c++)
+            {
+                if (bt)
+                {
+                    LONG l = aa_Level[src[c]];
+
+                    if (l)
+                        dst[c] = bt->t[c][l][dst[c]];
+                }
+                else if (src[c])
+                {
+                    ULONG a = src[c];
+
+                    a += a >> 7;        /* 0..255 -> 0..256 */
+                    dst[c] += ((fg[c] - dst[c]) * (LONG)a) >> 8;
+                }
+            }
+        }
+    }
+}
+
+/* Gray coverage of an LCD glyph, for the gray blending below */
+static struct AAGlyph *GrayCopy(const struct AAGlyph *g)
+{
+    static UBYTE mem[sizeof(struct AAGlyph) + 128 * 128];
+    struct AAGlyph *c = (struct AAGlyph *)mem;
+    LONG x, y;
+
+    if ((ULONG)g->width * g->rows > 128 * 128)
+        return NULL;
+    *c = *g;
+    c->lcd = FALSE;
+    for (y = 0; y < g->rows; y++)
+        for (x = 0; x < g->width; x++)
+            c->data[y * g->width + x] = aa_GlyphCov(g, x, y);
+    return c;
+}
+
 static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
                        LONG gx, LONG gy, const UBYTE *fg,
                        const struct AABlend *bt, LONG italicbase)
@@ -565,6 +638,18 @@ static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
     LONG y0 = 0, y1 = g->rows;
     LONG x, y;
     LONG fr = fg[0], fgc = fg[1], fb = fg[2];
+
+    if (g->lcd)
+    {
+        if (!aa_GrayCoverage)
+        {
+            BlendLCD(buf, w, h, g, gx, gy, fg, bt, italicbase);
+            return;
+        }
+        if (!(g = GrayCopy(g)))
+            return;
+        y1 = g->rows;
+    }
 
     if (bt)
     {
@@ -698,12 +783,11 @@ static void SetGlyphBits(UBYTE *tmpl, LONG bpr, LONG w, LONG h,
         LONG rx = gx + ItalicShift(gy + y, italicbase);
         LONG x0 = rx < 0 ? -rx : 0;
         LONG x1 = rx + g->width > w ? w - rx : g->width;
-        const UBYTE *src = g->data + y * g->width;
         UBYTE *row = tmpl + (gy + y) * bpr;
 
         for (x = x0; x < x1; x++)
         {
-            if (src[x] >= 128)
+            if (aa_GlyphCov(g, x, y) >= 128)
             {
                 LONG px = rx + x;
 
@@ -1203,8 +1287,10 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
 
             memset(buf, 0, w * h * 3);
             aa_LockGlyphs();
+            aa_GrayCoverage = TRUE;
             DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, white,
                      BlendFor(white));
+            aa_GrayCoverage = FALSE;
             aa_UnlockGlyphs();
             done = PaletteCompose(rp, vp, buf + (sy * w + sx) * 3, w * 3,
                                   x + sx, y + sy, w - sx, h - sy);
@@ -1348,8 +1434,10 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         if (font)
         {
             aa_LockGlyphs();
+            aa_GrayCoverage = TRUE;
             DrawString(buf, w, h, rp, font, string, count, white,
                        BlendFor(white));
+            aa_GrayCoverage = FALSE;
             aa_UnlockGlyphs();
         }
         else

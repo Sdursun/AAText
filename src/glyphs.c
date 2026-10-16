@@ -29,6 +29,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_LCD_FILTER_H
 #include FT_MODULE_H
 #include FT_ADVANCES_H
 #include FT_SIZES_H
@@ -144,6 +145,8 @@ static UBYTE aa_Hinting;
  * aa_LoadFlags, so widths and layouts do not change with the setting.
  */
 static BOOL aa_AntiAlias = TRUE;
+/* subpixel: LCD glyphs (3 values a pixel), only with antialiasing */
+static UBYTE aa_Subpixel = AA_SUBPIXEL_OFF;
 static FT_Int32 aa_MonoFlags = FT_LOAD_TARGET_MONO | FT_LOAD_FORCE_AUTOHINT |
                                FT_LOAD_NO_BITMAP;
 
@@ -330,6 +333,8 @@ static LONG SetHintingOnStack(APTR arg)
                                                  : TT_INTERPRETER_VERSION_40;
 
     FT_Property_Set(aa_FTLib, "truetype", "interpreter-version", &version);
+    /* subpixel: FreeType's light LCD filter (less blur than the default) */
+    FT_Library_SetLcdFilter(aa_FTLib, FT_LCD_FILTER_LIGHT);
 
     switch (aa_Hinting)
     {
@@ -511,6 +516,7 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     aa_Kerning = prefs->kerning;
     aa_Hinting = prefs->hinting;
     aa_AntiAlias = prefs->antialias;
+    aa_Subpixel = prefs->subpixel;
 
     aa_HaveEnvCodePage = ReadEnvCodePage(aa_EnvCodePage);
     D(("AAText: ENV:ftcodepage %s\n",
@@ -624,6 +630,7 @@ void aa_GlyphsReconfigure(const struct AAPrefs *prefs)
     aa_FontGen++;
     aa_Hinting = prefs->hinting;
     aa_AntiAlias = prefs->antialias;
+    aa_Subpixel = prefs->subpixel;
     if (aa_FTLib)
     {
         RunOnRenderStack(SetHintingOnStack, NULL);
@@ -1497,6 +1504,7 @@ static LONG RenderOnStack(APTR arg)
     FT_UInt gi;
     ULONG allocsize;
     LONG x, y, w, rows;
+    BOOL lcd;
 
     FT_Activate_Size((FT_Size)r->font->ftsize);
 
@@ -1510,16 +1518,17 @@ static LONG RenderOnStack(APTR arg)
     if ((aa_AntiAlias || FT_Load_Glyph(face, gi, aa_MonoFlags)) &&
         FT_Load_Glyph(face, gi, aa_LoadFlags))
         return FALSE;
-    if (FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL))
+    lcd = aa_AntiAlias && aa_Subpixel != AA_SUBPIXEL_OFF;
+    if (FT_Render_Glyph(slot, lcd ? FT_RENDER_MODE_LCD : FT_RENDER_MODE_NORMAL))
         return FALSE;
 
     bm = &slot->bitmap;
-    w = bm->width;
+    w = lcd ? bm->width / 3 : bm->width;
     rows = bm->rows;
-    if (bm->pixel_mode != FT_PIXEL_MODE_GRAY)
+    if (bm->pixel_mode != (lcd ? FT_PIXEL_MODE_LCD : FT_PIXEL_MODE_GRAY))
         w = rows = 0;
 
-    allocsize = sizeof(struct AAGlyph) + w * rows;
+    allocsize = sizeof(struct AAGlyph) + w * rows * (lcd ? 3 : 1);
     g = AllocMem(allocsize, MEMF_ANY);
     if (!g)
         return FALSE;
@@ -1532,8 +1541,25 @@ static LONG RenderOnStack(APTR arg)
     g->rows = rows;
     g->advance = (slot->advance.x + 32) >> 6;
     g->allocsize = allocsize;
+    g->lcd = lcd;
 
-    for (y = 0; y < rows; y++)
+    for (y = 0; lcd && y < rows; y++)
+    {
+        const UBYTE *src = bm->buffer + y * bm->pitch;
+        UBYTE *dst = g->data + y * w * 3;
+
+        if (aa_Subpixel == AA_SUBPIXEL_BGR)     /* store R, G, B always */
+            for (x = 0; x < w; x++, src += 3, dst += 3)
+            {
+                dst[0] = aa_GammaLUT[src[2]];
+                dst[1] = aa_GammaLUT[src[1]];
+                dst[2] = aa_GammaLUT[src[0]];
+            }
+        else
+            for (x = 0; x < w * 3; x++)
+                dst[x] = aa_GammaLUT[src[x]];
+    }
+    for (y = 0; !lcd && y < rows; y++)
     {
         const UBYTE *src = bm->buffer + y * bm->pitch;
         UBYTE *dst = g->data + y * w;

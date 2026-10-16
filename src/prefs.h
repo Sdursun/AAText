@@ -43,6 +43,9 @@ struct AAMapping
     BOOL  real;                     /* real TrueType metrics */
 };
 
+/* subpixel (LCD) antialiasing on RTG screens: order of the subpixels */
+enum { AA_SUBPIXEL_OFF = 0, AA_SUBPIXEL_RGB, AA_SUBPIXEL_BGR };
+
 struct AAPrefs
 {
     struct AAMapping map[AA_MAX_MAPPINGS];
@@ -60,6 +63,7 @@ struct AAPrefs
                                        screens, default off */
     BOOL  antialias;                /* off: TrueType glyphs drawn sharp
                                        (one colour), default on */
+    UBYTE subpixel;                 /* AA_SUBPIXEL_..., default off */
     ULONG cachekb;                  /* glyph cache size in KB */
     char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];
     UWORD numblack;

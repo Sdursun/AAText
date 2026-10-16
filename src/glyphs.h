@@ -27,9 +27,11 @@ struct AAGlyph
      * row), so a glyph's first row goes to tf_Baseline + 1 - top.
      */
     WORD   top;
-    UWORD  width;
+    UWORD  width;               /* pixels */
     UWORD  rows;
     WORD   advance;             /* pixels */
+    UBYTE  lcd;                 /* subpixel: 3 values (R, G, B) per pixel,
+                                   rows width * 3 bytes; else 1 value */
     ULONG  allocsize;
     UBYTE  data[];
 };
@@ -111,6 +113,17 @@ static inline BOOL aa_UseReal(const struct AAFont *font,
                               const struct TextFont *tf)
 {
     return font->real && (tf->tf_Flags & FPF_PROPORTIONAL);
+}
+
+/* Coverage of pixel x of row y of a glyph, one value (LCD: the mean). */
+static inline UBYTE aa_GlyphCov(const struct AAGlyph *g, LONG x, LONG y)
+{
+    const UBYTE *p;
+
+    if (!g->lcd)
+        return g->data[y * g->width + x];
+    p = g->data + (y * g->width + x) * 3;
+    return (p[0] + p[1] + p[2]) / 3;
 }
 
 /* Gamma corrected coverage values, filled by aa_GlyphsInit(). */
