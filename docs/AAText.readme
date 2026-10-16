@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text for Workbench
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/wb
-Version:      0.30
+Version:      0.31
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
@@ -19,6 +19,8 @@ Central European etc. work out of the box). Bitmap fonts are left
 untouched; AGA screens too, unless the experimental "aga on" is set.
 
 Features
+- Subpixel (LCD) antialiasing ("subpixel rgb|bgr") for flat panels that
+  show the screen 1:1: sharper letters with slightly coloured edges
 - Experimental antialiasing on palette (AGA) screens ("aga on"): letter
   edges in the palette colours nearest to the mix; needs shades such as
   the MagicWB greys. Also runs without RTG, on palette screens only

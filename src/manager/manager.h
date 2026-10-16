@@ -7,7 +7,7 @@
 
 /* the version of the AAText package (also in main.c's $VER) */
 #ifndef AAMGR_VERSION              /* a test build may pretend to be older */
-#define AAMGR_VERSION "0.30"
+#define AAMGR_VERSION "0.31"
 #endif
 
 /* main.c */
