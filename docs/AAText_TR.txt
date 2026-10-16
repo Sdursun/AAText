@@ -207,6 +207,11 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  "Onar..." bir kez sorar, sonra hepsini onarır; her
                  asıl dosya .otag.bak olarak saklanır. Başka motorların
                  fontlarına (ttf.library, ttengine) dokunulmaz.
+                 "Başka karakter setlerini seçilen sete çevir"
+                 (varsayılan kapalı) .otag'ı başka bir setin kod
+                 sayfasını taşıyan fontları da listeler, ör. Türkçe
+                 harfleri yanlış çıkan ISO-8859-1 fontlar; başka bir dil
+                 için (Kiril, Yunan) kurulmuş fontlarda kapalı bırakın.
   Tanılama       "Fontları tara", FONTS: içindeki her .otag dosyasını ve
                  gösterdiği font dosyasını denetler; sorunlu fontlar
                  listenin başında yer alır. Bir font seçildiğinde
@@ -238,6 +243,10 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  ("Version LIBS:ttf.library" gibi, dosyadaki $VER
                  satırından). Kütüphane kurulu değilse o fontu hiçbir
                  program açamaz; alttaki satır bunu söyler.
+                 Karakter seti: .otag'daki kod sayfasının seti (ör.
+                 "ISO-8859-1 (Batı Avrupa)"), "yok" ise AAText'in yerine
+                 kullandığı set ("charset" ayarı), ya da "kendi tablosu"
+                 ile en yakın set ve kaç karakterin farklı olduğu.
                  "Raporu kaydet..." listeyi hata bildirimleri için bir metin
                  dosyasına yazar. Taramanın kendisi hiçbir şeyi değiştirmez.
   İndir          Google Fonts'tan (github.com/google/fonts) ücretsiz

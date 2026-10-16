@@ -128,11 +128,38 @@ static void DisplayName(struct AADiagEntry *e, struct AAOTagFile *f)
         AddWord(e, "Italic");
 }
 
+/* which known set the code page table is, or the closest one */
+static void WhichCharset(struct AADiagEntry *e, const UWORD *page)
+{
+    LONG cs, c, best = 129;
+
+    e->charset = AA_CS_OWN;
+    for (cs = 0; cs < AA_NUM_CHARSETS; cs++)
+    {
+        LONG diff = 0;
+
+        /* 0 in a table: undefined, as the set's own undefined codes */
+        for (c = 0x80; c < 0x100; c++)
+            if ((ULONG)(page[c] ? page[c] : c) != aa_CharsetToUnicode(cs, c))
+                diff++;
+        if (diff < best)
+        {
+            best = diff;
+            e->nearcharset = cs;
+        }
+    }
+    e->neardiff = best;
+    if (!best)
+        e->charset = e->nearcharset;
+}
+
 static void Check(struct AADiagEntry *e, UBYTE *buf)
 {
     static struct AAOTagInfo ot;
     BPTR fh, lock;
     LONG len = 0;
+
+    e->charset = AA_CS_UNKNOWN;
 
     fh = Open((CONST_STRPTR)e->otag, MODE_OLDFILE);
     if (fh)
@@ -153,6 +180,10 @@ static void Check(struct AADiagEntry *e, UBYTE *buf)
         Copy(e->engine, ot.engine, sizeof(e->engine));
     e->facenum = ot.facenum;
     e->codepage = ot.hascodepage;
+    if (ot.hascodepage)
+        WhichCharset(e, ot.codepage);
+    else
+        e->charset = AA_CS_NONE;
     {
         static struct AAOTagFile f;
         struct AAOTagItem *m;
@@ -372,6 +403,10 @@ ULONG aa_RepairNeeded(const struct AADiagEntry *e, const struct AARepair *r)
         r->charset >= 0 && r->charset < AA_NUM_CHARSETS &&
         FreeTypeEngine(e->engine))
         what |= AA_REPAIR_CODEPAGE;
+    if ((r->what & AA_REPAIR_CHARSET) && e->codepage &&
+        r->charset >= 0 && r->charset < AA_NUM_CHARSETS &&
+        e->charset != r->charset && FreeTypeEngine(e->engine))
+        what |= AA_REPAIR_CHARSET;
     if ((r->what & AA_REPAIR_ENGINE) && r->engine &&
         !Stricmp((CONST_STRPTR)e->engine, (CONST_STRPTR)"freetype2") &&
         Stricmp((CONST_STRPTR)r->engine, (CONST_STRPTR)e->engine))
@@ -412,7 +447,7 @@ static ULONG Apply(const UBYTE *buf, ULONG len, const struct AADiagEntry *e,
             !aa_OTagSetString(&f, f.items[i].tag, e->found))
             return 0;
     }
-    if (what & AA_REPAIR_CODEPAGE)
+    if (what & (AA_REPAIR_CODEPAGE | AA_REPAIR_CHARSET))
     {
         aa_CharsetPage(r->charset, page);
         if (!aa_OTagFind(&f, OT_Spec2_CodePage) &&

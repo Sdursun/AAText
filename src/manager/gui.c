@@ -80,9 +80,9 @@ enum
 {
     GID_TABS = 1, GID_CHARSET, GID_ENGINE,
     GID_FILES, GID_PREVIEW, GID_PVAA, GID_PVSP, GID_DLSP, GID_ADD, GID_REMOVE, GID_SIZES, GID_OVERWRITE, GID_INSTALL,
-    GID_CHECK, GID_REPAIRLIST, GID_CHANGEENGINE, GID_REPAIR,
+    GID_CHECK, GID_REPAIRLIST, GID_CHANGEENGINE, GID_CHANGECHARSET, GID_REPAIR,
     GID_DSCAN, GID_DSCANSUM, GID_DFONTLIST, GID_DDETAIL1, GID_DDETAIL2,
-    GID_DDETAIL3, GID_DDETAIL4, GID_DADVICE, GID_DDELETE, GID_DREPORT,
+    GID_DDETAIL3, GID_DDETAIL4, GID_DDETAIL5, GID_DADVICE, GID_DDELETE, GID_DREPORT,
     GID_DLFILTER, GID_DLLOAD, GID_DLLIST, GID_DLPREVIEWBOX, GID_DLAA,
     GID_DLINSTALL,
     GID_TTFDIR, GID_TTFPICK, GID_OTFDIR, GID_OTFPICK, GID_TTCDIR,
@@ -490,18 +490,20 @@ static void Repair_Settings(struct AARepair *r)
     r->engine = Engine();
     if (GetGad(GID_CHANGEENGINE, GA_Selected))
         r->what |= AA_REPAIR_ENGINE;
+    if (GetGad(GID_CHANGECHARSET, GA_Selected))
+        r->what |= AA_REPAIR_CHARSET;
 }
 
 /* "font file moved, no code page" */
 static void Problems(ULONG what, char *buf, LONG len)
 {
-    static const LONG msg[5] =
+    static const LONG msg[6] =
         { MSG_P_MOVED, MSG_P_CODEPAGE, MSG_P_ENGINE, MSG_P_HEIGHT,
-          MSG_P_WIDTH };
+          MSG_P_WIDTH, MSG_P_CHARSET };
     LONG i;
 
     buf[0] = 0;
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < 6; i++)
         if (what & (1 << i))
             snprintf(buf + strlen(buf), len - strlen(buf), "%s%s",
                      buf[0] ? ", " : "", GetString(msg[i]));
@@ -766,6 +768,15 @@ static Object *RepairPage(void)
             GA_Selected, TRUE,
         End,
         CHILD_WeightedHeight, 0,
+        /* off by default: a Cyrillic or Greek font may be meant so */
+        LAYOUT_AddChild, gads[GID_CHANGECHARSET] =
+                         (struct Gadget *)CheckBoxObject,
+            GA_ID, GID_CHANGECHARSET,
+            GA_RelVerify, TRUE,
+            GA_Text, (ULONG)GetString(MSG_CHANGE_CHARSET),
+            GA_Selected, FALSE,
+        End,
+        CHILD_WeightedHeight, 0,
         LAYOUT_AddChild, gads[GID_REPAIRLIST] =
                          (struct Gadget *)ListBrowserObject,
             GA_ID, GID_REPAIRLIST,
@@ -799,6 +810,7 @@ static char detail1[AA_FONTFILE_LEN];   /* .otag file */
 static char detail2[AA_FONTFILE_LEN];   /* font file named in the .otag */
 static char detail3[AA_FONTFILE_LEN];   /* where it was found */
 static char detail4[80];                /* OT_Engine and its library */
+static char detail5[120];               /* character set of the .otag */
 static char advice[128];
 
 static const LONG diag_msg[AA_DIAG_NUM] =
@@ -838,7 +850,8 @@ static void DiagDetail(void)
     struct AADiagEntry *e;
     const char *arg;
 
-    detail1[0] = detail2[0] = detail3[0] = detail4[0] = advice[0] = 0;
+    detail1[0] = detail2[0] = detail3[0] = detail4[0] = detail5[0] =
+        advice[0] = 0;
     if (gads[GID_DFONTLIST])
         GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_DFONTLIST], &sel);
     if ((LONG)sel >= 0 && (LONG)sel < numdscan)
@@ -854,6 +867,24 @@ static void DiagDetail(void)
             snprintf(detail4, sizeof(detail4),
                      GetString(MSG_DIAG_ENGINENONE), e->engine, e->engine);
 
+        if (e->charset >= 0)
+            snprintf(detail5, sizeof(detail5), GetString(MSG_DIAG_CS_OTAG),
+                     GetString(charset_msg[e->charset]));
+        else if (e->charset == AA_CS_OWN)
+            snprintf(detail5, sizeof(detail5), GetString(MSG_DIAG_CS_OWN),
+                     GetString(charset_msg[e->nearcharset]),
+                     (long)e->neardiff);
+        else if (e->charset == AA_CS_NONE)
+        {
+            /* AAText then uses its own "charset" setting */
+            static struct AAPrefs p;
+
+            aa_ReadPrefs(&p, NULL, FALSE);
+            snprintf(detail5, sizeof(detail5), GetString(MSG_DIAG_CS_NONE),
+                     GetString(charset_msg[p.charset < AA_NUM_CHARSETS ?
+                                           p.charset : 0]));
+        }
+
         arg = e->status == AA_DIAG_OTHER ? e->engine : "";
         snprintf(advice, sizeof(advice), GetString(diag_advice[e->status]),
                  arg);
@@ -867,6 +898,7 @@ static void DiagDetail(void)
     SetGad(GID_DDETAIL2, STRINGA_TextVal, (ULONG)detail2);
     SetGad(GID_DDETAIL3, STRINGA_TextVal, (ULONG)detail3);
     SetGad(GID_DDETAIL4, STRINGA_TextVal, (ULONG)detail4);
+    SetGad(GID_DDETAIL5, STRINGA_TextVal, (ULONG)detail5);
     SetGad(GID_DADVICE, GA_Text, (ULONG)advice);
     SetGad(GID_DDELETE, GA_Disabled, (LONG)sel < 0 || (LONG)sel >= numdscan);
 }
@@ -1128,12 +1160,20 @@ static BOOL DiagWrite(const char *path)
         if (e->found[0] && strcmp(e->found, e->want))
             FPrintf(fh, (CONST_STRPTR)"  found:    %s\n", (ULONG)e->found);
         ok = FPrintf(fh, (CONST_STRPTR)"  engine:   %s (%s.library %s), "
-                     "face %ld, code page %s\n",
+                     "face %ld, code page %s",
                      (ULONG)(e->engine[0] ? e->engine : "?"),
                      (ULONG)(e->engine[0] ? e->engine : "?"),
                      (ULONG)(e->enginever[0] ? e->enginever : "not installed"),
                      (ULONG)e->facenum,
-                     (ULONG)(e->codepage ? "in .otag" : "none")) >= 0;
+                     (ULONG)(e->charset >= 0 ? aa_CharsetNames[e->charset] :
+                             e->charset == AA_CS_OWN ? "own table" :
+                             e->charset == AA_CS_NONE ? "none" : "?")) >= 0;
+        if (ok && e->charset == AA_CS_OWN)
+            FPrintf(fh, (CONST_STRPTR)" (nearest %s, %ld differ)",
+                    (ULONG)aa_CharsetNames[e->nearcharset],
+                    (ULONG)e->neardiff);
+        if (ok)
+            ok = FPrintf(fh, (CONST_STRPTR)"\n") >= 0;
     }
     if (!Close(fh))
         ok = FALSE;
@@ -1246,6 +1286,9 @@ static Object *DiagPage(void)
                 LABEL_Text, (ULONG)GetString(MSG_DIAG_L_ENGINE),
                 LABEL_Underscore, 0,
             End,
+            LAYOUT_AddChild, gads[GID_DDETAIL5] = DetailField(GID_DDETAIL5,
+                                                             detail5),
+            Label(GetString(MSG_DIAG_L_CHARSET)),
         End,
         CHILD_WeightedHeight, 0,
         LAYOUT_AddChild, gads[GID_DADVICE] = (struct Gadget *)ButtonObject,
@@ -2069,6 +2112,7 @@ static void Action(ULONG id)
         case GID_CHARSET:
         case GID_ENGINE:
         case GID_CHANGEENGINE:
+        case GID_CHANGECHARSET:
             /* the repair list depends on these */
             if (numdiag > 0)
                 CheckFonts();

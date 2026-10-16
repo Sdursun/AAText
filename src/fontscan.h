@@ -23,6 +23,11 @@ enum
     AA_DIAG_NUM
 };
 
+/* AADiagEntry.charset besides AA_CHARSET_* */
+#define AA_CS_NONE    (-1)  /* no code page in the .otag */
+#define AA_CS_OWN     (-2)  /* a table that is none of the known sets */
+#define AA_CS_UNKNOWN (-3)  /* .otag not read */
+
 struct AADiagEntry
 {
     char  name[AA_NAME_LEN];            /* font name, without .otag */
@@ -38,6 +43,10 @@ struct AADiagEntry
     LONG  facenum;
     UBYTE status;                       /* AA_DIAG_... */
     UBYTE codepage;                     /* the .otag has a code page */
+    BYTE  charset;                      /* which: AA_CHARSET_*, or
+                                           AA_CS_NONE / _OWN / _UNKNOWN */
+    BYTE  nearcharset;                  /* AA_CS_OWN: the closest set */
+    UBYTE neardiff;                     /* and how many codes differ */
     UBYTE bboxheight;                   /* OT_Spec4_Metric 0 or missing:
                                            height from the bounding box */
     UBYTE widecells;                    /* fixed width with OT_SpaceFactor
@@ -79,6 +88,7 @@ enum
 #define AA_REPAIR_HEIGHT    8   /* height from the bounding box -> hhea */
 #define AA_REPAIR_WIDTH    16   /* fixed width, cells one em wide: the
                                    font's advance / em as OT_SpaceFactor */
+#define AA_REPAIR_CHARSET  32   /* code page of another set -> charset */
 
 struct AARepair
 {

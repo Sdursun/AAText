@@ -151,7 +151,13 @@
     S(MSG_DEL_DONE,        141, "\"%s\" deleted; the font file is kept.") \
     S(MSG_DEL_DONEFILE,    142, "\"%s\" and its font file deleted.") \
     S(MSG_DEL_FAILED,      143, "Cannot delete %s (in use or write protected?).") \
-    S(MSG_DEL_SHARED,      144, "Deleted; the font file is kept: \"%s\" uses it too.")
+    S(MSG_DEL_SHARED,      144, "Deleted; the font file is kept: \"%s\" uses it too.") \
+    S(MSG_DIAG_L_CHARSET,  145, "Character set") \
+    S(MSG_DIAG_CS_OTAG,    146, "%s (code page in the .otag)") \
+    S(MSG_DIAG_CS_NONE,    147, "none in the .otag: AAText uses %s") \
+    S(MSG_DIAG_CS_OWN,     148, "own table (nearest: %s, %ld characters differ)") \
+    S(MSG_P_CHARSET,       149, "other character set") \
+    S(MSG_CHANGE_CHARSET,  150, "Change other character sets to the chosen one")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

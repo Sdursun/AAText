@@ -282,3 +282,15 @@ MSG_DEL_FAILED
 %s silinemedi (kullanımda ya da yazma korumalı mı?).
 MSG_DEL_SHARED
 Silindi; font dosyası duruyor: "%s" de onu kullanıyor.
+MSG_DIAG_L_CHARSET
+Karakter seti
+MSG_DIAG_CS_OTAG
+%s (kod sayfası .otag'da)
+MSG_DIAG_CS_NONE
+.otag'da yok: AAText %s kullanır
+MSG_DIAG_CS_OWN
+kendi tablosu (en yakın: %s, %ld karakter farklı)
+MSG_P_CHARSET
+başka karakter seti
+MSG_CHANGE_CHARSET
+Başka karakter setlerini seçilen sete çevir

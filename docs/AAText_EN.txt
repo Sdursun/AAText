@@ -203,6 +203,11 @@ ENV:ftcodepage.
                  can be too small and sit high): changed to hhea. "Repair..." asks once, then repairs them all;
                  each original is kept as .otag.bak. Fonts of other
                  engines (ttf.library, ttengine) are not changed.
+                 "Change other character sets to the chosen one" (off
+                 by default) also lists fonts whose .otag has the code
+                 page of another set, e.g. ISO-8859-1 fonts whose
+                 Turkish letters come out wrong; leave it off for fonts
+                 meant for another language (Cyrillic, Greek).
   Diagnostics    "Scan fonts" checks every .otag file in FONTS: and the
                  font file it names; fonts with problems are listed first.
                  Select a font: the fields under the list show its .otag
@@ -230,6 +235,11 @@ ENV:ftcodepage.
                  its $VER string, as "Version LIBS:ttf.library" shows it.
                  If the library is not installed, no program can open the
                  font, and the line below says so.
+                 Character set: the set of the code page in the .otag
+                 (e.g. "ISO-8859-1 (Western European)"), "none" with
+                 the set AAText uses instead (its "charset" setting), or
+                 "own table" with the nearest set and how many
+                 characters differ.
                  "Save report..." writes the list to a text file for bug
                  reports. The scan itself changes nothing.
   Download tab   free fonts from Google Fonts (github.com/google/fonts),
