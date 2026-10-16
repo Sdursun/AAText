@@ -1,4 +1,4 @@
-AAText 0.31 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.32 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -212,17 +212,18 @@ ENV:ftcodepage.
                    Moved         the .otag names another volume (e.g.
                                  System: after the disk was renamed);
                                  AAText finds the file in FONTS:, other
-                                 programs may not: use "Fix .otag..."
+                                 programs may not: repair it on the Repair tab
                    Missing       the font file is gone
                    Not a font    the file is no TrueType/OpenType font
                    Bad .otag     the .otag cannot be read
                    Other engine  an outline font for another engine
-                 "Fix .otag..." (Moved fonts only) writes the path where
-                 the file was found, such as FONTS:_ttf/arial.ttf, into the
-                 .otag, after asking. The original is first copied to
-                 <name>.otag.bak (an existing .bak is kept, so it always
-                 holds the oldest original); to undo, copy it back. Then
-                 every program finds the font again, not only AAText.
+                 "Delete..." removes the selected font after asking:
+                 "Only .otag/.font" deletes its .otag, .font and size
+                 directory and keeps the font file (it can be installed
+                 again); "With the font file" deletes the .ttf/.otf/.ttc
+                 too, unless another font uses that file (e.g. the other
+                 faces of a .ttc). A font file AAText is drawing with may
+                 be in use and cannot be deleted then.
                  OT_Engine is the engine named in the .otag, e.g. ttf
                  (ttf.library), freetype2 (FTManager), ttengine or aatext
                  (aatext.library), with the version of that library from
@@ -434,6 +435,10 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.32  AATextManager: "Delete..." on the Diagnostics tab removes a font
+      (.otag, .font, sizes; the font file on request). "Fix .otag..."
+      is gone: the Repair tab repairs moved font files.
 
 0.31  "subpixel off|rgb|bgr" (AATextPrefs: Appearance): subpixel (LCD)
       antialiasing for panels that show the screen 1:1. AATextManager:
