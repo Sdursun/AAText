@@ -1,4 +1,4 @@
-AAText 0.33 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.34 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -459,6 +459,12 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.34  AATextManager: Tanılama sekmesi her fontun karakter setini
+      gösterir (.otag'daki kod sayfası, yok ya da kendi tablosu); Onar
+      sekmesi başka setlerin kod sayfalarını seçilen sete çevirebilir
+      ("Başka karakter setlerini seçilen sete çevir", varsayılan
+      kapalı), ör. Türkçe harfleri yanlış çıkan ISO-8859-1 fontlar.
 
 0.33  AATextManager: "Sil..." fontun .otag.bak ve .font.bak
       dosyalarını da siler (Onar sekmesinin aldığı yedekler).
