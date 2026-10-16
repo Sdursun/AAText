@@ -1022,8 +1022,8 @@ static BOOL DeleteIfThere(const char *path)
  */
 static void DiagDelete(void)
 {
-    static char base[AA_FONTFILE_LEN], path[AA_FONTFILE_LEN + 8],
-                msg[sizeof(statustext)], failed[AA_FONTFILE_LEN + 8];
+    static char base[AA_FONTFILE_LEN], path[AA_FONTFILE_LEN + 16],
+                msg[sizeof(statustext)], failed[AA_FONTFILE_LEN + 16];
     const struct AADiagEntry *other = NULL;
     struct EasyStruct es;
     struct AADiagEntry *e;
