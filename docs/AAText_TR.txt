@@ -225,7 +225,7 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                    Bozuk .otag    .otag okunamıyor
                    Başka motor    başka bir font motoru için çizgisel font
                  "Sil..." seçili fontu sorduktan sonra siler: "Sadece
-                 .otag/.font" .otag, .font dosyasını ve boyut dizinini
+                 .otag/.font" .otag, .font dosyasını (.bak yedekleriyle) ve boyut dizinini
                  siler, font dosyası kalır (yeniden kurulabilir); "Font
                  dosyasıyla birlikte" .ttf/.otf/.ttc dosyasını da siler,
                  ama o dosyayı başka bir font da kullanıyorsa (ör. bir

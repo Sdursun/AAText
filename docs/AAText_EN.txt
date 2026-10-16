@@ -218,7 +218,7 @@ ENV:ftcodepage.
                    Bad .otag     the .otag cannot be read
                    Other engine  an outline font for another engine
                  "Delete..." removes the selected font after asking:
-                 "Only .otag/.font" deletes its .otag, .font and size
+                 "Only .otag/.font" deletes its .otag, .font (and .bak backups) and size
                  directory and keeps the font file (it can be installed
                  again); "With the font file" deletes the .ttf/.otf/.ttc
                  too, unless another font uses that file (e.g. the other
@@ -437,7 +437,7 @@ History
 -------
 
 0.32  AATextManager: "Delete..." on the Diagnostics tab removes a font
-      (.otag, .font, sizes; the font file on request). "Fix .otag..."
+      (.otag, .font, their .bak backups, sizes; the font file on request). "Fix .otag..."
       is gone: the Repair tab repairs moved font files.
 
 0.31  "subpixel off|rgb|bgr" (AATextPrefs: Appearance): subpixel (LCD)

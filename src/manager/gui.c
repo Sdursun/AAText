@@ -1078,6 +1078,13 @@ static void DiagDelete(void)
     snprintf(path, sizeof(path), "%s.font", base);
     if (!failed[0] && !DeleteIfThere(path))
         snprintf(failed, sizeof(failed), "%s", path);
+    /* Repair's backups of them would only bring the font back half */
+    snprintf(path, sizeof(path), "%s.otag.bak", base);
+    if (!failed[0] && !DeleteIfThere(path))
+        snprintf(failed, sizeof(failed), "%s", path);
+    snprintf(path, sizeof(path), "%s.font.bak", base);
+    if (!failed[0] && !DeleteIfThere(path))
+        snprintf(failed, sizeof(failed), "%s", path);
     if (!failed[0] && !DeleteSizeDir(base))
         snprintf(failed, sizeof(failed), "%s/", base);
     if (!failed[0] && withfile && !DeleteIfThere(file))
