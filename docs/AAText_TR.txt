@@ -1,4 +1,4 @@
-AAText 0.29 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.30 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -440,6 +440,12 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.30  AATextManager: sabit genişlikli fontlar (ör. Ubuntu Mono, Courier
+      New) bir em genişliğinde hücre alıyordu, harfler büyük çıkıp
+      kesiliyordu; daha önce kurulanları Onar sekmesi bulup onarır
+      ("sabit genişlikli, hücreler fazla geniş"). Yarıda kalan
+      indirmeler kurulmaz.
 
 0.29  "antialias off" (AATextPrefs: Görünüm): TrueType yazı yine AAText
       ile, tek renkli ve keskin kenarlı çizilir; düzenler değişmez.

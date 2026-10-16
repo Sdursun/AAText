@@ -1,4 +1,4 @@
-AAText 0.29 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.30 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -426,6 +426,12 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.30  AATextManager: fixed width fonts (e.g. Ubuntu Mono, Courier New)
+      got cells one em wide, so their letters were too big and cut off;
+      the Repair tab finds and repairs fonts installed before ("fixed
+      width, cells too wide"). Downloads that end early are not
+      installed.
 
 0.29  "antialias off" (AATextPrefs: Appearance): TrueType text still
       drawn by AAText, in one colour with sharp edges; layouts stay the
