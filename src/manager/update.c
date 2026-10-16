@@ -138,7 +138,7 @@ static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
     static char buf[32768];         /* GitHub headers can exceed 4 KB */
     static char req[2400];
     SSL *ssl = NULL;
-    LONG sock, n, status = 0, used = 0, got = 0;
+    LONG sock, n, status = 0, used = 0, got = 0, body = 0, length = -1;
     BOOL header = TRUE;
 
     location[0] = 0;
@@ -177,7 +177,7 @@ static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
     /* header (kept in buf until its end), then the body */
     while ((n = SSL_read(ssl, buf + used, sizeof(buf) - 1 - used)) > 0)
     {
-        char *body = buf;
+        char *data = buf;
         LONG bodylen = n;
 
         if (header)
@@ -195,6 +195,10 @@ static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
             *end = 0;
             if (!strncmp(buf, "HTTP/", 5) && (p = strchr(buf, ' ')))
                 status = atol(p + 1);
+            /* the length the body must have (missing: to the end) */
+            if ((p = strstr(buf, "\nContent-Length:")) ||
+                (p = strstr(buf, "\ncontent-length:")))
+                length = atol(p + 16);
             if ((p = strstr(buf, "\nLocation:")) ||
                 (p = strstr(buf, "\nlocation:")))
             {
@@ -212,15 +216,15 @@ static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
                 }
             }
             header = FALSE;
-            body = end + 4;
-            bodylen = used - (body - buf);
+            data = end + 4;
+            bodylen = used - (data - buf);
             used = 0;
         }
         if (status != 200)
             continue;               /* drain redirects and errors */
         if (fh)
         {
-            if (bodylen && Write(fh, body, bodylen) != bodylen)
+            if (bodylen && Write(fh, data, bodylen) != bodylen)
             {
                 strcpy(error, "cannot write the file");
                 status = 0;
@@ -235,16 +239,25 @@ static LONG HttpsGet(SSL_CTX *ctx, const char *host, const char *path,
                 status = 0;
                 goto done;
             }
-            memcpy(mem + got, body, bodylen);
+            memcpy(mem + got, data, bodylen);
             got += bodylen;
             mem[got] = 0;
         }
+        body += bodylen;
         if (gotlen)
             *gotlen += bodylen;
     }
     if (header)
     {
         sprintf(error, "no answer from %s", host);
+        status = 0;
+    }
+    /* the connection ended early (a dropped TCP connection looks like the
+       normal end of an HTTP/1.0 body): never take half a file */
+    else if (status == 200 && length >= 0 && body != length)
+    {
+        sprintf(error, "incomplete: %ld of %ld bytes", (long)body,
+                (long)length);
         status = 0;
     }
 

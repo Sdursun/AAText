@@ -19,6 +19,7 @@
 #include "otag.h"
 #include "otagfile.h"
 #include "charsets.h"
+#include "fontinfo.h"
 
 #define MAX_OTAG (64 * 1024)
 
@@ -159,6 +160,9 @@ static void Check(struct AADiagEntry *e, UBYTE *buf)
         e->bboxheight = aa_OTagLoad(&f, buf, len) &&
                         (!(m = aa_OTagFind(&f, OT_Spec4_Metric)) ||
                          m->data == OT_METRIC_GLOBALBBOX);
+        e->widecells = f.count && (m = aa_OTagFind(&f, OT_IsFixed)) &&
+                       m->data && (m = aa_OTagFind(&f, OT_SpaceFactor)) &&
+                       m->data == 0x10000;
         if (f.count)
             DisplayName(e, &f);
     }
@@ -375,6 +379,9 @@ ULONG aa_RepairNeeded(const struct AADiagEntry *e, const struct AARepair *r)
     if ((r->what & AA_REPAIR_HEIGHT) && e->bboxheight &&
         FreeTypeEngine(e->engine))
         what |= AA_REPAIR_HEIGHT;
+    if ((r->what & AA_REPAIR_WIDTH) && e->widecells &&
+        FreeTypeEngine(e->engine))
+        what |= AA_REPAIR_WIDTH;
     return what;
 }
 
@@ -420,6 +427,16 @@ static ULONG Apply(const UBYTE *buf, ULONG len, const struct AADiagEntry *e,
     if ((what & AA_REPAIR_ENGINE) &&
         !aa_OTagSetString(&f, OT_Engine, r->engine))
         return 0;
+    if (what & AA_REPAIR_WIDTH)
+    {
+        static struct AAFontInfo fi;
+
+        /* the advance from the font itself */
+        if (!aa_GetFontInfo(e->found[0] ? e->found : e->want, e->facenum,
+                            &fi) ||
+            !aa_OTagSet(&f, OT_SpaceFactor, fi.spacefactor))
+            return 0;
+    }
     return aa_OTagSave(&f, out, max);
 }
 

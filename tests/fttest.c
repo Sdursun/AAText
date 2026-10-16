@@ -188,6 +188,32 @@ int main(int argc, char **argv)
         return bad ? 10 : 0;
     }
 
+    /*
+     * "spacefactor" <fixed.ttf> <proportional.ttf>: OT_SpaceFactor is the
+     * advance / em for a fixed width font (diskfont makes its cells that
+     * wide), 1.0 for a proportional one.
+     */
+    if (strcmp(argv[2], "spacefactor") == 0 && argc > 4)
+    {
+        static struct AAFontInfo fx, pr;
+        ULONG want;
+
+        if (!aa_GetFontInfo(argv[3], 0, &fx) || !aa_GetFontInfo(argv[4], 0, &pr))
+        {
+            printf("FAIL: cannot read the fonts\n");
+            return 10;
+        }
+        want = fx.unitsperem ? (fx.spaceadvance << 16) / fx.unitsperem : 0;
+        printf("fixed %d: factor $%lx (advance %lu/%u); proportional %d: "
+               "$%lx -> %s\n", fx.fixed, (unsigned long)fx.spacefactor,
+               (unsigned long)fx.spaceadvance, fx.unitsperem, pr.fixed,
+               (unsigned long)pr.spacefactor,
+               (fx.fixed && !pr.fixed && fx.spacefactor == want &&
+                want < 0x10000 && pr.spacefactor == 0x10000) ? "OK" : "FAIL");
+        return (fx.fixed && !pr.fixed && fx.spacefactor == want &&
+                want < 0x10000 && pr.spacefactor == 0x10000) ? 0 : 10;
+    }
+
     /* "charsets": the charset keyword and a few known mappings per set */
     if (strcmp(argv[2], "charsets") == 0)
     {

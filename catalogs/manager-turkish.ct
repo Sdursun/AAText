@@ -272,3 +272,5 @@ MSG_DL_NOSSL
 İndirmek için AmiSSL 5 gerekir (Aminet: util/libs/AmiSSL-5).
 MSG_PV_AA
 Yumuşatma
+MSG_P_WIDTH
+sabit genişlikli, hücreler fazla geniş

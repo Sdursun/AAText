@@ -40,6 +40,9 @@ struct AADiagEntry
     UBYTE codepage;                     /* the .otag has a code page */
     UBYTE bboxheight;                   /* OT_Spec4_Metric 0 or missing:
                                            height from the bounding box */
+    UBYTE widecells;                    /* fixed width with OT_SpaceFactor
+                                           1.0: cells one em wide
+                                           (AATextManager before 0.30) */
 };
 
 /*
@@ -74,6 +77,8 @@ enum
 #define AA_REPAIR_CODEPAGE  2   /* no code page: add the one of charset */
 #define AA_REPAIR_ENGINE    4   /* engine "freetype2" -> engine */
 #define AA_REPAIR_HEIGHT    8   /* height from the bounding box -> hhea */
+#define AA_REPAIR_WIDTH    16   /* fixed width, cells one em wide: the
+                                   font's advance / em as OT_SpaceFactor */
 
 struct AARepair
 {

@@ -133,6 +133,10 @@ BOOL aa_GetFontInfo(const char *path, LONG facenum, struct AAFontInfo *info)
         if (info->unitsperem)
             info->spacewidth = info->spaceadvance * AA_SPACE_UNITS /
                               info->unitsperem;
+        info->spacefactor = 0x10000;
+        if (info->fixed && info->unitsperem && info->spaceadvance)
+            info->spacefactor = (info->spaceadvance << 16) /
+                                info->unitsperem;
         ok = info->family[0] != 0;
         FT_Done_Face(face);
     }

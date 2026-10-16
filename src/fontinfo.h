@@ -20,6 +20,10 @@ struct AAFontInfo
     UWORD width;            /* OS/2 usWidthClass 1..9, 5 if unknown */
     UWORD unitsperem;
     ULONG spaceadvance;     /* advance of the space, font units */
+    ULONG spacefactor;      /* OT_SpaceFactor (16.16): for fixed width
+                               fonts diskfont makes each cell this many
+                               ems wide, so the advance / em there; 1.0
+                               for the others */
 
     /* the same as .otag values */
     ULONG stemweight;       /* OT_StemWeight */

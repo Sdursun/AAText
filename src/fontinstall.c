@@ -153,7 +153,7 @@ BOOL aa_BuildOTag(const struct AAInstall *in, struct AAOTagFile *f)
          aa_OTagSet(f, OT_StemWeight, fi->stemweight) &&
          aa_OTagSet(f, OT_SlantStyle, fi->slantstyle) &&
          aa_OTagSet(f, OT_HorizStyle, fi->horizstyle) &&
-         aa_OTagSet(f, OT_SpaceFactor, 0x10000) &&
+         aa_OTagSet(f, OT_SpaceFactor, fi->spacefactor) &&
          aa_OTagSet(f, OT_InhibitAlgoStyle,
                     FSF_UNDERLINED | FSF_BOLD | (fi->italic ? FSF_ITALIC : 0)) &&
          aa_OTagSet(f, OT_SpecCount, in->charset >= 0 ? 5 : 4) &&

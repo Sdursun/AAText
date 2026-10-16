@@ -38,6 +38,7 @@ run auto            tests/data/empty.prefs auto AutoTest.font
 run charsets        tests/charset.prefs charsets
 run fontinfo        tests/data/empty.prefs fontinfo third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf 0 dejavusansbook
 run fontinfo-bi     tests/data/empty.prefs fontinfo third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSansMono-BoldOblique.ttf 0 dejavusansmonoboldoblique
+run spacefactor     tests/data/empty.prefs spacefactor third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSansMono.ttf third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf
 
 # .otag written on a volume of another name: "Gone:Fonts/..." must be
 # found again in FONTS:
