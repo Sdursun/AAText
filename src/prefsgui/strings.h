@@ -85,7 +85,11 @@
     S(MSG_DIAG_NOMANAGER,  117, "Cannot start %s.") \
     S(MSG_AGA,             118, "Antialiasing on palette (AGA) screens") \
     S(MSG_MANAGER_NOTE,    119, "Installing, repairing and checking fonts: AATextManager.") \
-    S(MSG_ANTIALIAS,       120, "Antialiasing (off: TrueType text with sharp edges)")
+    S(MSG_ANTIALIAS,       120, "Antialiasing (off: TrueType text with sharp edges)") \
+    S(MSG_SUBPIXEL,        121, "Subpixel (LCD)") \
+    S(MSG_SP_OFF,          122, "Off (gray)") \
+    S(MSG_SP_RGB,          123, "RGB - LCD shown 1:1, not scaled") \
+    S(MSG_SP_BGR,          124, "BGR - LCD shown 1:1, not scaled")
 
 
 #define S(id, n, s) id = n,

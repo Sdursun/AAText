@@ -151,3 +151,11 @@ MSG_MANAGER_NOTE
 Font kurma, onarma ve tanılama: AATextManager.
 MSG_ANTIALIAS
 Yumuşatma (kapalıyken TrueType yazı keskin kenarlı)
+MSG_SUBPIXEL
+Alt piksel (LCD)
+MSG_SP_OFF
+Kapalı (gri)
+MSG_SP_RGB
+RGB - 1:1 gösterilen LCD, ölçeklenmeden
+MSG_SP_BGR
+BGR - 1:1 gösterilen LCD, ölçeklenmeden

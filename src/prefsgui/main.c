@@ -96,7 +96,7 @@ enum
     GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
     GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
-    GID_PICKFILE, GID_KERNING, GID_ANTIALIAS,
+    GID_PICKFILE, GID_KERNING, GID_ANTIALIAS, GID_SUBPIXEL,
     GID_MANAGER,
     GID_COUNT
 };
@@ -110,7 +110,8 @@ static const UBYTE hint_order[4] =
 static struct Gadget *gads[GID_COUNT];
 static Object *winobj, *pages;
 static struct Window *win;
-static struct List tablist, hintlist, blacklb, runlist, charsetlist;
+static struct List tablist, hintlist, blacklb, runlist, charsetlist,
+                   subpixlist;
 
 static struct AAPrefs cur;      /* what the window shows */
 static struct AAPrefs before;   /* AAText's settings when we started */
@@ -192,7 +193,7 @@ static void CloseLibs(void)
 static LONG PageOf(LONG gid)
 {
     if ((gid >= GID_GAMMA && gid <= GID_FONTINFO) || gid == GID_KERNING ||
-        gid == GID_ANTIALIAS)
+        gid == GID_ANTIALIAS || gid == GID_SUBPIXEL)
         return 0;
     if ((gid >= GID_BLACKLIST && gid <= GID_RUNNING) || gid == GID_PICKFILE)
         return 1;
@@ -412,6 +413,8 @@ static void ReadGadgets(void)
         cur.aga = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_ANTIALIAS], &v))
         cur.antialias = v != 0;
+    if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_SUBPIXEL], &v))
+        cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
         cur.cachekb = v;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_CHARSET], &v))
@@ -843,6 +846,8 @@ static void FreeLists(void)
 
     while ((n = RemHead(&tablist)))
         FreeClickTabNode(n);
+    while ((n = RemHead(&subpixlist)))
+        FreeChooserNode(n);
     while ((n = RemHead(&hintlist)))
         FreeChooserNode(n);
     while ((n = RemHead(&runlist)))
@@ -1084,6 +1089,16 @@ static Object *AppearancePage(void)
         End,
         CHILD_WeightedHeight, 0,
 
+        LAYOUT_AddChild, gads[GID_SUBPIXEL] = (struct Gadget *)ChooserObject,
+            GA_ID, GID_SUBPIXEL,
+            GA_RelVerify, TRUE,
+            CHOOSER_PopUp, TRUE,
+            CHOOSER_Labels, (ULONG)&subpixlist,
+            CHOOSER_Selected, cur.subpixel,
+        End,
+        CHILD_WeightedHeight, 0,
+        Label(GetString(MSG_SUBPIXEL)),
+
         LAYOUT_AddChild, gads[GID_HINTING] = (struct Gadget *)ChooserObject,
             GA_ID, GID_HINTING,
             GA_RelVerify, TRUE,
@@ -1179,6 +1194,9 @@ static BOOL OpenWin(struct Screen *scr)
     AddTab(&tablist, MSG_TAB_APPEARANCE, 0);
     AddTab(&tablist, MSG_TAB_PROGRAMS, 1);
     AddTab(&tablist, MSG_TAB_ADVANCED, 2);
+    AddChoice(&subpixlist, MSG_SP_OFF);
+    AddChoice(&subpixlist, MSG_SP_RGB);
+    AddChoice(&subpixlist, MSG_SP_BGR);
     AddChoice(&hintlist, MSG_HINT_NORMAL);
     AddChoice(&hintlist, MSG_HINT_LIGHT);
     AddChoice(&hintlist, MSG_HINT_NONE);
@@ -1276,6 +1294,7 @@ static BOOL Action(ULONG id)
         case GID_OFFSCREEN:
         case GID_AGA:
         case GID_ANTIALIAS:
+        case GID_SUBPIXEL:
         case GID_CACHE:
         case GID_CHARSET:
             LiveApply();
@@ -1366,6 +1385,7 @@ static void ShowPrefs(void)
     SetGad(GID_OFFSCREEN, GA_Selected, cur.offscreen);
     SetGad(GID_AGA, GA_Selected, cur.aga);
     SetGad(GID_ANTIALIAS, GA_Selected, cur.antialias);
+    SetGad(GID_SUBPIXEL, CHOOSER_Selected, cur.subpixel);
     SetGad(GID_CACHE, INTEGER_Number, cur.cachekb);
     SetGad(GID_CHARSET, CHOOSER_Selected, cur.charset);
     ShowBlacklist();
@@ -1472,6 +1492,7 @@ int main(int argc, char **argv)
 
     NewList(&tablist);      /* FreeLists() must work on every path */
     NewList(&hintlist);
+    NewList(&subpixlist);
     NewList(&blacklb);
     NewList(&runlist);
     NewList(&charsetlist);
