@@ -5,7 +5,9 @@
  * User interface strings of AATextManager. English is built in; other
  * languages come from aatextmanager.catalog (locale.library). The IDs
  * are part of the catalog format: never renumber, only append. A "_"
- * marks a button's keyboard shortcut.
+ * marks a button's keyboard shortcut. Retired IDs, never to be reused:
+ * 87-94 (Fix .otag on the Diagnostics tab, removed in 0.32: the Repair
+ * tab does it).
  * Translations: catalogs/manager-<language>.ct, compiled by
  * tools/mkcatalog.pl.
  */
@@ -92,7 +94,7 @@
     S(MSG_DIAG_BADOTAG,    76, "Bad .otag") \
     S(MSG_DIAG_OTHER,      77, "Other engine") \
     S(MSG_DIAG_ADV_OK,     78, "The font file is where the .otag says.") \
-    S(MSG_DIAG_ADV_MOVED,  79, "AAText finds it there, other programs may not: use Fix .otag.") \
+    S(MSG_DIAG_ADV_MOVED,  79, "AAText finds it there, other programs may not: repair it on the Repair tab.") \
     S(MSG_DIAG_ADV_MISSING, 80, "The font file is not there. Install the font again, or delete its .font and .otag.") \
     S(MSG_DIAG_ADV_BADFILE, 81, "This file is not a TrueType or OpenType font.") \
     S(MSG_DIAG_ADV_BADOTAG, 82, "The .otag cannot be read or names no font file.") \
@@ -100,14 +102,6 @@
     S(MSG_DIAG_SAVE_TITLE, 84, "Save font report") \
     S(MSG_DIAG_SAVED,      85, "Report saved: %s") \
     S(MSG_DIAG_LISTFULL,   86, "Only the first %ld fonts are listed.") \
-    S(MSG_DIAG_FIX,        87, "Fix .otag...") \
-    S(MSG_DIAG_FIX_ASK,    88, "Change %s?\n\nFont file now: %s\nbecomes: %s\n\nThe original is kept as %s.") \
-    S(MSG_DIAG_FIX_GADS,   89, "Change|Cancel") \
-    S(MSG_DIAG_FIXED,      90, "Fixed. The original is in %s.") \
-    S(MSG_DIAG_FIX_NOTMOVED, 91, "Only fonts marked Moved can be fixed.") \
-    S(MSG_DIAG_FIX_BACKUP, 92, "Cannot write the backup %s; nothing was changed.") \
-    S(MSG_DIAG_FIX_READ,   93, "Cannot read or rebuild %s; nothing was changed.") \
-    S(MSG_DIAG_FIX_WRITE,  94, "Cannot write %s. The original is in %s.") \
     S(MSG_DIAG_NOENGINE,   95, "%s.library is not installed: no program can open this font.") \
     S(MSG_DIAG_L_OTAG,     96, ".otag file") \
     S(MSG_DIAG_L_WANT,     97, "Font file in .otag") \
@@ -149,7 +143,15 @@
     S(MSG_PV_SP,           133, "Subpixel") \
     S(MSG_PV_SP_OFF,       134, "Off") \
     S(MSG_PV_SP_RGB,       135, "RGB") \
-    S(MSG_PV_SP_BGR,       136, "BGR")
+    S(MSG_PV_SP_BGR,       136, "BGR") \
+    S(MSG_DEL,             137, "Delete...") \
+    S(MSG_DEL_ASK,         138, "Delete the font \"%s\"?\n\n%s and its .font file and sizes are deleted.\nFont file: %s") \
+    S(MSG_DEL_GADS3,       139, "Only .otag/.font|With the font file|Cancel") \
+    S(MSG_DEL_GADS2,       140, "Delete|Cancel") \
+    S(MSG_DEL_DONE,        141, "\"%s\" deleted; the font file is kept.") \
+    S(MSG_DEL_DONEFILE,    142, "\"%s\" and its font file deleted.") \
+    S(MSG_DEL_FAILED,      143, "Cannot delete %s (in use or write protected?).") \
+    S(MSG_DEL_SHARED,      144, "Deleted; the font file is kept: \"%s\" uses it too.")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

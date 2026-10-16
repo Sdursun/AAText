@@ -82,7 +82,7 @@ enum
     GID_FILES, GID_PREVIEW, GID_PVAA, GID_PVSP, GID_DLSP, GID_ADD, GID_REMOVE, GID_SIZES, GID_OVERWRITE, GID_INSTALL,
     GID_CHECK, GID_REPAIRLIST, GID_CHANGEENGINE, GID_REPAIR,
     GID_DSCAN, GID_DSCANSUM, GID_DFONTLIST, GID_DDETAIL1, GID_DDETAIL2,
-    GID_DDETAIL3, GID_DDETAIL4, GID_DADVICE, GID_DFIX, GID_DREPORT,
+    GID_DDETAIL3, GID_DDETAIL4, GID_DADVICE, GID_DDELETE, GID_DREPORT,
     GID_DLFILTER, GID_DLLOAD, GID_DLLIST, GID_DLPREVIEWBOX, GID_DLAA,
     GID_DLINSTALL,
     GID_TTFDIR, GID_TTFPICK, GID_OTFDIR, GID_OTFPICK, GID_TTCDIR,
@@ -868,8 +868,7 @@ static void DiagDetail(void)
     SetGad(GID_DDETAIL3, STRINGA_TextVal, (ULONG)detail3);
     SetGad(GID_DDETAIL4, STRINGA_TextVal, (ULONG)detail4);
     SetGad(GID_DADVICE, GA_Text, (ULONG)advice);
-    SetGad(GID_DFIX, GA_Disabled, (LONG)sel < 0 || (LONG)sel >= numdscan ||
-           dscan[sel].status != AA_DIAG_MOVED);
+    SetGad(GID_DDELETE, GA_Disabled, (LONG)sel < 0 || (LONG)sel >= numdscan);
 }
 
 /* Show the scan results; sel is the entry to select, or -1. */
@@ -922,58 +921,178 @@ static void DiagScan(void)
     DiagShow(-1);
 }
 
-/*
- * Point the selected moved font's .otag at the file where it was
- * found, after asking; the original is kept as .otag.bak.
- */
-static void DiagFix(void)
+/* the font file of e, if it has one ("" if not) */
+static const char *DiagFontFile(const struct AADiagEntry *e)
 {
-    static char backup[AA_FONTFILE_LEN + 4], msg[sizeof(statustext)];
+    if (e->status == AA_DIAG_OK || e->status == AA_DIAG_MOVED)
+        return e->found[0] ? e->found : e->want;
+    if (e->status == AA_DIAG_BADFILE)
+        return e->want;
+    return "";
+}
+
+/* another scanned font that uses file (a .ttc face, or the same file
+   installed twice), or NULL */
+static const struct AADiagEntry *DiagSharedBy(const struct AADiagEntry *e,
+                                              const char *file)
+{
+    LONG i;
+
+    for (i = 0; i < numdscan; i++)
+        if (&dscan[i] != e &&
+            !Stricmp((CONST_STRPTR)DiagFontFile(&dscan[i]),
+                     (CONST_STRPTR)file))
+            return &dscan[i];
+    return NULL;
+}
+
+/* delete the files in dir and dir itself (a font's size directory:
+   only files in it); FALSE if something stays */
+static BOOL DeleteSizeDir(const char *dir)
+{
+    static char path[AA_FONTFILE_LEN + 40];
+    struct FileInfoBlock *fib;
+    BPTR lock = Lock((CONST_STRPTR)dir, ACCESS_READ);
+    BOOL ok = TRUE;
+
+    if (!lock)
+        return TRUE;            /* no size directory */
+    if (!(fib = AllocDosObject(DOS_FIB, NULL)))
+    {
+        UnLock(lock);
+        return FALSE;
+    }
+    if (Examine(lock, fib) && fib->fib_DirEntryType > 0)
+    {
+        /* collect first, delete after: deleting while ExNext() walks
+           the directory is not safe on every file system */
+        char (*names)[108] = AllocVec(64 * 108, MEMF_ANY);
+        LONG n = 0, i;
+
+        if (!names)
+            ok = FALSE;
+        else
+        {
+            while (ExNext(lock, fib))
+            {
+                if (fib->fib_DirEntryType > 0 || n >= 64)
+                {
+                    ok = FALSE;     /* not a plain size directory */
+                    continue;
+                }
+                snprintf(names[n++], 108, "%s", (char *)fib->fib_FileName);
+            }
+        }
+        UnLock(lock);
+        lock = 0;
+        for (i = 0; ok && i < n; i++)
+        {
+            snprintf(path, sizeof(path), "%s/%s", dir, names[i]);
+            if (!DeleteFile((CONST_STRPTR)path))
+                ok = FALSE;
+        }
+        if (names)
+            FreeVec(names);
+        if (ok && !DeleteFile((CONST_STRPTR)dir))
+            ok = FALSE;
+    }
+    else
+        ok = FALSE;             /* a file of that name: leave it */
+    if (lock)
+        UnLock(lock);
+    FreeDosObject(DOS_FIB, fib);
+    return ok;
+}
+
+/* delete path if it exists; FALSE if it exists and stays */
+static BOOL DeleteIfThere(const char *path)
+{
+    BPTR lock = Lock((CONST_STRPTR)path, ACCESS_READ);
+
+    if (!lock)
+        return TRUE;
+    UnLock(lock);
+    return DeleteFile((CONST_STRPTR)path) != 0;
+}
+
+/*
+ * Delete the selected font after asking: its .otag, .font and size
+ * directory, and if wanted the font file too (not when another font
+ * uses it).
+ */
+static void DiagDelete(void)
+{
+    static char base[AA_FONTFILE_LEN], path[AA_FONTFILE_LEN + 8],
+                msg[sizeof(statustext)], failed[AA_FONTFILE_LEN + 8];
+    const struct AADiagEntry *other = NULL;
     struct EasyStruct es;
     struct AADiagEntry *e;
-    ULONG sel = ~0UL, args[4];
-    LONG r;
+    const char *file;
+    ULONG sel = ~0UL, args[3];
+    LONG r, len;
+    BOOL withfile;
 
     GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_DFONTLIST], &sel);
-    if ((LONG)sel < 0 || (LONG)sel >= numdscan ||
-        dscan[sel].status != AA_DIAG_MOVED)
-    {
-        SetStatus(GetString(MSG_DIAG_FIX_NOTMOVED));
+    if ((LONG)sel < 0 || (LONG)sel >= numdscan)
         return;
-    }
     e = &dscan[sel];
+    file = DiagFontFile(e);
+    if (file[0])
+    {
+        BPTR lock = Lock((CONST_STRPTR)file, ACCESS_READ);
 
-    snprintf(backup, sizeof(backup), "%s.bak", e->otag);
-    args[0] = (ULONG)e->otag;
-    args[1] = (ULONG)e->want;
-    args[2] = (ULONG)e->found;
-    args[3] = (ULONG)backup;
+        if (lock)
+            UnLock(lock);
+        else
+            file = "";          /* nothing to delete */
+    }
+    if (file[0])
+        other = DiagSharedBy(e, file);
+
+    args[0] = (ULONG)FontLabel(e);
+    args[1] = (ULONG)e->otag;
+    args[2] = (ULONG)(file[0] ? file : "-");
     es.es_StructSize = sizeof(es);
     es.es_Flags = 0;
     es.es_Title = (UBYTE *)GetString(MSG_TITLE);
-    es.es_TextFormat = (UBYTE *)GetString(MSG_DIAG_FIX_ASK);
-    es.es_GadgetFormat = (UBYTE *)GetString(MSG_DIAG_FIX_GADS);
-    if (EasyRequestArgs(win, &es, NULL, args) != 1)
+    es.es_TextFormat = (UBYTE *)GetString(MSG_DEL_ASK);
+    /* the font file only when there is one that no other font uses */
+    es.es_GadgetFormat = (UBYTE *)GetString(file[0] && !other ?
+                                            MSG_DEL_GADS3 : MSG_DEL_GADS2);
+    r = EasyRequestArgs(win, &es, NULL, args);
+    if (r == 0)
         return;
+    withfile = r == 2;
 
-    r = aa_FixOTag(e, backup);
-    switch (r)
-    {
-        case AA_FIX_OK:
-            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIXED), backup);
-            break;
-        case AA_FIX_BACKUP:
-            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_BACKUP), backup);
-            break;
-        case AA_FIX_WRITE:
-            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_WRITE),
-                     e->otag, backup);
-            break;
-        default:
-            snprintf(msg, sizeof(msg), GetString(MSG_DIAG_FIX_READ), e->otag);
-            break;
-    }
-    DiagShow(sel);
+    /* FONTS:x.otag -> FONTS:x */
+    snprintf(base, sizeof(base), "%s", e->otag);
+    len = strlen(base);
+    if (len > 5 && !Stricmp((CONST_STRPTR)base + len - 5,
+                            (CONST_STRPTR)".otag"))
+        base[len - 5] = 0;
+
+    failed[0] = 0;
+    snprintf(path, sizeof(path), "%s.otag", base);
+    if (!DeleteIfThere(path))
+        snprintf(failed, sizeof(failed), "%s", path);
+    snprintf(path, sizeof(path), "%s.font", base);
+    if (!failed[0] && !DeleteIfThere(path))
+        snprintf(failed, sizeof(failed), "%s", path);
+    if (!failed[0] && !DeleteSizeDir(base))
+        snprintf(failed, sizeof(failed), "%s/", base);
+    if (!failed[0] && withfile && !DeleteIfThere(file))
+        snprintf(failed, sizeof(failed), "%s", file);
+
+    if (failed[0])
+        snprintf(msg, sizeof(msg), GetString(MSG_DEL_FAILED), failed);
+    else if (other)
+        snprintf(msg, sizeof(msg), GetString(MSG_DEL_SHARED),
+                 FontLabel(other));
+    else
+        snprintf(msg, sizeof(msg), GetString(withfile ? MSG_DEL_DONEFILE :
+                                                        MSG_DEL_DONE),
+                 (char *)args[0]);
+    DiagScan();
     SetStatus(msg);
 }
 
@@ -1133,10 +1252,10 @@ static Object *DiagPage(void)
         CHILD_WeightedHeight, 0,
 
         LAYOUT_AddChild, HLayoutObject,
-            LAYOUT_AddChild, gads[GID_DFIX] = (struct Gadget *)ButtonObject,
-                GA_ID, GID_DFIX, GA_RelVerify, TRUE,
+            LAYOUT_AddChild, gads[GID_DDELETE] = (struct Gadget *)ButtonObject,
+                GA_ID, GID_DDELETE, GA_RelVerify, TRUE,
                 GA_Disabled, TRUE,
-                GA_Text, (ULONG)GetString(MSG_DIAG_FIX),
+                GA_Text, (ULONG)GetString(MSG_DEL),
             End,
             CHILD_WeightedWidth, 0,
             LAYOUT_AddChild, gads[GID_DREPORT] = (struct Gadget *)ButtonObject,
@@ -1908,7 +2027,7 @@ static void Action(ULONG id)
         case GID_REPAIR:    RepairAll();    break;
         case GID_DSCAN:     DiagScan();     break;
         case GID_DFONTLIST: DiagDetail();   break;
-        case GID_DFIX:      DiagFix();      break;
+        case GID_DDELETE:   DiagDelete();   break;
         case GID_DREPORT:   DiagReport();   break;
         case GID_TTFPICK:   PickDir(MGR_DIR_TTF); break;
         case GID_OTFPICK:   PickDir(MGR_DIR_OTF); break;

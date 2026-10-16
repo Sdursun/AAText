@@ -167,7 +167,7 @@ Başka motor
 MSG_DIAG_ADV_OK
 Font dosyası .otag'da yazan yerde.
 MSG_DIAG_ADV_MOVED
-AAText onu orada bulur, diğer programlar bulamayabilir: ".otag'ı düzelt"i kullanın.
+AAText onu orada bulur, diğer programlar bulamayabilir: Onar sekmesinde onarın.
 MSG_DIAG_ADV_MISSING
 Font dosyası yok. Fontu yeniden kurun ya da .font ve .otag dosyalarını silin.
 MSG_DIAG_ADV_BADFILE
@@ -182,22 +182,6 @@ MSG_DIAG_SAVED
 Rapor kaydedildi: %s
 MSG_DIAG_LISTFULL
 Yalnızca ilk %ld font listelendi.
-MSG_DIAG_FIX
-.otag'ı düzelt...
-MSG_DIAG_FIX_ASK
-%s değiştirilsin mi?\n\nŞu anki font dosyası: %s\nyeni hali: %s\n\nOrijinali %s olarak saklanır.
-MSG_DIAG_FIX_GADS
-Değiştir|İptal
-MSG_DIAG_FIXED
-Düzeltildi. Orijinali: %s
-MSG_DIAG_FIX_NOTMOVED
-Yalnızca "Yeri değişmiş" fontlar düzeltilebilir.
-MSG_DIAG_FIX_BACKUP
-%s yedeği yazılamadı; hiçbir şey değiştirilmedi.
-MSG_DIAG_FIX_READ
-%s okunamadı ya da yeniden oluşturulamadı; hiçbir şey değiştirilmedi.
-MSG_DIAG_FIX_WRITE
-%s yazılamadı. Orijinali: %s
 MSG_DIAG_NOENGINE
 %s.library kurulu değil: bu fontu hiçbir program açamaz.
 MSG_DIAG_L_OTAG
@@ -282,3 +266,19 @@ MSG_PV_SP_RGB
 RGB
 MSG_PV_SP_BGR
 BGR
+MSG_DEL
+Sil...
+MSG_DEL_ASK
+"%s" fontu silinsin mi?\n\n%s, .font dosyası ve boyutları silinir.\nFont dosyası: %s
+MSG_DEL_GADS3
+Sadece .otag/.font|Font dosyasıyla birlikte|İptal
+MSG_DEL_GADS2
+Sil|İptal
+MSG_DEL_DONE
+"%s" silindi; font dosyası duruyor.
+MSG_DEL_DONEFILE
+"%s" font dosyasıyla birlikte silindi.
+MSG_DEL_FAILED
+%s silinemedi (kullanımda ya da yazma korumalı mı?).
+MSG_DEL_SHARED
+Silindi; font dosyası duruyor: "%s" de onu kullanıyor.
