@@ -133,6 +133,28 @@ lcdtest: $(BUILDDIR)/lcdtest
 $(BUILDDIR)/lcdtest: tests/lcdtest.c $(FT_LIB) $(BUILDDIR)/cgx.o
 	$(CC) $(CFLAGS) -o $@ tests/lcdtest.c $(BUILDDIR)/cgx.o $(FT_LIB) $(LIBS)
 
+# lcdtest-ct: the same with FreeType's ClearType style LCD rendering and
+# its filters (FT_CONFIG_OPTION_SUBPIXEL_RENDERING), in a FreeType of its
+# own: AAText's FreeType stays as it is
+CT_DIR  := $(BUILDDIR)/ftct
+CT_OBJS := $(addprefix $(CT_DIR)/,$(notdir $(FT_SRCS:.c=.o)))
+CT_LIB  := $(CT_DIR)/libft.a
+
+.PHONY: lcdtest-ct
+lcdtest-ct: $(BUILDDIR)/lcdtest-ct
+
+$(CT_DIR)/%.o: %.c src/ft/aa_ftoption.h src/ft/aa_ftmodule.h
+	@mkdir -p $(CT_DIR)
+	$(CC) $(FT_CFLAGS) -DFT_CONFIG_OPTION_SUBPIXEL_RENDERING -c -o $@ $<
+
+$(CT_LIB): $(CT_OBJS)
+	rm -f $@
+	$(AR) rcs $@ $^
+
+$(BUILDDIR)/lcdtest-ct: tests/lcdtest.c $(CT_LIB) $(BUILDDIR)/cgx.o
+	$(CC) $(CFLAGS) -DFT_CONFIG_OPTION_SUBPIXEL_RENDERING -DLCD_CLEARTYPE \
+		-o $@ tests/lcdtest.c $(BUILDDIR)/cgx.o $(CT_LIB) $(LIBS)
+
 # Release archive for Aminet: build/dist/AAText.lha + AAText.readme
 # (docs are UTF-8 in the repository; the Turkish one is converted to
 # ISO-8859-9, the usual Turkish character set on the Amiga)

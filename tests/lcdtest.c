@@ -12,6 +12,12 @@
  * on three backgrounds (the window's, white, dark), so both can be
  * compared on the screen they are meant for.
  *
+ * Built as lcdtest-ct (LCD_CLEARTYPE, a FreeType with
+ * FT_CONFIG_OPTION_SUBPIXEL_RENDERING), the rows are FreeType's ClearType
+ * style rendering with its own filters instead: gray, RGB d and BGR d
+ * (FT_LCD_FILTER_DEFAULT), RGB l and BGR l (FT_LCD_FILTER_LIGHT, as
+ * Ubuntu uses).
+ *
  *   lcdtest [FONT <file.ttf>] [SIZE <pixels>] [SECONDS <n>] [GAMMA <n>]
  *
  * FONT: a TrueType/OpenType file; without it the first of DejaVu Sans,
@@ -38,6 +44,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_LCD_FILTER_H
 
 #include "cgx.h"
 
@@ -117,6 +124,11 @@ static void DrawLine(FT_Face face, UBYTE *buf, LONG w, LONG h, LONG base,
     const UBYTE *s = (const UBYTE *)text;
     LONG pen = 4;
 
+#ifdef LCD_CLEARTYPE
+    FT_Library_SetLcdFilter(face->glyph->library,
+                            mode >= 3 ? FT_LCD_FILTER_LIGHT :
+                            FT_LCD_FILTER_DEFAULT);
+#endif
     while (*s)
     {
         ULONG c = NextChar(&s);
@@ -156,7 +168,11 @@ static void DrawLine(FT_Face face, UBYTE *buf, LONG w, LONG h, LONG base,
                 static UBYTE row[3 * 512 + 8];
                 LONG n = bm->width, off = 0;
 
+#ifndef LCD_CLEARTYPE      /* FreeType filters itself there */
                 if (mode >= 3 && n < 3 * 512)
+#else
+                if (0)
+#endif
                 {
                     /* 2 subpixels more on each side: start 1 pixel
                        left, ending 1 pixel right */
@@ -205,8 +221,13 @@ static const char *const fonts[] =
 
 int main(int argc, char **argv)
 {
+#ifdef LCD_CLEARTYPE
+    static const char *const modename[] = { "gray", "RGB d", "BGR d",
+                                            "RGB l", "BGR l" };
+#else
     static const char *const modename[] = { "gray", "RGB", "BGR", "RGB f",
                                             "BGR f" };
+#endif
     FT_Library lib;
     FT_Face face;
     struct Window *win;
@@ -219,6 +240,7 @@ int main(int argc, char **argv)
     LONG args[4] = { 0, 0, 0, 0 };
     struct RDArgs *rda;
     const char *fontpath = NULL;
+    static char title[300];
 
     (void)argc;
     (void)argv;
@@ -274,8 +296,13 @@ int main(int argc, char **argv)
     }
 
     h = 3 * (5 * 2 * LINEH + 8);
+#ifdef LCD_CLEARTYPE
+    snprintf(title, sizeof(title), "%s  (FreeType ClearType + filter)", fontpath);
+#else
+    snprintf(title, sizeof(title), "%s  (FreeType Harmony)", fontpath);
+#endif
     win = OpenWindowTags(NULL, WA_Left, 10, WA_Top, 30, WA_InnerWidth, W + 70,
-                         WA_InnerHeight, h + 4, WA_Title, (ULONG)fontpath,
+                         WA_InnerHeight, h + 4, WA_Title, (ULONG)title,
                          WA_DragBar, TRUE, WA_DepthGadget, TRUE,
                          WA_CloseGadget, TRUE, WA_Activate, TRUE,
                          WA_SmartRefresh, TRUE, WA_IDCMP, IDCMP_CLOSEWINDOW,
