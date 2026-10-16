@@ -74,7 +74,7 @@
 #include "strings.h"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AATextPrefs 0.32 (16.10.2026)";
+    "$VER: AATextPrefs 0.33 (16.10.2026)";
 /* stack the Shell gives the program (V47); the icon asks for the same */
 static const char stackcookie[] __attribute__((used)) = "$STACK:16384";
 

@@ -1,4 +1,4 @@
-AAText 0.32 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.33 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -450,6 +450,9 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.33  AATextManager: "Sil..." fontun .otag.bak ve .font.bak
+      dosyalarını da siler (Onar sekmesinin aldığı yedekler).
 
 0.32  AATextManager: Tanılama sekmesinde "Sil..." bir fontu kaldırır
       (.otag, .font, boyutlar; istenirse font dosyası). ".otag'ı

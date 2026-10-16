@@ -1,4 +1,4 @@
-AAText 0.32 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.33 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -435,6 +435,9 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.33  AATextManager: "Delete..." also removes the font's .otag.bak and
+      .font.bak (backups the Repair tab made).
 
 0.32  AATextManager: "Delete..." on the Diagnostics tab removes a font
       (.otag, .font, their .bak backups, sizes; the font file on request). "Fix .otag..."
