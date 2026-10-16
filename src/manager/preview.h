@@ -33,6 +33,11 @@ BOOL pv_Render(struct Screen *scr, const char *path, LONG face,
 /* Antialiased (default) or one colour, for the next pv_Render(). */
 void pv_SetAntialias(BOOL on);
 
+/* Subpixel (LCD) rendering as AAText's "subpixel" setting, for the next
+   pv_Render(); RTG screens only, palette screens show it grey. */
+enum { PV_SUBPIXEL_OFF, PV_SUBPIXEL_RGB, PV_SUBPIXEL_BGR };
+void pv_SetSubpixel(UBYTE mode);
+
 /* Draw the buffer into box of rp (from the render hook). */
 void pv_Draw(struct RastPort *rp, LONG left, LONG top, LONG width,
              LONG height, UBYTE bgpen, UBYTE textpen,

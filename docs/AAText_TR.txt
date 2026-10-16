@@ -144,7 +144,7 @@ satırında görürsünüz.
   Kullan    ayarları bir sonraki açılışa kadar kullanır (sadece ENV:)
   İptal     AAText'i önceki ayarlarına döndürür
 
-  Görünüm     yumuşatma açık/kapalı, gamma, hinting, gerçek harf
+  Görünüm     yumuşatma açık/kapalı, alt piksel, gamma, hinting, gerçek harf
               genişlikleri, kerning, önizleme
   Programlar  AAText'in dokunmayacağı programlar (kara liste): adı
               yazın, program dosyasını "Seç..." ile seçin ya da
@@ -339,6 +339,15 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                     keskin kenarlı. Açıp kapatınca pencere düzenleri
                     değişmez.
 
+  subpixel rgb      Alt piksel (LCD) yumuşatma (off, rgb veya bgr;
+                    varsayılan off): panelin kırmızı, yeşil ve mavi
+                    şeritleriyle daha keskin kenarlar, hafif renkli
+                    saçaklar. Sadece ekranı piksel piksel (1:1)
+                    gösteren düz panellerde; ölçeklenmiş görüntüde
+                    (ör. 1080p panelde 720p) ya da CRT'de kapalı
+                    bırakın. Sadece RTG ekranlar; paletli ekranlar
+                    gri kalır.
+
   offscreen on      Bazı programlar (dock'lar, göstergeler) yazıyı önce
                     gizli bir bitmap'e çizer. AAText orada hangi ekran
                     renklerinin geçerli olduğunu bilemez ve bu yazılara
@@ -440,6 +449,10 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.31  "subpixel off|rgb|bgr" (AATextPrefs: Görünüm): ekranı 1:1
+      gösteren paneller için alt piksel (LCD) yumuşatma.
+      AATextManager: önizlemelerin altında alt piksel seçimi.
 
 0.30  AATextManager: sabit genişlikli fontlar (ör. Ubuntu Mono, Courier
       New) bir em genişliğinde hücre alıyordu, harfler büyük çıkıp

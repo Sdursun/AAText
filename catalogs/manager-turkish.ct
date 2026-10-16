@@ -274,3 +274,11 @@ MSG_PV_AA
 Yumuşatma
 MSG_P_WIDTH
 sabit genişlikli, hücreler fazla geniş
+MSG_PV_SP
+Alt piksel
+MSG_PV_SP_OFF
+Kapalı
+MSG_PV_SP_RGB
+RGB
+MSG_PV_SP_BGR
+BGR

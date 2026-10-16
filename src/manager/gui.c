@@ -79,7 +79,7 @@ struct Library *WindowBase, *LayoutBase, *ClickTabBase, *ChooserBase,
 enum
 {
     GID_TABS = 1, GID_CHARSET, GID_ENGINE,
-    GID_FILES, GID_PREVIEW, GID_PVAA, GID_ADD, GID_REMOVE, GID_SIZES, GID_OVERWRITE, GID_INSTALL,
+    GID_FILES, GID_PREVIEW, GID_PVAA, GID_PVSP, GID_DLSP, GID_ADD, GID_REMOVE, GID_SIZES, GID_OVERWRITE, GID_INSTALL,
     GID_CHECK, GID_REPAIRLIST, GID_CHANGEENGINE, GID_REPAIR,
     GID_DSCAN, GID_DSCANSUM, GID_DFONTLIST, GID_DDETAIL1, GID_DDETAIL2,
     GID_DDETAIL3, GID_DDETAIL4, GID_DADVICE, GID_DFIX, GID_DREPORT,
@@ -105,6 +105,7 @@ struct FileEntry
 static struct Gadget *gads[GID_COUNT];
 static Object *winobj, *pages;
 static struct Window *win;
+static struct List pvsplist, dlsplist;
 static struct List tablist, charsetlist, defcharsetlist, enginelist, filelb, repairlb,
                    diaglb, dllb;
 static struct FileEntry *files;
@@ -625,6 +626,10 @@ static void FreeLists(void)
         FreeChooserNode(n);
     while ((n = RemHead(&enginelist)))
         FreeChooserNode(n);
+    while ((n = RemHead(&pvsplist)))
+        FreeChooserNode(n);
+    while ((n = RemHead(&dlsplist)))
+        FreeChooserNode(n);
     FreeListBrowserList(&filelb);
     FreeListBrowserList(&repairlb);
 }
@@ -647,6 +652,26 @@ static struct Gadget *AACheckBox(ULONG id)
         GA_RelVerify, TRUE,
         GA_Text, (ULONG)GetString(MSG_PV_AA),
         GA_Selected, pvaa,
+    End;
+}
+
+/* "Subpixel" for the previews (shared as pvaa) */
+static UBYTE pvsp = PV_SUBPIXEL_OFF;
+
+static Object *AAOptions(ULONG aaid, ULONG spid, struct List *list)
+{
+    return HLayoutObject,
+        LAYOUT_AddChild, gads[aaid] = AACheckBox(aaid),
+        CHILD_WeightedWidth, 0,
+        LAYOUT_AddChild, gads[spid] = (struct Gadget *)ChooserObject,
+            GA_ID, spid,
+            GA_RelVerify, TRUE,
+            GA_Disabled, !pvaa,
+            CHOOSER_PopUp, TRUE,
+            CHOOSER_Labels, (ULONG)list,
+            CHOOSER_Selected, pvsp,
+        End,
+        Label(GetString(MSG_PV_SP)),
     End;
 }
 
@@ -696,7 +721,7 @@ static Object *InstallPage(void)
                 SPACE_MinWidth, 300,
                 SPACE_RenderHook, (ULONG)&previewhook,
             End,
-            LAYOUT_AddChild, gads[GID_PVAA] = AACheckBox(GID_PVAA),
+            LAYOUT_AddChild, AAOptions(GID_PVAA, GID_PVSP, &pvsplist),
             CHILD_WeightedHeight, 0,
         End,
         CHILD_WeightedHeight, 0,
@@ -1572,7 +1597,7 @@ static Object *DownloadPage(void)
                 SPACE_MinHeight, pv_NeededHeight(),
                 SPACE_RenderHook, (ULONG)&previewhook,
             End,
-            LAYOUT_AddChild, gads[GID_DLAA] = AACheckBox(GID_DLAA),
+            LAYOUT_AddChild, AAOptions(GID_DLAA, GID_DLSP, &dlsplist),
             CHILD_WeightedHeight, 0,
         End,
         CHILD_WeightedHeight, 0,
@@ -1797,6 +1822,11 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
     }
     AddChoice(&enginelist, GetString(MSG_ENGINE_AATEXT));
     AddChoice(&enginelist, GetString(MSG_ENGINE_FT2));
+    for (i = 0; i < 3; i++)
+    {
+        AddChoice(&pvsplist, GetString(MSG_PV_SP_OFF + i));
+        AddChoice(&dlsplist, GetString(MSG_PV_SP_OFF + i));
+    }
 
     winobj = WindowObject,
         WA_Title, (ULONG)GetString(MSG_TITLE),
@@ -1892,7 +1922,19 @@ static void Action(ULONG id)
             pvaa = GetGad(id, GA_Selected) != 0;
             pv_SetAntialias(pvaa);
             SetGad(id == GID_PVAA ? GID_DLAA : GID_PVAA, GA_Selected, pvaa);
+            SetGad(GID_PVSP, GA_Disabled, !pvaa);
+            SetGad(GID_DLSP, GA_Disabled, !pvaa);
             if (id == GID_PVAA)
+                ShowPreview();
+            else
+                DlPreview();
+            break;
+        case GID_PVSP:
+        case GID_DLSP:
+            pvsp = GetGad(id, CHOOSER_Selected);
+            pv_SetSubpixel(pvsp);
+            SetGad(id == GID_PVSP ? GID_DLSP : GID_PVSP, CHOOSER_Selected, pvsp);
+            if (id == GID_PVSP)
                 ShowPreview();
             else
                 DlPreview();
@@ -1935,6 +1977,8 @@ int mgr_RunGUI(const char *language)
     NewList(&charsetlist);
     NewList(&defcharsetlist);
     NewList(&enginelist);
+    NewList(&pvsplist);
+    NewList(&dlsplist);
     NewList(&filelb);
     NewList(&repairlb);
     NewList(&diaglb);

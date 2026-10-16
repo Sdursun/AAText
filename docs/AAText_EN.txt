@@ -138,7 +138,7 @@ while you try it out.
   Use     keeps them until the next reboot (ENV: only)
   Cancel  returns AAText to the settings it had before
 
-  Appearance  antialiasing on/off, gamma, hinting, real character
+  Appearance  antialiasing on/off, subpixel, gamma, hinting, real character
               widths, kerning, preview
   Programs    the programs AAText leaves alone (blacklist): type a
               name, choose the program file with "Choose...", or pick
@@ -327,6 +327,14 @@ It is a plain text file with one setting per line; lines starting with
                     its shapes and widths, but in one colour with sharp
                     edges. Layouts stay the same when it is switched.
 
+  subpixel rgb      Subpixel (LCD) antialiasing (off, rgb or bgr;
+                    default off): the panel's red, green and blue
+                    stripes give sharper edges with slightly coloured
+                    fringes. Only for a flat panel that shows the
+                    screen pixel for pixel; on a scaled picture (e.g.
+                    720p on a 1080p panel) or a CRT leave it off. RTG
+                    screens only; palette screens stay grey.
+
   offscreen on      Some programs (docks, gauges) draw text into a
                     hidden bitmap first. AAText cannot tell which screen
                     colours apply there and leaves such text alone. With
@@ -426,6 +434,10 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.31  "subpixel off|rgb|bgr" (AATextPrefs: Appearance): subpixel (LCD)
+      antialiasing for panels that show the screen 1:1. AATextManager:
+      subpixel choice under the previews.
 
 0.30  AATextManager: fixed width fonts (e.g. Ubuntu Mono, Courier New)
       got cells one em wide, so their letters were too big and cut off;

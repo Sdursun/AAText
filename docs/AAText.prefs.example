@@ -58,6 +58,12 @@
 # AAText, in one colour with sharp edges; widths and layouts stay the same.
 #antialias off
 
+# Subpixel (LCD) antialiasing (default off): uses the red, green and
+# blue stripes of an LCD panel for sharper edges, with coloured fringes.
+# Only for a flat panel that shows the Amiga screen 1:1 (not scaled);
+# "rgb" or "bgr" after the panel's stripe order. RTG screens only.
+#subpixel rgb
+
 # Explicit mappings (rarely needed): draw a font with a TrueType file,
 # e.g. a bitmap font, or a font whose .otag is not found.
 #

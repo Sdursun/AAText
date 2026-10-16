@@ -145,7 +145,11 @@
     S(MSG_DL_NONET,        129, "No network: bsdsocket.library is not available (is TCP/IP running?).") \
     S(MSG_DL_NOSSL,        130, "Downloading needs AmiSSL 5 (Aminet: util/libs/AmiSSL-5).") \
     S(MSG_PV_AA,           131, "Antialiasing") \
-    S(MSG_P_WIDTH,         132, "fixed width, cells too wide")
+    S(MSG_P_WIDTH,         132, "fixed width, cells too wide") \
+    S(MSG_PV_SP,           133, "Subpixel") \
+    S(MSG_PV_SP_OFF,       134, "Off") \
+    S(MSG_PV_SP_RGB,       135, "RGB") \
+    S(MSG_PV_SP_BGR,       136, "BGR")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };

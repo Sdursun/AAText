@@ -26,6 +26,9 @@
 
 static struct Library *CyberGfxBase;
 static UBYTE *cov;              /* coverage 0-255, PV_WIDTH x PV_HEIGHT */
+static UBYTE *cov3;             /* subpixel: 3 x PV_WIDTH x PV_HEIGHT */
+static UBYTE subpixel;          /* PV_SUBPIXEL_... */
+static LONG covw;               /* columns of the buffer AddGlyph() fills */
 static BOOL antialias = TRUE;   /* off: one colour, as AAText's "antialias off" */
 static UBYTE *rgb;              /* RTG: 3 bytes a pixel (with CGX only) */
 static UBYTE *pens;             /* palette screens: a pen per pixel */
@@ -63,6 +66,9 @@ void pv_Cleanup(void)
         FreeVec(pens);
     if (cov)
         FreeVec(cov);
+    if (cov3)
+        FreeVec(cov3);
+    cov3 = NULL;
     if (rgb)
         FreeVec(rgb);
     if (CyberGfxBase)
@@ -100,7 +106,7 @@ static ULONG PenRGB(struct Screen *scr, UBYTE pen)
 
 /* one glyph's coverage added at pen position x, baseline y (neighbouring
    glyphs may overlap) */
-static void AddGlyph(FT_GlyphSlot g, LONG x, LONG y)
+static void AddGlyph(UBYTE *buf, FT_GlyphSlot g, LONG x, LONG y)
 {
     FT_Bitmap *b = &g->bitmap;
     LONG r, c, px, py;
@@ -119,9 +125,9 @@ static void AddGlyph(FT_GlyphSlot g, LONG x, LONG y)
             UBYTE *d;
 
             px = x + g->bitmap_left + c;
-            if (!a || px < 0 || px >= PV_WIDTH)
+            if (!a || px < 0 || px >= covw)
                 continue;
-            d = cov + py * PV_WIDTH + px;
+            d = buf + py * covw + px;
             v = *d + a;
             *d = v > 255 ? 255 : v;
         }
@@ -195,6 +201,60 @@ static BOOL ToPens(struct Screen *scr, LONG depth, UBYTE bgpen, UBYTE fgpen)
     return tbm != NULL;
 }
 
+/*
+ * Subpixel coverage -> per channel coverage in rgb[] (0-255, R G B
+ * order) and its mean in cov[]. FreeType's light LCD filter
+ * (0x00 0x55 0x56 0x55 0x00: a third of each neighbour), so the colour
+ * fringes match AAText's.
+ */
+static void FilterLCD(void)
+{
+    LONG y, x, k;
+
+    for (y = 0; y < PV_HEIGHT; y++)
+    {
+        const UBYTE *s = cov3 + y * PV_WIDTH * 3;
+
+        for (x = 0; x < PV_WIDTH; x++)
+        {
+            LONG sum = 0;
+
+            for (k = 0; k < 3; k++)
+            {
+                LONG i = x * 3 + k;
+                LONG v = s[i] * 0x56;
+
+                if (i > 0)
+                    v += s[i - 1] * 0x55;
+                if (i < PV_WIDTH * 3 - 1)
+                    v += s[i + 1] * 0x55;
+                v >>= 8;
+                if (v > 255)
+                    v = 255;
+                rgb[(y * PV_WIDTH + x) * 3 +
+                    (subpixel == PV_SUBPIXEL_BGR ? 2 - k : k)] = v;
+                sum += v;
+            }
+            cov[y * PV_WIDTH + x] = sum / 3;
+        }
+    }
+}
+
+/* per channel coverage in rgb[] -> RGB between bg and fg */
+static void ToRGBLCD(ULONG fg, ULONG bg)
+{
+    LONG i, k;
+
+    for (i = 0; i < PV_WIDTH * PV_HEIGHT; i++)
+        for (k = 0; k < 3; k++)
+        {
+            LONG f = (fg >> (16 - 8 * k)) & 0xFF;
+            LONG b = (bg >> (16 - 8 * k)) & 0xFF;
+
+            rgb[i * 3 + k] = b + (f - b) * rgb[i * 3 + k] / 255;
+        }
+}
+
 /* coverage -> RGB between bg and fg (0xRRGGBB) */
 static void ToRGB(ULONG fg, ULONG bg)
 {
@@ -237,6 +297,11 @@ void pv_SetAntialias(BOOL on)
     antialias = on;
 }
 
+void pv_SetSubpixel(UBYTE m)
+{
+    subpixel = m <= PV_SUBPIXEL_BGR ? m : PV_SUBPIXEL_OFF;
+}
+
 BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum,
                const char *alphabet, const char *sentence)
 {
@@ -244,6 +309,7 @@ BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum,
     FT_Face face;
     UBYTE *file, fgpen = 1, bgpen = 0;
     LONG len, i, y = GAP, depth;
+    BOOL lcd;
 
     mode = PV_NONE;
     if (!cov || !path)
@@ -272,13 +338,31 @@ BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum,
             FreeScreenDrawInfo(scr, dri);
         }
     }
+    /* subpixel: three times as wide (FT_Set_Transform), filtered and
+       mixed per channel afterwards; palette screens take the mean */
+    depth = GetBitMapAttr(scr->RastPort.BitMap, BMA_DEPTH);
+    lcd = antialias && subpixel != PV_SUBPIXEL_OFF && rgb;
+    if (lcd && !cov3)
+        cov3 = AllocVec(PV_WIDTH * 3 * PV_HEIGHT, MEMF_ANY);
+    if (!cov3)
+        lcd = FALSE;
+    if (lcd)
+    {
+        FT_Matrix m = { 3 << 16, 0, 0, 1 << 16 };
+
+        FT_Set_Transform(face, &m, NULL);
+        memset(cov3, 0, PV_WIDTH * 3 * PV_HEIGHT);
+        covw = PV_WIDTH * 3;
+    }
+    else
+        covw = PV_WIDTH;
     memset(cov, 0, PV_WIDTH * PV_HEIGHT);
 
     for (i = 0; i < (LONG)NUM_LINES && y < PV_HEIGHT; i++)
     {
         const UBYTE *s;
         char label[8];
-        LONG x = 4, pass;
+        LONG x = lcd ? 12 : 4, pass;
 
         if (FT_Set_Pixel_Sizes(face, 0, lines[i].size))
             break;
@@ -292,7 +376,7 @@ BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum,
         {
             s = (const UBYTE *)(!pass ? label :
                                 lines[i].sentence ? sentence : alphabet);
-            while (*s && x < PV_WIDTH)
+            while (*s && x < covw)
             {
                 ULONG c = NextChar(&s);
 
@@ -306,14 +390,15 @@ BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum,
                                       FT_LOAD_FORCE_AUTOHINT) ||
                          FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL)))
                     continue;
-                AddGlyph(face->glyph, x, y);
+                AddGlyph(lcd ? cov3 : cov, face->glyph, x, y);
                 x += (face->glyph->advance.x + 32) >> 6;
             }
         }
         y += ((-face->size->metrics.descender + 63) >> 6) + GAP;
     }
+    if (lcd)
+        FilterLCD();
     /* palette screens: pens; RTG: RGB */
-    depth = GetBitMapAttr(scr->RastPort.BitMap, BMA_DEPTH);
     if (depth <= 8)
     {
         if (ToPens(scr, depth, bgpen, fgpen))
@@ -321,7 +406,10 @@ BOOL pv_Render(struct Screen *scr, const char *path, LONG facenum,
     }
     else if (rgb && depth >= 15)
     {
-        ToRGB(PenRGB(scr, fgpen), PenRGB(scr, bgpen));
+        if (lcd)
+            ToRGBLCD(PenRGB(scr, fgpen), PenRGB(scr, bgpen));
+        else
+            ToRGB(PenRGB(scr, fgpen), PenRGB(scr, bgpen));
         mode = PV_RGB;
     }
 
