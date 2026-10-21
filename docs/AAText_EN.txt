@@ -1,4 +1,4 @@
-AAText 0.37 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.38 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -455,6 +455,11 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.38  Text that MUI programs (e.g. LumiFTP) draw into hidden buffers -
+      string gadgets, labels - is antialiased without "offscreen on":
+      AAText uses the screen of the program's window, or of the active
+      window for MUI's helper processes.
 
 0.37  "fontmem" (AATextPrefs: Advanced, default 8 MB): over it, the
       TrueType files of fonts no longer open are freed and loaded again
