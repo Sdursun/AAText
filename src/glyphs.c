@@ -832,6 +832,18 @@ static struct AAFace *ResolveName(struct AAName *n, BOOL report)
     return face;
 }
 
+void aa_RetryMissingFonts(void)
+{
+    LONG i;
+
+    ObtainSemaphore(&aa_GlyphSem);
+    for (i = 0; i < aa_NumNames; i++)
+        if (aa_Names[i].state == NAME_NONE)
+            aa_Names[i].state = NAME_PENDING;
+    aa_FontGen++;
+    ReleaseSemaphore(&aa_GlyphSem);
+}
+
 LONG aa_ResolvePending(BOOL report)
 {
     LONG i, done = 0;
@@ -1645,7 +1657,14 @@ struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code)
     r.code = code;
     r.glyph = NULL;
     if (!RunOnRenderStack(RenderOnStack, &r))
-        return NULL;
+    {
+        if (r.glyph || !(g = AllocMem(sizeof(*g), MEMF_ANY | MEMF_CLEAR)))
+            return NULL;
+        g->font = font;
+        g->code = code;
+        g->allocsize = sizeof(*g);
+        r.glyph = g;
+    }
 
     g = r.glyph;
     g->next = aa_Hash[h];

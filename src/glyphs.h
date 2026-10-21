@@ -167,6 +167,12 @@ struct AAFont *aa_FindFont(struct TextFont *tf);
 void aa_SetHelper(struct Task *task, ULONG sigmask);
 LONG aa_ResolvePending(BOOL report);
 
+/*
+ * Check font names without a usable .otag again (a font installed while
+ * AAText runs); the next aa_ResolvePending() loads what is there now.
+ */
+void aa_RetryMissingFonts(void);
+
 /* Queue a font name (as in tf_Message.mn_Node.ln_Name) for detection. */
 void aa_RequestFont(const char *fontname);
 

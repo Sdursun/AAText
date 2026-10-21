@@ -66,6 +66,8 @@
 #include "update.h"
 #include "settings.h"
 #include "../fontscan.h"
+#include "../aamsg.h"
+#include "../aaclient.h"
 #include "../charsets.h"
 #include "../prefs.h"
 
@@ -323,6 +325,15 @@ static void ShowPreview(void)
 /* Install tab                                                          */
 /* ------------------------------------------------------------------ */
 
+/* A running AAText looks for the new fonts (RELOAD); no answer is fine */
+static void TellAAText(void)
+{
+    struct AAMessage *m = aa_SendCommand(AACMD_RELOAD, NULL, NULL, 100);
+
+    if (m != AACLIENT_NOTRUNNING && m != AACLIENT_TIMEOUT)
+        aa_FreeReply(m);
+}
+
 static void ShowFiles(void)
 {
     LONG i;
@@ -484,6 +495,8 @@ static void Install(void)
         }
     }
     Busy(FALSE);
+    if (ok)
+        TellAAText();
     snprintf(msg, sizeof(msg), GetString(MSG_INSTALLED), (long)ok,
              (long)skipped, (long)failed);
     if (notopen[0])
@@ -1752,6 +1765,8 @@ static void DlInstall(void)
     }
     net_Close(&net);
     Busy(FALSE);
+    if (ok)
+        TellAAText();
     snprintf(msg, sizeof(msg), GetString(MSG_INSTALLED), (long)ok,
              (long)skipped, (long)failed);
     if (notopen[0])

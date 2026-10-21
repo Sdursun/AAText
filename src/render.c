@@ -160,6 +160,8 @@ void aa_RenderReconfigure(const struct AAPrefs *prefs)
         D(("AAText: blacklisted \"%s\"\n", (ULONG)aa_Blacklist[i]));
 }
 
+static void FreePal(void);
+
 BOOL aa_RenderInit(const struct AAPrefs *prefs)
 {
     LONG i;
@@ -214,6 +216,7 @@ void aa_RenderCleanup(void)
             FreeVec(aa_Blend[i]);
         aa_Blend[i] = NULL;
     }
+    FreePal();
 #ifdef DEBUG
     if (aa_TimerOpen)
         CloseDevice((struct IORequest *)&aa_TimerReq);
@@ -623,21 +626,36 @@ static void BlendLCD(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
     }
 }
 
-/* Gray coverage of an LCD glyph, for the gray blending below */
-static struct AAGlyph *GrayCopy(const struct AAGlyph *g)
+/* LCD glyph as one coverage a pixel (the mean of its three): palette
+   screens and coverage maps. Any size; only those screens need it. */
+static void BlendLCDGray(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
+                         LONG gx, LONG gy, const UBYTE *fg, LONG italicbase)
 {
-    static UBYTE mem[sizeof(struct AAGlyph) + 128 * 128];
-    struct AAGlyph *c = (struct AAGlyph *)mem;
-    LONG x, y;
+    LONG y0 = 0, y1 = g->rows, x, y;
 
-    if ((ULONG)g->width * g->rows > 128 * 128)
-        return NULL;
-    *c = *g;
-    c->lcd = FALSE;
-    for (y = 0; y < g->rows; y++)
-        for (x = 0; x < g->width; x++)
-            c->data[y * g->width + x] = aa_GlyphCov(g, x, y);
-    return c;
+    if (gy < 0)
+        y0 = -gy;
+    if (gy + y1 > h)
+        y1 = h - gy;
+    for (y = y0; y < y1; y++)
+    {
+        LONG rx = gx + ItalicShift(gy + y, italicbase);
+        LONG x0 = rx < 0 ? -rx : 0;
+        LONG x1 = rx + g->width > w ? w - rx : g->width;
+        UBYTE *dst = buf + ((gy + y) * w + rx + x0) * 3;
+
+        for (x = x0; x < x1; x++, dst += 3)
+        {
+            ULONG a = aa_GlyphCov(g, x, y);
+
+            if (!a)
+                continue;
+            a += a >> 7;            /* 0..255 -> 0..256 */
+            dst[0] += ((fg[0] - dst[0]) * (LONG)a) >> 8;
+            dst[1] += ((fg[1] - dst[1]) * (LONG)a) >> 8;
+            dst[2] += ((fg[2] - dst[2]) * (LONG)a) >> 8;
+        }
+    }
 }
 
 static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
@@ -650,14 +668,11 @@ static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
 
     if (g->lcd)
     {
-        if (!aa_GrayCoverage)
-        {
+        if (aa_GrayCoverage)
+            BlendLCDGray(buf, w, h, g, gx, gy, fg, italicbase);
+        else
             BlendLCD(buf, w, h, g, gx, gy, fg, bt, italicbase);
-            return;
-        }
-        if (!(g = GrayCopy(g)))
-            return;
-        y1 = g->rows;
+        return;
     }
 
     if (bt)
@@ -1115,6 +1130,42 @@ static UBYTE MixPen(struct ColorMap *cm, const ULONG *rgb, LONG ncol,
  * layers locked, so no lock of ours may be held around these graphics
  * calls. No pens are allocated.
  */
+/*
+ * One set of PaletteCompose() memory and line bitmap kept between calls
+ * (taken under Forbid(), like the pixel buffers); a second task drawing
+ * at the same time allocates its own, as before.
+ */
+static struct
+{
+    APTR           mem;
+    ULONG          memsize;
+    struct BitMap *bm;
+    LONG           bmwidth, bmdepth;
+    volatile BOOL  busy;
+} aa_Pal;
+
+static BOOL TakePal(void)
+{
+    BOOL got = FALSE;
+
+    Forbid();
+    if (!aa_Pal.busy)
+        aa_Pal.busy = got = TRUE;
+    Permit();
+    return got;
+}
+
+static void FreePal(void)
+{
+    if (aa_Pal.bm)
+        FreeBitMap(aa_Pal.bm);
+    if (aa_Pal.mem)
+        FreeVec(aa_Pal.mem);
+    aa_Pal.bm = NULL;
+    aa_Pal.mem = NULL;
+    aa_Pal.memsize = 0;
+}
+
 static BOOL PaletteCompose(struct RastPort *rp, struct ViewPort *vp,
                            const UBYTE *cov, LONG covmod, LONG x, LONG y,
                            LONG w, LONG h)
@@ -1130,24 +1181,52 @@ static BOOL PaletteCompose(struct RastPort *rp, struct ViewPort *vp,
     UWORD *mix;
     UBYTE fgpen = GetAPen(rp);
     LONG r, c, i;
+    ULONG size;
+    BOOL kept;
 
     if (ncol > cm->Count)
         ncol = cm->Count;
     if (fgpen >= ncol)
         return FALSE;
     /* palette (32 bit guns), pens of the cell, mix cache per step and pen */
-    rgb = AllocVec(ncol * 3 * sizeof(ULONG) + mod * h +
-                   (AA_PAL_STEPS - 1) * 256 * sizeof(UWORD), MEMF_ANY);
-    if (!rgb)
-        return FALSE;
+    size = ncol * 3 * sizeof(ULONG) + mod * h +
+           (AA_PAL_STEPS - 1) * 256 * sizeof(UWORD);
+    kept = TakePal();
+    if (kept)
+    {
+        /* grown or other depth: allocate the kept set again */
+        if (size > aa_Pal.memsize || mod > aa_Pal.bmwidth ||
+            depth != aa_Pal.bmdepth)
+        {
+            FreePal();
+            aa_Pal.mem = AllocVec(size, MEMF_ANY);
+            aa_Pal.bm = AllocBitMap(mod, 1, depth, 0, NULL);
+            if (!aa_Pal.mem || !aa_Pal.bm)
+            {
+                FreePal();
+                aa_Pal.busy = FALSE;
+                return FALSE;
+            }
+            aa_Pal.memsize = size;
+            aa_Pal.bmwidth = mod;
+            aa_Pal.bmdepth = depth;
+        }
+        rgb = aa_Pal.mem;
+        tbm = aa_Pal.bm;
+    }
+    else
+    {
+        rgb = AllocVec(size, MEMF_ANY);
+        tbm = rgb ? AllocBitMap(mod, 1, depth, 0, NULL) : NULL;
+        if (!tbm)
+        {
+            if (rgb)
+                FreeVec(rgb);
+            return FALSE;
+        }
+    }
     pens = (UBYTE *)(rgb + ncol * 3);
     mix = (UWORD *)(pens + mod * h);        /* mod is even */
-    tbm = AllocBitMap(mod, 1, depth, 0, NULL);
-    if (!tbm)
-    {
-        FreeVec(rgb);
-        return FALSE;
-    }
     InitRastPort(&temprp);
     temprp.BitMap = tbm;
 
@@ -1185,8 +1264,13 @@ static BOOL PaletteCompose(struct RastPort *rp, struct ViewPort *vp,
     }
 
     WritePixelArray8(rp, x, y, x + w - 1, y + h - 1, pens, &temprp);
-    FreeBitMap(tbm);
-    FreeVec(rgb);
+    if (kept)
+        aa_Pal.busy = FALSE;
+    else
+    {
+        FreeBitMap(tbm);
+        FreeVec(rgb);
+    }
     return TRUE;
 }
 
@@ -1266,8 +1350,9 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
                                    RECTFMT_RGB);
 
             aa_LockGlyphs();
-            DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, fg,
-                     BlendFor(fg));
+            if (aa_PrepareFont(font, tf))
+                DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, fg,
+                         BlendFor(fg));
             aa_UnlockGlyphs();
 
             cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp,
@@ -1297,8 +1382,9 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
             memset(buf, 0, w * h * 3);
             aa_LockGlyphs();
             aa_GrayCoverage = TRUE;
-            DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, white,
-                     BlendFor(white));
+            if (aa_PrepareFont(font, tf))
+                DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox,
+                         white, BlendFor(white));
             aa_GrayCoverage = FALSE;
             aa_UnlockGlyphs();
             done = PaletteCompose(rp, vp, buf + (sy * w + sx) * 3, w * 3,
@@ -1323,8 +1409,9 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
         memset(tmpl, 0, bpr * h);
 
         aa_LockGlyphs();
-        DrawReal(NULL, tmpl, bpr, w, h, rp, font, string, count, ox, NULL,
-                 NULL);
+        if (aa_PrepareFont(font, tf))
+            DrawReal(NULL, tmpl, bpr, w, h, rp, font, string, count, ox, NULL,
+                     NULL);
         aa_UnlockGlyphs();
 
         BltTemplate((PLANEPTR)tmpl, 0, bpr, rp, x, y, w, h);
@@ -1444,8 +1531,9 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         {
             aa_LockGlyphs();
             aa_GrayCoverage = TRUE;
-            DrawString(buf, w, h, rp, font, string, count, white,
-                       BlendFor(white));
+            if (aa_PrepareFont(font, tf))
+                DrawString(buf, w, h, rp, font, string, count, white,
+                           BlendFor(white));
             aa_GrayCoverage = FALSE;
             aa_UnlockGlyphs();
         }
@@ -1478,7 +1566,9 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     if (font)
     {
         aa_LockGlyphs();
-        DrawString(buf, w, h, rp, font, string, count, fg, BlendFor(fg));
+        /* again: new settings may have reset the font since */
+        if (aa_PrepareFont(font, tf))
+            DrawString(buf, w, h, rp, font, string, count, fg, BlendFor(fg));
         aa_UnlockGlyphs();
     }
     else

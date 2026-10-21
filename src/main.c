@@ -47,6 +47,7 @@ static struct AAPrefs newprefs;         /* RELOAD/APPLY scratch */
 static BOOL from_shell;
 static char prefspath[AA_PATH_LEN];
 static BOOL have_prefspath;
+static BOOL retryfonts;                 /* RELOAD: look for new fonts */
 
 /* Print to the Shell; silently does nothing when started from Workbench. */
 static void Msg(const char *text)
@@ -219,6 +220,7 @@ static void HandleMessage(struct AAMessage *m)
                 m->result = AARES_NOFILE;
             else
                 m->result = ApplyPrefs(&newprefs);
+            retryfonts = TRUE;      /* after the reply: file I/O */
             break;
         }
 
@@ -627,6 +629,12 @@ int main(int argc, char **argv)
         if (sigs & portsig)
             while ((m = (struct AAMessage *)GetMsg(port)))
                 HandleMessage(m);
+        if (retryfonts)
+        {
+            retryfonts = FALSE;
+            aa_RetryMissingFonts();
+            aa_ResolvePending(FALSE);
+        }
 
         if (!(sigs & SIGBREAKF_CTRL_C))
             continue;
