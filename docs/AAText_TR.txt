@@ -1,4 +1,4 @@
-AAText 0.38 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.39 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -477,6 +477,12 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.39  AATextPrefs: "Font eşlemeleri" sekmesi - TrueType bir fontla
+      çizilen bitmap fontlar, font ve dosya seçicileriyle seçilir,
+      önizlemeli. Ör. Türkçe harfleri olmayan bir Shell fontu, onları
+      içeren bir TrueType fontla çizilir. Eşlemeler AAText yeniden
+      başlatılınca değişir.
 
 0.38  MUI programlarının (ör. LumiFTP) gizli tamponlara çizdiği yazılar -
       yazı alanları, etiketler - "offscreen on" olmadan da yumuşatılır:

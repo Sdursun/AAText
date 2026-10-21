@@ -37,7 +37,7 @@
 #include <string.h>
 
 static const char version[] __attribute__((used)) =
-    "$VER: AAText 0.38 (21.10.2026)";
+    "$VER: AAText 0.39 (21.10.2026)";
 
 struct GfxBase *GfxBase;
 struct IntuitionBase *IntuitionBase;
