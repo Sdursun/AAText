@@ -32,6 +32,14 @@ run metrics-nokern  tests/realnokern.prefs metrics
 run mono            tests/mono.prefs mono
 run lcd             tests/lcd.prefs lcd
 run otag            tests/test.prefs otag tests/data/arial.otag
+# damaged code page offset near 4 GB: must not read outside the file
+if $V build/68020/fttest tests/test.prefs otag tests/data/badcodepage.otag 2>&1 |
+   grep -q "code page: no"; then
+    echo "ok    otag-badcp"
+else
+    echo "FAIL  otag-badcp (code page read from outside the file)"
+    fail=1
+fi
 run otagrw-ftm      tests/data/empty.prefs otagrw tests/data/verdanaregular.otag
 run otagrw-cff      tests/data/empty.prefs otagrw tests/data/sourcesans3regular.otag
 run otagrw-ttf      tests/data/empty.prefs otagrw tests/data/arial.otag

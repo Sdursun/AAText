@@ -187,8 +187,14 @@ static BOOL ToPens(struct Screen *scr, LONG depth, UBYTE bgpen, UBYTE fgpen)
     step[PAL_STEPS] = fgpen;
     FreeVec(pal);
 
-    for (i = 0; i < PV_WIDTH * PV_HEIGHT; i++)
-        pens[i] = step[(cov[i] * PAL_STEPS + 127) / 255];
+    {
+        UBYTE pen[256];         /* coverage -> pen: no division a pixel */
+
+        for (i = 0; i < 256; i++)
+            pen[i] = step[(i * PAL_STEPS + 127) / 255];
+        for (i = 0; i < PV_WIDTH * PV_HEIGHT; i++)
+            pens[i] = pen[cov[i]];
+    }
 
     /* one line bitmap of the screen's depth for WritePixelLine8() */
     if (tbm && GetBitMapAttr(tbm, BMA_DEPTH) != (ULONG)depth)
@@ -240,34 +246,53 @@ static void FilterLCD(void)
     }
 }
 
+/* coverage -> colour of each channel between bg and fg: 768 divisions
+   instead of three a pixel (a 68020 needs a second for the buffer) */
+static UBYTE mixlut[3][256];
+
+static void MakeMix(ULONG fg, ULONG bg)
+{
+    LONG k, a;
+
+    for (k = 0; k < 3; k++)
+    {
+        LONG f = (fg >> (16 - 8 * k)) & 0xFF;
+        LONG b = (bg >> (16 - 8 * k)) & 0xFF;
+
+        for (a = 0; a < 256; a++)
+            mixlut[k][a] = b + (f - b) * a / 255;
+    }
+}
+
 /* per channel coverage in rgb[] -> RGB between bg and fg */
 static void ToRGBLCD(ULONG fg, ULONG bg)
 {
-    LONG i, k;
+    UBYTE *p = rgb, *end = rgb + PV_WIDTH * PV_HEIGHT * 3;
 
-    for (i = 0; i < PV_WIDTH * PV_HEIGHT; i++)
-        for (k = 0; k < 3; k++)
-        {
-            LONG f = (fg >> (16 - 8 * k)) & 0xFF;
-            LONG b = (bg >> (16 - 8 * k)) & 0xFF;
-
-            rgb[i * 3 + k] = b + (f - b) * rgb[i * 3 + k] / 255;
-        }
+    MakeMix(fg, bg);
+    for (; p < end; p += 3)
+    {
+        p[0] = mixlut[0][p[0]];
+        p[1] = mixlut[1][p[1]];
+        p[2] = mixlut[2][p[2]];
+    }
 }
 
 /* coverage -> RGB between bg and fg (0xRRGGBB) */
 static void ToRGB(ULONG fg, ULONG bg)
 {
-    LONG i, k;
+    UBYTE *p = rgb;
+    LONG i;
 
-    for (i = 0; i < PV_WIDTH * PV_HEIGHT; i++)
-        for (k = 0; k < 3; k++)
-        {
-            LONG f = (fg >> (16 - 8 * k)) & 0xFF;
-            LONG b = (bg >> (16 - 8 * k)) & 0xFF;
+    MakeMix(fg, bg);
+    for (i = 0; i < PV_WIDTH * PV_HEIGHT; i++, p += 3)
+    {
+        UBYTE a = cov[i];
 
-            rgb[i * 3 + k] = b + (f - b) * cov[i] / 255;
-        }
+        p[0] = mixlut[0][a];
+        p[1] = mixlut[1][a];
+        p[2] = mixlut[2][a];
+    }
 }
 
 /* the whole file in memory (aatext.library has streams, but the

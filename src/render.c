@@ -40,9 +40,16 @@
 /* Upper limit for one temporary pixel buffer (bytes). */
 #define AA_MAX_BUFFER   (512 * 1024)
 
-/* Preallocated buffers, so short strings need no AllocVec(). */
+/*
+ * Preallocated buffers, so strings need no AllocVec(): two for short
+ * strings, two for long lines (a Shell line across a 1920 pixel screen
+ * is about 100 KB). Smallest first, GetBuffer() takes the first that fits.
+ */
 #define AA_NUM_BUFFERS  4
-#define AA_BUFFER_SIZE  (32 * 1024)
+static const ULONG aa_BufferSize[AA_NUM_BUFFERS] =
+{
+    32 * 1024, 32 * 1024, 128 * 1024, 128 * 1024
+};
 
 /* Preallocated chip RAM templates for the 1 bit real metrics path. */
 #define AA_NUM_CHIP     2
@@ -172,10 +179,11 @@ BOOL aa_RenderInit(const struct AAPrefs *prefs)
     }
 #endif
 
+    /* the small ones are needed; the large ones save AllocVec() calls */
     for (i = 0; i < AA_NUM_BUFFERS; i++)
     {
-        aa_Buffers[i] = AllocVec(AA_BUFFER_SIZE, MEMF_ANY);
-        if (!aa_Buffers[i])
+        aa_Buffers[i] = AllocVec(aa_BufferSize[i], MEMF_ANY);
+        if (!aa_Buffers[i] && aa_BufferSize[i] <= 32 * 1024)
             return FALSE;
     }
     /* optional: GetChipBuffer() falls back to AllocVec() */
@@ -292,12 +300,13 @@ static UBYTE *GetBuffer(ULONG size)
 {
     LONG i;
 
-    if (size <= AA_BUFFER_SIZE)
+    if (size <= aa_BufferSize[AA_NUM_BUFFERS - 1])
     {
         Forbid();
         for (i = 0; i < AA_NUM_BUFFERS; i++)
         {
-            if (!aa_BufferBusy[i])
+            if (aa_Buffers[i] && !aa_BufferBusy[i] &&
+                size <= aa_BufferSize[i])
             {
                 aa_BufferBusy[i] = TRUE;
                 Permit();

@@ -91,7 +91,8 @@ BOOL aa_ParseOTag(const UBYTE *buf, ULONG len, struct AAOTagInfo *info)
                 break;
 
             case OT_Spec2_CodePage:
-                if (data + 512 <= len)
+                /* no data + 512: a damaged offset near 4 GB wraps */
+                if (data < len && len - data >= 512)
                 {
                     LONG i;
 

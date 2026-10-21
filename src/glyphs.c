@@ -123,7 +123,7 @@ static BOOL aa_Kerning = TRUE;        /* fixed while AAText runs, like real */
  * font. Entries are read and written inside Forbid(), Text() runs on
  * any task.
  */
-#define AA_LOOKUP_SLOTS 8
+#define AA_LOOKUP_SLOTS 64
 #define AA_LOOKUP_NAME  64
 
 static volatile ULONG aa_FontGen = 1;

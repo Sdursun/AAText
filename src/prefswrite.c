@@ -111,7 +111,8 @@ BOOL aa_WritePrefs(const struct AAPrefs *prefs, const char *path,
                    const char *template_path)
 {
     static const char *const hint[] = { "normal", "none", "light", "full" };
-    static char line[AA_NAME_LEN * AA_MAX_BLACKLIST + 32];  /* 1.5 KB */
+    /* every name with " \"...\"" around it: 3 more bytes each */
+    static char line[(AA_NAME_LEN + 3) * AA_MAX_BLACKLIST + 32];
     BPTR out;
     BOOL ok = TRUE;
     LONG i, tlen;
