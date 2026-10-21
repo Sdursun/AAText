@@ -27,10 +27,38 @@ static int ToLower(int c)
     return (c >= 'A' && c <= 'Z') ? c + ('a' - 'A') : c;
 }
 
+/*
+ * A font mapping ("name size -> file ..."): a "->" token outside quotes
+ * before any comment. AATextPrefs edits mappings, so it writes them.
+ */
+static BOOL IsMapping(const char *line, LONG len)
+{
+    BOOL quoted = FALSE;
+    LONG i;
+
+    for (i = 0; i < len; i++)
+    {
+        char c = line[i];
+
+        if (c == '"')
+            quoted = !quoted;
+        else if (!quoted && c == '#')
+            return FALSE;
+        else if (!quoted && c == '-' && i + 1 < len && line[i + 1] == '>' &&
+                 i > 0 && (line[i - 1] == ' ' || line[i - 1] == '\t') &&
+                 (i + 2 == len || line[i + 2] == ' ' || line[i + 2] == '\t'))
+            return TRUE;
+    }
+    return FALSE;
+}
+
 /* Does the line (len bytes) start with a managed keyword? */
 static BOOL IsManaged(const char *line, LONG len)
 {
     LONG i = 0, n, k;
+
+    if (IsMapping(line, len))
+        return TRUE;
 
     while (i < len && (line[i] == ' ' || line[i] == '\t'))
         i++;
@@ -112,7 +140,8 @@ BOOL aa_WritePrefs(const struct AAPrefs *prefs, const char *path,
 {
     static const char *const hint[] = { "normal", "none", "light", "full" };
     /* every name with " \"...\"" around it: 3 more bytes each */
-    static char line[(AA_NAME_LEN + 3) * AA_MAX_BLACKLIST + 32];
+    static char line[(AA_NAME_LEN + 3) * AA_MAX_BLACKLIST + AA_PATH_LEN +
+                     64];
     BPTR out;
     BOOL ok = TRUE;
     LONG i, tlen;
@@ -180,6 +209,24 @@ BOOL aa_WritePrefs(const struct AAPrefs *prefs, const char *path,
             if (quote)
                 strcat(line, "\"");
         }
+        strcat(line, "\n");
+        ok &= Put(out, line);
+    }
+
+    /* font mappings; names and paths with blanks in quotes */
+    for (i = 0; i < prefs->nummaps; i++)
+    {
+        const struct AAMapping *m = &prefs->map[i];
+        BOOL qn = strchr(m->fontname, ' ') != NULL;
+        BOOL qp = strchr(m->ttfpath, ' ') != NULL;
+
+        sprintf(line, "%s%s%s %ld -> %s%s%s", qn ? "\"" : "", m->fontname,
+                qn ? "\"" : "", (long)m->ysize, qp ? "\"" : "", m->ttfpath,
+                qp ? "\"" : "");
+        if (m->pixelsize)
+            sprintf(line + strlen(line), " %ld", (long)m->pixelsize);
+        if (m->real)
+            strcat(line, " real");
         strcat(line, "\n");
         ok &= Put(out, line);
     }

@@ -163,3 +163,29 @@ MSG_FONTMEM
 Font dosyaları (KB, 0: sınırsız)
 MSG_FONTMEM_USED
 Yüklü: %ld KB, %ld dosya
+MSG_TAB_MAPPINGS
+Font eşlemeleri
+MSG_MAP_INFO
+Bu bitmap fontlar bir TrueType fontla çizilir; harf genişlikleri aynı kalır.
+MSG_MAP_COL_FONT
+Bitmap font
+MSG_MAP_COL_FILE
+TrueType dosyası
+MSG_MAP_COL_PX
+Piksel boyutu
+MSG_MAP_ADD
+Ekle...
+MSG_MAP_CHANGE
+Değiştir...
+MSG_MAP_PX
+Piksel boyutu (0: otomatik)
+MSG_MAP_FONTTITLE
+TrueType ile çizilecek bitmap font
+MSG_MAP_FILETITLE
+Bunun için TrueType font dosyası
+MSG_MAP_FULL
+Liste dolu (%ld eşleme).
+MSG_MAP_NOTE
+Font eşlemeleri AAText yeniden başlatılınca değişir.
+MSG_MAP_AUTO
+otomatik

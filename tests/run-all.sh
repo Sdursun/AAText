@@ -41,6 +41,7 @@ else
     fail=1
 fi
 run fontmem         tests/fontmem.prefs fontmem
+run mapsrw          tests/maps.prefs mapsrw build/maps-out.prefs
 run otagrw-ftm      tests/data/empty.prefs otagrw tests/data/verdanaregular.otag
 run otagrw-cff      tests/data/empty.prefs otagrw tests/data/sourcesans3regular.otag
 run otagrw-ttf      tests/data/empty.prefs otagrw tests/data/arial.otag

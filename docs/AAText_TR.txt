@@ -157,6 +157,14 @@ satırında görürsünüz.
               "Fontlar (AATextManager)..." SYS:System/
               AATextManager'ı başlatır: font kurma, onarma ve
               tanılama (Tanılama sekmesi 0.23'e kadar buradaydı)
+  Font eşlemeleri  TrueType bir fontla çizilen bitmap fontlar
+              (aşağıda "Elle eşleme"ye bakın): "Ekle..." önce bitmap
+              fontu ve boyutunu, sonra TrueType dosyasını sorar;
+              "Değiştir...", "Sil", piksel boyutu (0: otomatik) ve
+              TrueType dosyasının önizlemesi. Eşlemeler AAText yeniden
+              başlatılınca değişir. Örnek: Türkçe harfleri olmayan
+              Shell bitmap fontu, onları içeren bir TrueType fontla
+              çizilir; harf hücreleri ve sütunlar aynı kalır.
 
 Menülerde, sistemin Prefs programlarındaki gibi Aç..., Farklı
 Kaydet..., Varsayılan Ayarlar, Son Kaydedilen ve Geri Al bulunur.
@@ -381,8 +389,8 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
   auto off          Otomatik font algılamayı kapatır; sadece aşağıdaki
                     elle eşlemeler kullanılır.
 
-Elle eşleme nadiren gerekir. Bir bitmap fontu ya da .otag dosyası
-bulunmayan bir fontu bir TrueType dosyasıyla çizer:
+Elle eşleme (AATextPrefs: Font eşlemeleri) bir bitmap fontu ya da
+.otag dosyası bulunmayan bir fontu bir TrueType dosyasıyla çizer:
 
   topaz 8 -> FONTS:_ttf/DejaVuSansMono.ttf
   "Bir Font" 16 -> "FONTS:Fontlarım/x.ttf" 14 real

@@ -25,6 +25,7 @@
 #include "fontinfo.h"
 #include "fontinstall.h"
 #include "startup.h"
+#include "prefswrite.h"
 
 /* stub.s references these; the patch itself is not linked here. */
 volatile LONG aa_UseCount;
@@ -619,6 +620,50 @@ int main(int argc, char **argv)
         }
         return aa_OTagWriteFile(&a, argv[4]) ? 0 : 10;
     }
+    /*
+     * "mapsrw": write the prefs read from argv[1] (with mappings, one
+     * name and one path with blanks) to argv[3] with argv[1] as the
+     * template, read it back: same mappings, each once, comment kept.
+     */
+    if (strcmp(argv[2], "mapsrw") == 0 && argc > 3)
+    {
+        static struct AAPrefs back;
+        static char text[4096];
+        FILE *f;
+        size_t len;
+        LONG i, arrows = 0;
+        BOOL bad = !aa_WritePrefs(&prefs, argv[3], argv[1]) ||
+                   !aa_ReadPrefs(&back, argv[3], TRUE) ||
+                   back.nummaps != prefs.nummaps || prefs.nummaps < 2;
+
+        for (i = 0; !bad && i < prefs.nummaps; i++)
+        {
+            const struct AAMapping *a = &prefs.map[i], *b = &back.map[i];
+
+            if (strcmp(a->fontname, b->fontname) ||
+                strcmp(a->ttfpath, b->ttfpath) || a->ysize != b->ysize ||
+                a->pixelsize != b->pixelsize || a->real != b->real)
+                bad = TRUE;
+            printf("map %ld: \"%s\" %d -> \"%s\" px %d%s\n", (long)i,
+                   b->fontname, b->ysize, b->ttfpath, b->pixelsize,
+                   b->real ? " real" : "");
+        }
+        f = fopen(argv[3], "rb");
+        len = f ? fread(text, 1, sizeof(text) - 1, f) : 0;
+        if (f)
+            fclose(f);
+        text[len] = 0;
+        for (i = 0; text[i]; i++)
+            if (text[i] == '-' && text[i + 1] == '>')
+                arrows++;
+        if (arrows != prefs.nummaps || !strstr(text, "# keep me"))
+            bad = TRUE;
+        printf("%ld mapping lines, comment %s\n%s\n", (long)arrows,
+               strstr(text, "# keep me") ? "kept" : "lost",
+               bad ? "FAIL" : "OK");
+        return bad ? 10 : 0;
+    }
+
     /* "otag": parse a .otag file given as third argument */
     if (strcmp(argv[2], "otag") == 0 && argc > 3)
     {

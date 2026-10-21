@@ -118,7 +118,7 @@ clean:
 TEST_OBJS := $(BUILDDIR)/prefs.o $(BUILDDIR)/glyphs.o $(BUILDDIR)/metrics.o \
              $(BUILDDIR)/otag.o $(BUILDDIR)/debug.o $(BUILDDIR)/charsets.o $(BUILDDIR)/fontfile.o $(BUILDDIR)/fontscan.o \
              $(BUILDDIR)/otagfile.o $(BUILDDIR)/fontinfo.o $(BUILDDIR)/fontinstall.o \
-             $(BUILDDIR)/startup.o $(BUILDDIR)/stub.o
+             $(BUILDDIR)/startup.o $(BUILDDIR)/stub.o $(BUILDDIR)/prefswrite.o
 
 .PHONY: test
 test: $(BUILDDIR)/fttest
@@ -211,8 +211,10 @@ dist:
 # both programs have a main.c
 GUI_TARGET := $(BUILDDIR)/AATextPrefs
 GUI_SRCS   := src/prefsgui/main.c src/prefsgui/strings.c src/prefs.c \
-              src/prefswrite.c src/aaclient.c src/charsets.c
-GUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/gui/%.o,$(GUI_SRCS))
+              src/prefswrite.c src/aaclient.c src/charsets.c \
+              src/manager/preview.c
+GUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/gui/%.o,$(GUI_SRCS)) \
+              $(BUILDDIR)/gui/cgx.o
 
 .PHONY: gui
 gui: $(GUI_TARGET)
@@ -227,6 +229,15 @@ endif
 $(BUILDDIR)/gui/%.o: src/%.c src/*.h src/prefsgui/*.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -Wno-pointer-sign -c -o $@ $<
+
+# the mapping preview: AATextManager's, FreeType from aatext.library
+$(BUILDDIR)/gui/manager/preview.o: src/manager/preview.c src/manager/preview.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/aatextlib -Wno-pointer-sign -c -o $@ $<
+
+$(BUILDDIR)/gui/cgx.o: src/cgx.s
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) -c -o $@ $<
 
 # Turkish catalog for AATextPrefs
 CATALOG := build/catalogs/aatextprefs.catalog

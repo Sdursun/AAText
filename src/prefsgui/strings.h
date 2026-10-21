@@ -91,7 +91,20 @@
     S(MSG_SP_RGB,          123, "RGB - LCD shown 1:1, not scaled") \
     S(MSG_SP_BGR,          124, "BGR - LCD shown 1:1, not scaled") \
     S(MSG_FONTMEM,         125, "Font files (KB, 0: no limit)") \
-    S(MSG_FONTMEM_USED,    126, "Loaded: %ld KB, %ld files")
+    S(MSG_FONTMEM_USED,    126, "Loaded: %ld KB, %ld files") \
+    S(MSG_TAB_MAPPINGS,    127, "Font mappings") \
+    S(MSG_MAP_INFO,        128, "These bitmap fonts are drawn with a TrueType font; their character widths stay.") \
+    S(MSG_MAP_COL_FONT,    129, "Bitmap font") \
+    S(MSG_MAP_COL_FILE,    130, "TrueType file") \
+    S(MSG_MAP_COL_PX,      131, "Pixel size") \
+    S(MSG_MAP_ADD,         132, "Add...") \
+    S(MSG_MAP_CHANGE,      133, "Change...") \
+    S(MSG_MAP_PX,          134, "Pixel size (0: automatic)") \
+    S(MSG_MAP_FONTTITLE,   135, "Bitmap font to draw with TrueType") \
+    S(MSG_MAP_FILETITLE,   136, "TrueType font file for it") \
+    S(MSG_MAP_FULL,        137, "The list is full (%ld mappings).") \
+    S(MSG_MAP_NOTE,        138, "Font mappings change when AAText is restarted.") \
+    S(MSG_MAP_AUTO,        139, "automatic")
 
 
 #define S(id, n, s) id = n,

@@ -151,6 +151,14 @@ while you try it out.
               "Fonts (AATextManager)..." starts SYS:System/
               AATextManager: installing, repairing and checking
               fonts (its Diagnostics tab was here until 0.23)
+  Font mappings  bitmap fonts drawn with a TrueType font (see
+              "Explicit mappings" below): "Add..." asks for the bitmap
+              font and size, then for the TrueType file; "Change...",
+              "Remove", the pixel size (0: automatic) and a preview of
+              the TrueType file. Mappings change when AAText is
+              restarted. Example: the Shell's bitmap font without
+              Turkish letters, drawn with a TrueType font that has
+              them; its character cells and columns stay.
 
 The menus offer Open..., Save As..., Reset To Defaults, Last Saved and
 Restore, like the system's Prefs programs.
@@ -368,8 +376,8 @@ It is a plain text file with one setting per line; lines starting with
   auto off          Switch off automatic font detection; only the
                     explicit mappings below are used.
 
-Explicit mappings are rarely needed. They draw a bitmap font, or a font
-whose .otag file is missing, with a TrueType file:
+Explicit mappings (AATextPrefs: Font mappings) draw a bitmap font, or a
+font whose .otag file is missing, with a TrueType file:
 
   topaz 8 -> FONTS:_ttf/DejaVuSansMono.ttf
   "Some Font" 16 -> "FONTS:My Fonts/x.ttf" 14 real

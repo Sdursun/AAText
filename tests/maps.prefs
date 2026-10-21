@@ -1,0 +1,4 @@
+# keep me: a comment the writer must copy
+gamma 1.0
+"Andale Mono" 16 -> FONTS:_ttf/UbuntuMono-Regular.ttf
+topaz 8 -> "FONTS:My Fonts/DejaVuSansMono.ttf" 10 real

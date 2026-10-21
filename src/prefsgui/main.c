@@ -71,6 +71,7 @@
 #include "../prefswrite.h"
 #include "../aaclient.h"
 #include "../charsets.h"
+#include "../manager/preview.h"
 #include "strings.h"
 
 static const char version[] __attribute__((used)) =
@@ -89,6 +90,8 @@ struct Library *WindowBase, *LayoutBase, *ClickTabBase, *ChooserBase,
                *SliderBase, *CheckBoxBase, *LabelBase, *ButtonBase,
                *SpaceBase, *ListBrowserBase, *StringBase, *IntegerBase,
                *AslBase;
+/* FreeType for the mapping preview (optional: no preview without it) */
+struct Library *AATextBase;
 
 enum
 {
@@ -98,6 +101,8 @@ enum
     GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_CACHEUSED, GID_FONTMEM, GID_FONTMEMUSED, GID_CHARSET,
     GID_PICKFILE, GID_KERNING, GID_ANTIALIAS, GID_SUBPIXEL,
     GID_MANAGER,
+    GID_MAPLIST, GID_MAPADD, GID_MAPCHANGE, GID_MAPREMOVE, GID_MAPPX,
+    GID_MAPPREVIEW,
     GID_COUNT
 };
 
@@ -110,6 +115,7 @@ static const UBYTE hint_order[4] =
 static struct Gadget *gads[GID_COUNT];
 static Object *winobj, *pages;
 static struct Window *win;
+static struct List maplb;
 static struct List tablist, hintlist, blacklb, runlist, charsetlist,
                    subpixlist;
 
@@ -200,6 +206,8 @@ static LONG PageOf(LONG gid)
         return 1;
     if ((gid >= GID_AUTO && gid <= GID_CHARSET) || gid == GID_MANAGER)
         return 2;
+    if (gid >= GID_MAPLIST && gid <= GID_MAPPREVIEW)
+        return 3;
     return -1;
 }
 
@@ -850,6 +858,308 @@ static void AddChoice(struct List *list, LONG msg)
         AddTail(list, n);
 }
 
+/* ------------------------------------------------------------------ */
+/* Font mappings tab                                                   */
+/* ------------------------------------------------------------------ */
+
+static struct ColumnInfo mapcols[] =
+{
+    { 34, NULL, 0 }, { 50, NULL, 0 }, { 16, NULL, 0 }, { -1, NULL, 0 }
+};
+/* column texts of the list, kept while it shows */
+static char mapfont[AA_MAX_MAPPINGS][AA_NAME_LEN + 8];
+static char mappx[AA_MAX_MAPPINGS][12];
+static struct Hook mappreviewhook;
+static BOOL pvready;            /* pv_Init() done */
+
+static LONG MapSelected(void)
+{
+    ULONG sel = ~0UL;
+
+    if (gads[GID_MAPLIST])
+        GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_MAPLIST], &sel);
+    return (LONG)sel >= 0 && (LONG)sel < cur.nummaps ? (LONG)sel : -1;
+}
+
+/* the selected mapping's TrueType file in the preview, or nothing */
+static void MapPreview(void)
+{
+    LONG sel = MapSelected();
+
+    if (!win || !AATextBase)
+        return;
+    if (!pvready && !(pvready = pv_Init()))
+        return;
+    if (sel >= 0)
+        pv_Render(win->WScreen, cur.map[sel].ttfpath, 0,
+                  GetString(MSG_PREVIEW_LINE1), GetString(MSG_PREVIEW_LINE2));
+    else
+        pv_Render(win->WScreen, NULL, 0, NULL, NULL);
+    if (CurrentPage() == 3)
+        RefreshGList(gads[GID_MAPPREVIEW], win, NULL, 1);
+}
+
+static ULONG MapPreviewRender(struct Hook *hook, Object *obj,
+                              struct gpRender *gpr)
+{
+    struct DrawInfo *dri = gpr->gpr_GInfo ? gpr->gpr_GInfo->gi_DrInfo : NULL;
+    struct IBox *box = NULL;
+
+    GetAttr(SPACE_AreaBox, obj, (ULONG *)&box);
+    if (gpr->gpr_RPort && box && pvready)
+        pv_Draw(gpr->gpr_RPort, box->Left, box->Top, box->Width,
+                box->Height, dri ? dri->dri_Pens[BACKGROUNDPEN] : 0,
+                dri ? dri->dri_Pens[TEXTPEN] : 1, "");
+    return 0;
+}
+
+/* the selection's pixel size in its gadget, Change/Remove usable */
+static void MapSelectionChanged(void)
+{
+    LONG sel = MapSelected();
+
+    SetGad2(GID_MAPPX, INTEGER_Number, sel >= 0 ? cur.map[sel].pixelsize : 0,
+            GA_Disabled, sel < 0);
+    SetGad(GID_MAPCHANGE, GA_Disabled, sel < 0);
+    SetGad(GID_MAPREMOVE, GA_Disabled, sel < 0);
+    MapPreview();
+}
+
+/* Show cur.map in the list browser; sel is the entry to select or -1. */
+static void ShowMappings(LONG sel)
+{
+    LONG i;
+
+    if (win)
+        SetGad(GID_MAPLIST, LISTBROWSER_Labels, ~0UL);
+    FreeListBrowserList(&maplb);
+    for (i = 0; i < cur.nummaps; i++)
+    {
+        const struct AAMapping *mp = &cur.map[i];
+        struct Node *n;
+
+        snprintf(mapfont[i], sizeof(mapfont[i]), "%s %ld", mp->fontname,
+                 (long)mp->ysize);
+        if (mp->pixelsize)
+            snprintf(mappx[i], sizeof(mappx[i]), "%ld", (long)mp->pixelsize);
+        else
+            snprintf(mappx[i], sizeof(mappx[i]), "%s",
+                     GetString(MSG_MAP_AUTO));
+        n = AllocListBrowserNode(3,
+            LBNA_Column, 0, LBNCA_Text, (ULONG)mapfont[i],
+            LBNA_Column, 1, LBNCA_Text, (ULONG)mp->ttfpath,
+            LBNA_Column, 2, LBNCA_Text, (ULONG)mappx[i],
+            TAG_DONE);
+        if (n)
+            AddTail(&maplb, n);
+    }
+    if (win)
+    {
+        SetGad2(GID_MAPLIST, LISTBROWSER_Labels, (ULONG)&maplb,
+                LISTBROWSER_Selected, (ULONG)sel);
+        MapSelectionChanged();
+    }
+}
+
+/*
+ * Add a mapping (replace < 0) or change entry replace: the bitmap font
+ * from the font requester, then its TrueType file. Changed mappings
+ * apply when AAText is restarted.
+ */
+static void EditMapping(LONG replace)
+{
+    struct FontRequester *fo;
+    struct FileRequester *fr;
+    struct AAMapping m;
+    char name[AA_NAME_LEN + 8], path[AA_PATH_LEN];
+    LONG len;
+    BOOL ok = FALSE;
+
+    if (replace < 0 && cur.nummaps == AA_MAX_MAPPINGS)
+    {
+        char msg[80];
+
+        snprintf(msg, sizeof(msg), GetString(MSG_MAP_FULL),
+                 (long)AA_MAX_MAPPINGS);
+        SetStatus(msg);
+        return;
+    }
+    if (replace >= 0)
+        m = cur.map[replace];
+    else
+        memset(&m, 0, sizeof(m));
+
+    /* the bitmap font and its size */
+    snprintf(name, sizeof(name), "%s.font", replace >= 0 ? m.fontname
+                                                         : "topaz");
+    fo = AllocAslRequestTags(ASL_FontRequest,
+                             ASLFO_Window, (ULONG)win,
+                             ASLFO_TitleText,
+                                 (ULONG)GetString(MSG_MAP_FONTTITLE),
+                             ASLFO_InitialName, (ULONG)name,
+                             ASLFO_InitialSize, replace >= 0 ? m.ysize : 8,
+                             ASLFO_SleepWindow, TRUE,
+                             TAG_DONE);
+    if (!fo)
+        return;
+    if (AslRequest(fo, NULL) && fo->fo_Attr.ta_Name)
+    {
+        snprintf(m.fontname, sizeof(m.fontname), "%s",
+                 (const char *)fo->fo_Attr.ta_Name);
+        len = strlen(m.fontname);
+        if (len > 5 && !Stricmp((CONST_STRPTR)m.fontname + len - 5,
+                                (CONST_STRPTR)".font"))
+            m.fontname[len - 5] = 0;
+        m.ysize = fo->fo_Attr.ta_YSize;
+        ok = TRUE;
+    }
+    FreeAslRequest(fo);
+    if (!ok)
+        return;
+
+    /* its TrueType file */
+    ok = FALSE;
+    fr = AllocAslRequestTags(ASL_FileRequest,
+                             ASLFR_Window, (ULONG)win,
+                             ASLFR_TitleText,
+                                 (ULONG)GetString(MSG_MAP_FILETITLE),
+                             ASLFR_InitialDrawer, (ULONG)"FONTS:_ttf",
+                             ASLFR_InitialPattern,
+                                 (ULONG)"#?.(ttf|otf|ttc|otc)",
+                             ASLFR_DoPatterns, TRUE,
+                             ASLFR_RejectIcons, TRUE,
+                             ASLFR_SleepWindow, TRUE,
+                             TAG_DONE);
+    if (!fr)
+        return;
+    if (AslRequest(fr, NULL) && fr->fr_File && fr->fr_File[0])
+    {
+        snprintf(path, sizeof(path), "%s", (const char *)fr->fr_Drawer);
+        if (AddPart((STRPTR)path, fr->fr_File, sizeof(path)))
+        {
+            snprintf(m.ttfpath, sizeof(m.ttfpath), "%s", path);
+            ok = TRUE;
+        }
+    }
+    FreeAslRequest(fr);
+    if (!ok)
+        return;
+
+    if (replace < 0)
+        replace = cur.nummaps++;
+    cur.map[replace] = m;
+    ShowMappings(replace);
+    SetStatus(GetString(MSG_MAP_NOTE));
+}
+
+static void RemoveMapping(void)
+{
+    LONG sel = MapSelected(), i;
+
+    if (sel < 0)
+        return;
+    for (i = sel; i < cur.nummaps - 1; i++)
+        cur.map[i] = cur.map[i + 1];
+    cur.nummaps--;
+    ShowMappings(-1);
+    SetStatus(GetString(MSG_MAP_NOTE));
+}
+
+static void MapPixelSize(void)
+{
+    LONG sel = MapSelected();
+    ULONG v = 0;
+
+    if (sel < 0)
+        return;
+    GetAttr(INTEGER_Number, (Object *)gads[GID_MAPPX], &v);
+    if (v == cur.map[sel].pixelsize)
+        return;
+    cur.map[sel].pixelsize = v;
+    ShowMappings(sel);
+    SetStatus(GetString(MSG_MAP_NOTE));
+}
+
+static Object *MappingsPage(void)
+{
+    LONG lineh = previewfont ? previewfont->tf_YSize : 8;
+
+    mapcols[0].ci_Title = (STRPTR)GetString(MSG_MAP_COL_FONT);
+    mapcols[1].ci_Title = (STRPTR)GetString(MSG_MAP_COL_FILE);
+    mapcols[2].ci_Title = (STRPTR)GetString(MSG_MAP_COL_PX);
+
+    return VLayoutObject,
+        LAYOUT_SpaceOuter, TRUE,
+        LAYOUT_DeferLayout, TRUE,
+
+        LAYOUT_AddImage, LabelObject,
+            LABEL_Text, (ULONG)GetString(MSG_MAP_INFO),
+            LABEL_Underscore, 0,
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, gads[GID_MAPLIST] = (struct Gadget *)ListBrowserObject,
+            GA_ID, GID_MAPLIST,
+            GA_RelVerify, TRUE,
+            LISTBROWSER_Labels, (ULONG)&maplb,
+            LISTBROWSER_ColumnInfo, (ULONG)mapcols,
+            LISTBROWSER_ColumnTitles, TRUE,
+            LISTBROWSER_ShowSelected, TRUE,
+        End,
+        CHILD_MinHeight, lineh * 5 + 8,
+
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, HLayoutObject,
+                LAYOUT_EvenSize, TRUE,
+                LAYOUT_AddChild, gads[GID_MAPADD] = (struct Gadget *)ButtonObject,
+                    GA_ID, GID_MAPADD, GA_RelVerify, TRUE,
+                    GA_Text, (ULONG)GetString(MSG_MAP_ADD),
+                End,
+                LAYOUT_AddChild, gads[GID_MAPCHANGE] =
+                                 (struct Gadget *)ButtonObject,
+                    GA_ID, GID_MAPCHANGE, GA_RelVerify, TRUE,
+                    GA_Disabled, TRUE,
+                    GA_Text, (ULONG)GetString(MSG_MAP_CHANGE),
+                End,
+                LAYOUT_AddChild, gads[GID_MAPREMOVE] =
+                                 (struct Gadget *)ButtonObject,
+                    GA_ID, GID_MAPREMOVE, GA_RelVerify, TRUE,
+                    GA_Disabled, TRUE,
+                    GA_Text, (ULONG)GetString(MSG_REMOVE),
+                End,
+            End,
+            CHILD_WeightedWidth, 0,
+            LAYOUT_AddChild, SpaceObject, End,
+            LAYOUT_AddChild, gads[GID_MAPPX] = (struct Gadget *)IntegerObject,
+                GA_ID, GID_MAPPX,
+                GA_RelVerify, TRUE,
+                GA_TabCycle, TRUE,
+                GA_Disabled, TRUE,
+                INTEGER_Minimum, 0,
+                INTEGER_Maximum, 255,
+                INTEGER_Number, 0,
+                INTEGER_Arrows, TRUE,
+            End,
+            CHILD_WeightedWidth, 0,
+            CHILD_MinWidth, 80,
+            Label(GetString(MSG_MAP_PX)),
+        End,
+        CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, VLayoutObject,
+            LAYOUT_BevelStyle, BVS_GROUP,
+            LAYOUT_Label, (ULONG)GetString(MSG_PREVIEW),
+            LAYOUT_AddChild, gads[GID_MAPPREVIEW] =
+                             (struct Gadget *)SpaceObject,
+                GA_ID, GID_MAPPREVIEW,
+                SPACE_MinHeight, AATextBase ? pv_NeededHeight() : lineh,
+                SPACE_RenderHook, (ULONG)&mappreviewhook,
+            End,
+        End,
+        CHILD_WeightedHeight, 0,
+    End;
+}
+
 static void FreeLists(void)
 {
     struct Node *n;
@@ -865,6 +1175,7 @@ static void FreeLists(void)
     while ((n = RemHead(&charsetlist)))
         FreeChooserNode(n);
     FreeListBrowserList(&blacklb);
+    FreeListBrowserList(&maplb);
 }
 
 static Object *ProgramsPage(void)
@@ -1229,6 +1540,7 @@ static BOOL OpenWin(struct Screen *scr)
     AddTab(&tablist, MSG_TAB_APPEARANCE, 0);
     AddTab(&tablist, MSG_TAB_PROGRAMS, 1);
     AddTab(&tablist, MSG_TAB_ADVANCED, 2);
+    AddTab(&tablist, MSG_TAB_MAPPINGS, 3);
     AddChoice(&subpixlist, MSG_SP_OFF);
     AddChoice(&subpixlist, MSG_SP_RGB);
     AddChoice(&subpixlist, MSG_SP_BGR);
@@ -1243,6 +1555,9 @@ static BOOL OpenWin(struct Screen *scr)
 
     previewhook.h_Entry = (HOOKFUNC)(APTR)HookEntry;
     previewhook.h_SubEntry = (HOOKFUNC)(APTR)PreviewRender;
+    mappreviewhook.h_Entry = (HOOKFUNC)(APTR)HookEntry;
+    mappreviewhook.h_SubEntry = (HOOKFUNC)(APTR)MapPreviewRender;
+    ShowMappings(-1);
 
     winobj = WindowObject,
         WA_Title, (ULONG)GetString(MSG_WINDOW_TITLE),
@@ -1270,6 +1585,7 @@ static BOOL OpenWin(struct Screen *scr)
                     PAGE_Add, AppearancePage(),
                     PAGE_Add, ProgramsPage(),
                     PAGE_Add, AdvancedPage(),
+                    PAGE_Add, MappingsPage(),
                 End,
             End,
 
@@ -1345,8 +1661,31 @@ static BOOL Action(ULONG id)
                 FillRunning();
             else if (page == 2)
                 UpdateCacheUsed();
+            else if (page == 3)
+                MapPreview();
             break;
         }
+
+        case GID_MAPLIST:
+            MapSelectionChanged();
+            break;
+
+        case GID_MAPADD:
+            EditMapping(-1);
+            break;
+
+        case GID_MAPCHANGE:
+            if (MapSelected() >= 0)
+                EditMapping(MapSelected());
+            break;
+
+        case GID_MAPREMOVE:
+            RemoveMapping();
+            break;
+
+        case GID_MAPPX:
+            MapPixelSize();
+            break;
 
         case GID_ADD:
         {
@@ -1426,6 +1765,7 @@ static void ShowPrefs(void)
     SetGad(GID_FONTMEM, INTEGER_Number, cur.fontmemkb);
     SetGad(GID_CHARSET, CHOOSER_Selected, cur.charset);
     ShowBlacklist();
+    ShowMappings(-1);
     LiveApply();
 }
 
@@ -1552,6 +1892,7 @@ int main(int argc, char **argv)
 
     if (!OpenLibs())
         goto out;
+    AATextBase = OpenLibrary((CONST_STRPTR)"aatext.library", 1);
     InitStrings(language[0] ? language : NULL);
 
     aa_ReadPrefs(&cur, NULL, FALSE);   /* defaults if there is no file */
@@ -1639,6 +1980,11 @@ out:
     if (winobj)
         DisposeObject(winobj);
     FreeLists();
+    if (pvready)
+        pv_Cleanup();
+    if (AATextBase)
+        CloseLibrary(AATextBase);
+    AATextBase = NULL;
     if (previewfont)
         CloseFont(previewfont);
     if (scr)
