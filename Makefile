@@ -133,6 +133,22 @@ lcdtest: $(BUILDDIR)/lcdtest
 $(BUILDDIR)/lcdtest: tests/lcdtest.c $(FT_LIB) $(BUILDDIR)/cgx.o
 	$(CC) $(CFLAGS) -o $@ tests/lcdtest.c $(BUILDDIR)/cgx.o $(FT_LIB) $(LIBS)
 
+# MUI GUIs: MUI 3.8 headers from Aminet (tools/fetch-mui.sh), inline
+# functions made with sfdc; MUI_NewObject() from src/mui/muistubs.c
+MUI_INC   := third_party/mui/include
+MUI_FLAGS := -I$(MUI_INC) -DNO_INLINE_STDARG
+
+$(MUI_INC)/libraries/mui.h:
+	@echo "MUI headers missing: run tools/fetch-mui.sh"; exit 1
+
+# muitest: the MUI 3.8 classes the MUI GUIs use, see tests/muitest.c
+.PHONY: muitest
+muitest: $(BUILDDIR)/muitest
+
+$(BUILDDIR)/muitest: tests/muitest.c src/mui/muistubs.c $(MUI_INC)/libraries/mui.h
+	$(CC) $(CFLAGS) $(MUI_FLAGS) -Wno-pointer-sign -o $@ tests/muitest.c \
+		src/mui/muistubs.c -lamiga
+
 # lcdtest-ct: the same with FreeType's ClearType style LCD rendering and
 # its filters (FT_CONFIG_OPTION_SUBPIXEL_RENDERING), in a FreeType of its
 # own: AAText's FreeType stays as it is
