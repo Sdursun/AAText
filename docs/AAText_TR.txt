@@ -401,11 +401,7 @@ bildirilir.
   Karakter setinizi AATextPrefs'te (Gelişmiş) seçin: Kaydet ve Kullan
   ENV:ftcodepage'i buna göre yazar (Latin-1 varsayılan olduğu için onu
   siler). Listedeki setlerden hiçbiri olmayan bir ENV:ftcodepage ancak
-  sorulduktan sonra değiştirilir. AATextPrefs olmadan, Türkçe için
-  paketteki dosyayı kopyalayın:
-      Copy ftcodepage.latin5 ENVARC:ftcodepage
-      Copy ftcodepage.latin5 ENV:ftcodepage
-  AAText bunu hemen kullanır; diğer programlarda freetype2.library'nin
+  sorulduktan sonra değiştirilir. AAText bunu hemen kullanır; diğer programlarda freetype2.library'nin
   daha önce ürettiği fontlar, sistem yeniden başlatılana kadar eski
   karakterleriyle kalır. (ttf.library kod sayfasını her .otag
   dosyasına yazar, ek bir şey gerekmez.)

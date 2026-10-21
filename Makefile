@@ -194,8 +194,6 @@ dist:
 	cp $(AATEXTLIB_PKG)/FTL.txt $(DISTDIR)/AAText/FTL.txt
 	chmod 644 $(DISTDIR)/AAText/LICENSE.aatext.txt $(DISTDIR)/AAText/FTL.txt
 	chmod 755 $(DISTDIR)/AAText/Libs/aatext.library $(DISTDIR)/AAText/AATextManager
-	cp docs/ftcodepage.latin5 $(DISTDIR)/AAText/ftcodepage.latin5
-	chmod 644 $(DISTDIR)/AAText/ftcodepage.latin5
 	iconv -f UTF-8 -t ISO-8859-9 docs/AAText_TR.txt > $(DISTDIR)/AAText/AAText_TR.txt
 	# installer script (Turkish strings and paths in ISO-8859-9) and its icon
 	iconv -f UTF-8 -t ISO-8859-9 installer/Install-AAText > $(DISTDIR)/AAText/Install-AAText
