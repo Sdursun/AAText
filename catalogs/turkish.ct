@@ -185,7 +185,5 @@ MSG_MAP_FILETITLE
 Bunun için TrueType font dosyası
 MSG_MAP_FULL
 Liste dolu (%ld eşleme).
-MSG_MAP_NOTE
-Font eşlemeleri AAText yeniden başlatılınca değişir.
 MSG_MAP_AUTO
 otomatik

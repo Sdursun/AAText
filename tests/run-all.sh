@@ -40,6 +40,7 @@ else
     echo "FAIL  otag-badcp (code page read from outside the file)"
     fail=1
 fi
+run maplive         tests/maplive.prefs maplive
 run fontmem         tests/fontmem.prefs fontmem
 run mapsrw          tests/maps.prefs mapsrw build/maps-out.prefs
 run otagrw-ftm      tests/data/empty.prefs otagrw tests/data/verdanaregular.otag

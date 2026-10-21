@@ -161,8 +161,10 @@ satırında görürsünüz.
               (aşağıda "Elle eşleme"ye bakın): "Ekle..." önce bitmap
               fontu ve boyutunu, sonra TrueType dosyasını sorar;
               "Değiştir...", "Sil", piksel boyutu (0: otomatik) ve
-              TrueType dosyasının önizlemesi. Eşlemeler AAText yeniden
-              başlatılınca değişir. Örnek: Türkçe harfleri olmayan
+              TrueType dosyasının önizlemesi. Değişiklikler hemen
+              geçerli olur (ekrandaki yazı, pencere yeniden çizilince
+              değişir); AAText başlarken gerçek ölçü kullanan bir font
+              yoksa "real" bir eşleme yeniden başlatma ister. Örnek: Türkçe harfleri olmayan
               Shell bitmap fontu, onları içeren bir TrueType fontla
               çizilir; harf hücreleri ve sütunlar aynı kalır.
 

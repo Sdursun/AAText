@@ -679,7 +679,7 @@ static struct AAFont *Usable(struct AAFont *font, BOOL *final)
 {
     struct AAFace *f;
 
-    if (!font || font->failed)
+    if (!font || font->failed || font->retired)
         return NULL;
     f = font->face;
     if (f->state == FACE_LOADED)
@@ -702,7 +702,7 @@ static struct AAFont *Usable(struct AAFont *font, BOOL *final)
 
 /* Append a font entry. Caller holds aa_GlyphSem or is still in init. */
 static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
-                              BOOL real, struct AAFace *face)
+                              BOOL real, struct AAFace *face, BOOL mapped)
 {
     struct AAFont *f;
 
@@ -718,6 +718,8 @@ static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
     f->ftsize = NULL;
     f->prepared = FALSE;
     f->failed = FALSE;
+    f->mapped = mapped;
+    f->retired = FALSE;
     f->adv = f->inkl = f->inkr = NULL;
     f->kern = NULL;
     f->yoffset = 0;
@@ -794,7 +796,8 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
         struct AAFace *face = GetFace(m->ttfpath, 0, NULL, report);
 
         if (face)
-            AddFont(m->fontname, m->ysize, m->pixelsize, m->real, face);
+            AddFont(m->fontname, m->ysize, m->pixelsize, m->real, face,
+                    TRUE);
     }
     return aa_NumFonts;
 }
@@ -1164,7 +1167,7 @@ static BOOL LookupCached(struct TextFont *tf, const char *fontname,
     Permit();
     if (hit && *font)
     {
-        if ((*font)->failed)
+        if ((*font)->failed || (*font)->retired)
             *font = NULL;
         else    /* unloading a file changes aa_FontGen: it is loaded */
             (*font)->face->lastuse = ++aa_UseTick;
@@ -1230,7 +1233,7 @@ static struct AAFont *FindFontUncached(struct TextFont *tf,
     {
         struct AAFont *f = FONT(i);
 
-        if (f->ysize == tf->tf_YSize && StrIEq(f->name, base))
+        if (!f->retired && f->ysize == tf->tf_YSize && StrIEq(f->name, base))
             return Usable(f, final);
     }
 
@@ -1254,7 +1257,7 @@ static struct AAFont *FindFontUncached(struct TextFont *tf,
     ObtainSemaphore(&aa_GlyphSem);
     for (n = 0; n < aa_NumFonts; n++)
     {
-        if (FONT(n)->ysize == tf->tf_YSize &&
+        if (!FONT(n)->retired && FONT(n)->ysize == tf->tf_YSize &&
             StrIEq(FONT(n)->name, base))
         {
             font = FONT(n);
@@ -1262,10 +1265,134 @@ static struct AAFont *FindFontUncached(struct TextFont *tf,
         }
     }
     if (!font)
-        font = AddFont(base, tf->tf_YSize, 0, aa_AutoReal, NAME(i)->face);
+        font = AddFont(base, tf->tf_YSize, 0, aa_AutoReal, NAME(i)->face,
+                       FALSE);
     ReleaseSemaphore(&aa_GlyphSem);
 
     return Usable(font, final);
+}
+
+static BOOL SameMapping(const struct AAMapping *a, const struct AAMapping *b)
+{
+    return a->ysize == b->ysize && a->pixelsize == b->pixelsize &&
+           a->real == b->real && StrIEq(a->fontname, b->fontname) &&
+           StrEq(a->ttfpath, b->ttfpath);
+}
+
+static BOOL HasMapping(const struct AAPrefs *p, const struct AAMapping *m)
+{
+    LONG i;
+
+    for (i = 0; i < p->nummaps; i++)
+        if (SameMapping(&p->map[i], m))
+            return TRUE;
+    return FALSE;
+}
+
+static LONG DoneSizeOnStack(APTR arg)
+{
+    FT_Done_Size((FT_Size)arg);
+    return 0;
+}
+
+/*
+ * Retire the live entries for name/ysize: only mapped ones, or all.
+ * Their FreeType size goes (set up again if the entry comes back); their
+ * real metrics tables stay, the measuring hooks read them unlocked.
+ * Glyph lock held.
+ */
+static void RetireFonts(const char *name, UWORD ysize, BOOL mappedonly)
+{
+    LONG i;
+
+    for (i = 0; i < aa_NumFonts; i++)
+    {
+        struct AAFont *f = FONT(i);
+
+        if (!f->retired && f->ysize == ysize && StrIEq(f->name, name) &&
+            (f->mapped || !mappedonly))
+        {
+            f->retired = TRUE;
+            f->prepared = FALSE;
+            if (f->ftsize && f->face->face)
+                RunOnRenderStack(DoneSizeOnStack, f->ftsize);
+            f->ftsize = NULL;
+        }
+    }
+}
+
+/* A retired mapped entry exactly like this one, to use again (a mapping
+   switched back), so changing back and forth does not grow the table */
+static struct AAFont *RetiredLike(const struct AAMapping *m,
+                                  const struct AAFace *face, BOOL real)
+{
+    LONG i;
+
+    for (i = 0; i < aa_NumFonts; i++)
+    {
+        struct AAFont *f = FONT(i);
+
+        if (f->retired && f->mapped && f->face == face &&
+            f->ysize == m->ysize && f->pixelsize == m->pixelsize &&
+            f->real == real && !f->failed && StrIEq(f->name, m->fontname))
+            return f;
+    }
+    return NULL;
+}
+
+BOOL aa_GlyphsSetMappings(const struct AAPrefs *old,
+                          const struct AAPrefs *new, BOOL realok)
+{
+    BOOL restart = FALSE;
+    LONG i;
+
+    /* gone or changed: back to the bitmap font (or detection) */
+    ObtainSemaphore(&aa_GlyphSem);
+    for (i = 0; i < old->nummaps; i++)
+        if (!HasMapping(new, &old->map[i]))
+            RetireFonts(old->map[i].fontname, old->map[i].ysize, TRUE);
+    aa_FontGen++;
+    ReleaseSemaphore(&aa_GlyphSem);
+
+    /* new: their files loaded here, then the entries */
+    for (i = 0; i < new->nummaps; i++)
+    {
+        const struct AAMapping *mp = &new->map[i];
+        struct AAFace *face;
+        BOOL real = mp->real;
+
+        if (HasMapping(old, mp))
+            continue;
+        if (real && !realok)
+        {
+            real = FALSE;       /* safe metrics until AAText restarts */
+            restart = TRUE;
+        }
+        face = GetFace(mp->ttfpath, 0, NULL, FALSE);
+        ObtainSemaphore(&aa_GlyphSem);
+        RetireFonts(mp->fontname, mp->ysize, FALSE);    /* detected too */
+        if (face)
+        {
+            struct AAFont *again = RetiredLike(mp, face, real);
+
+            if (again)
+                again->retired = FALSE;
+            else
+                AddFont(mp->fontname, mp->ysize, mp->pixelsize, real, face,
+                        TRUE);
+        }
+        aa_FontGen++;
+        ReleaseSemaphore(&aa_GlyphSem);
+        D(("AAText: mapping %s %ld -> %s %s\n", (ULONG)mp->fontname,
+           (LONG)mp->ysize, (ULONG)mp->ttfpath,
+           (ULONG)(face ? "added" : "not loadable")));
+    }
+    return restart;
+}
+
+const char *aa_FontFile(const struct AAFont *font)
+{
+    return font && font->face ? font->face->path : "";
 }
 
 LONG aa_FontCount(void)

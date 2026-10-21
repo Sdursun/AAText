@@ -110,8 +110,8 @@ static int Controller(BOOL reload, BOOL status)
         if (m->result == AARES_NOFILE)
             Msg("AAText: cannot read the prefs file.\n");
         else if (m->result == AARES_RESTART)
-            Msg("AAText: settings applied; real metrics, kerning and font "
-                "mappings change when AAText is restarted.\n");
+            Msg("AAText: settings applied; real metrics and kerning change "
+                "when AAText is restarted.\n");
         else
             Msg("AAText: settings applied.\n");
         aa_FreeReply(m);
@@ -173,23 +173,23 @@ static BOOL MappingsDiffer(const struct AAPrefs *a, const struct AAPrefs *b)
 }
 
 /*
- * Apply new settings. Real metrics, kerning and font mappings are fixed
- * while AAText runs (the measuring patches, text widths and font tables
- * depend on them); they keep their values and AARES_RESTART tells the
- * caller.
+ * Apply new settings. Real metrics and kerning are fixed while AAText
+ * runs (the measuring patches and text widths depend on them); they keep
+ * their values and AARES_RESTART tells the caller. Font mappings change
+ * at once.
  */
 static LONG ApplyPrefs(const struct AAPrefs *np)
 {
     LONG result = (np->autoreal != prefs.autoreal ||
-                   np->kerning != prefs.kerning ||
-                   MappingsDiffer(np, &prefs)) ? AARES_RESTART : AARES_OK;
-    UWORD nummaps = prefs.nummaps;
+                   np->kerning != prefs.kerning) ? AARES_RESTART : AARES_OK;
     BOOL autoreal = prefs.autoreal, kerning = prefs.kerning;
 
     if (np != &newprefs)
         CopyMem((APTR)np, &newprefs, sizeof(newprefs));
-    CopyMem(prefs.map, newprefs.map, sizeof(prefs.map));
-    newprefs.nummaps = nummaps;
+    /* font mappings change now; "real" ones need the measuring patches */
+    if (MappingsDiffer(&newprefs, &prefs) &&
+        aa_GlyphsSetMappings(&prefs, &newprefs, aa_MeasuringPatched()))
+        result = AARES_RESTART;
     newprefs.autoreal = autoreal;
     newprefs.kerning = kerning;
     CopyMem(&newprefs, &prefs, sizeof(prefs));

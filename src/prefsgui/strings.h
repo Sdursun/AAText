@@ -7,7 +7,8 @@
  * part of the catalog format: never renumber, only append. A "_" marks
  * a button's keyboard shortcut. Retired IDs, never to be reused:
  * 2 (Fonts tab), 18 (Test button), 22 (placeholder page), 72-115
- * (Diagnostics tab, moved to AATextManager in 0.24).
+ * (Diagnostics tab, moved to AATextManager in 0.24), 138 (mappings
+ * needed a restart until 0.40).
  * Translations: catalogs/<language>.ct, compiled by tools/mkcatalog.pl.
  */
 
@@ -103,7 +104,6 @@
     S(MSG_MAP_FONTTITLE,   135, "Bitmap font to draw with TrueType") \
     S(MSG_MAP_FILETITLE,   136, "TrueType font file for it") \
     S(MSG_MAP_FULL,        137, "The list is full (%ld mappings).") \
-    S(MSG_MAP_NOTE,        138, "Font mappings change when AAText is restarted.") \
     S(MSG_MAP_AUTO,        139, "automatic")
 
 

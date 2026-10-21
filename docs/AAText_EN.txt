@@ -155,8 +155,10 @@ while you try it out.
               "Explicit mappings" below): "Add..." asks for the bitmap
               font and size, then for the TrueType file; "Change...",
               "Remove", the pixel size (0: automatic) and a preview of
-              the TrueType file. Mappings change when AAText is
-              restarted. Example: the Shell's bitmap font without
+              the TrueType file. Changes apply at once (text already
+              on screen changes when its window is redrawn); a
+              mapping with "real" needs a restart if no font used
+              real metrics when AAText started. Example: the Shell's bitmap font without
               Turkish letters, drawn with a TrueType font that has
               them; its character cells and columns stay.
 

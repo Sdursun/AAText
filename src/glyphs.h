@@ -52,6 +52,13 @@ struct AAFont
     BOOL   prepared;
     BOOL   failed;
     BOOL   real;                /* real TrueType metrics */
+    BOOL   mapped;              /* from a mapping in the prefs, not detected */
+    /*
+     * Replaced or removed while AAText runs (mappings changed): skipped by
+     * every lookup. Entries are never freed, a Text() call may still use
+     * this one; set under the glyph lock.
+     */
+    volatile BOOL retired;
     /*
      * Rows to add to tf_Baseline to reach the row the bitmap font's
      * letters actually sit on (measured from its glyph images; some
@@ -188,6 +195,20 @@ void aa_RetryMissingFonts(void);
 
 /* Queue a font name (as in tf_Message.mn_Node.ln_Name) for detection. */
 void aa_RequestFont(const char *fontname);
+
+/*
+ * Font mappings changed (RELOAD/APPLY): retire the entries of mappings
+ * that are gone or changed, add the new ones (a mapping replaces a
+ * detected font of the same name and size). realok: the measuring
+ * functions are patched, so mappings may use real metrics; without,
+ * new "real" mappings use safe metrics and TRUE is returned (they need
+ * a restart). AAText's own process only.
+ */
+BOOL aa_GlyphsSetMappings(const struct AAPrefs *old,
+                          const struct AAPrefs *new, BOOL realok);
+
+/* The TrueType file a font is drawn with (tests, diagnostics). */
+const char *aa_FontFile(const struct AAFont *font);
 
 /* All font entries, for preparing them at startup. */
 LONG aa_FontCount(void);

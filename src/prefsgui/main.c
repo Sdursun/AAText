@@ -1049,7 +1049,7 @@ static void EditMapping(LONG replace)
         replace = cur.nummaps++;
     cur.map[replace] = m;
     ShowMappings(replace);
-    SetStatus(GetString(MSG_MAP_NOTE));
+    LiveApply();
 }
 
 static void RemoveMapping(void)
@@ -1062,7 +1062,7 @@ static void RemoveMapping(void)
         cur.map[i] = cur.map[i + 1];
     cur.nummaps--;
     ShowMappings(-1);
-    SetStatus(GetString(MSG_MAP_NOTE));
+    LiveApply();
 }
 
 static void MapPixelSize(void)
@@ -1077,7 +1077,7 @@ static void MapPixelSize(void)
         return;
     cur.map[sel].pixelsize = v;
     ShowMappings(sel);
-    SetStatus(GetString(MSG_MAP_NOTE));
+    LiveApply();
 }
 
 static Object *MappingsPage(void)

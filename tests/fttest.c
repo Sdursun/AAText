@@ -693,6 +693,101 @@ int main(int argc, char **argv)
     n = aa_GlyphsInit(&prefs, TRUE);
 
     /*
+     * "maplive": tests/maplive.prefs maps Live 16 to DejaVuSans. Changed
+     * to DejaVuSerif while running, the font is drawn with that file;
+     * removed, Live is left alone; added again, back to DejaVuSans; a
+     * mapping replaces a detected font (AutoTest, from FONTS:); repeated
+     * changes lose no memory.
+     */
+    if (strcmp(argv[2], "maplive") == 0)
+    {
+        static struct AAPrefs a, b, none, det;
+        static struct TextFont live, autotf;
+        struct AAFont *af;
+        ULONG mem0 = 0, mem1 = 1;
+        LONG i;
+        BOOL bad = FALSE;
+
+        memset(&live, 0, sizeof(live));
+        live.tf_Message.mn_Node.ln_Name = (char *)"Live.font";
+        live.tf_YSize = 16;
+        live.tf_XSize = 8;
+        live.tf_Baseline = 12;
+        live.tf_LoChar = 32;
+        live.tf_HiChar = 255;
+        autotf = live;
+        autotf.tf_Message.mn_Node.ln_Name = (char *)"AutoTest.font";
+
+        CopyMem(&prefs, &a, sizeof(a));
+        CopyMem(&prefs, &b, sizeof(b));
+        strcpy(b.map[0].ttfpath,
+               "third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSerif.ttf");
+        CopyMem(&prefs, &none, sizeof(none));
+        none.nummaps = 0;
+
+        for (i = 0; i < 8 && !bad; i++)
+        {
+            af = aa_FindFont(&live);
+            if (i == 0)
+                printf("start: %s\n", aa_FontFile(af));
+            if (!af || !strstr(aa_FontFile(af), "DejaVuSans.ttf"))
+                bad = TRUE;
+
+            aa_GlyphsSetMappings(&a, &b, TRUE);
+            af = aa_FindFont(&live);
+            if (i == 0)
+                printf("changed: %s\n", aa_FontFile(af));
+            if (!af || !strstr(aa_FontFile(af), "DejaVuSerif.ttf"))
+                bad = TRUE;
+            aa_LockGlyphs();
+            if (!af || !aa_PrepareFont(af, &live) || !aa_GetGlyph(af, 'W'))
+                bad = TRUE;
+            aa_UnlockGlyphs();
+
+            aa_GlyphsSetMappings(&b, &none, TRUE);
+            af = aa_FindFont(&live);
+            if (i == 0)
+                printf("removed: %s\n", af ? aa_FontFile(af) : "none");
+            if (af)
+                bad = TRUE;
+
+            aa_GlyphsSetMappings(&none, &a, TRUE);
+            if (i == 2)
+                mem0 = AvailMem(MEMF_ANY);
+            if (i == 7)
+                mem1 = AvailMem(MEMF_ANY);
+        }
+
+        /* a mapping before a detected font of the same name and size */
+        aa_FindFont(&autotf);
+        aa_ResolvePending(TRUE);
+        af = aa_FindFont(&autotf);
+        printf("AutoTest detected: %s\n", af ? aa_FontFile(af) : "none");
+        if (!af)
+            bad = TRUE;
+        CopyMem(&none, &det, sizeof(det));
+        det.nummaps = 1;
+        strcpy(det.map[0].fontname, "AutoTest");
+        det.map[0].ysize = 16;
+        strcpy(det.map[0].ttfpath,
+               "third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSerif.ttf");
+        det.map[0].pixelsize = 0;
+        det.map[0].real = FALSE;
+        aa_GlyphsSetMappings(&none, &det, TRUE);
+        af = aa_FindFont(&autotf);
+        printf("AutoTest mapped: %s\n", af ? aa_FontFile(af) : "none");
+        if (!af || !strstr(aa_FontFile(af), "DejaVuSerif.ttf"))
+            bad = TRUE;
+
+        printf("memory over 5 change cycles: %ld bytes difference\n",
+               (long)(mem0 - mem1));
+        if (mem0 != mem1)
+            bad = TRUE;
+        printf("%s\n", bad ? "FAIL" : "OK");
+        return bad ? 10 : 0;
+    }
+
+    /*
      * "fontmem": tests/fontmem.prefs maps FontA, FontB, FontC (757, 380
      * and 705 KB) with a 1 MB budget. With only FontA open, the others
      * are freed; FontC used again is loaded again by the helper and
