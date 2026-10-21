@@ -1,4 +1,4 @@
-AAText 0.39 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.40 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -479,6 +479,11 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.40  Font eşlemeleri AAText çalışırken değişir: AATextPrefs'te
+      eklenen, değiştirilen ya da silinen eşlemeler hemen görünür
+      (ekrandaki yazı, pencere yeniden çizilince); İptal geri alır. Bir
+      eşleme, aynı ad ve boyuttaki algılanmış fontun önüne geçer.
 
 0.39  AATextPrefs: "Font eşlemeleri" sekmesi - TrueType bir fontla
       çizilen bitmap fontlar, font ve dosya seçicileriyle seçilir,
