@@ -270,6 +270,10 @@ static const char *Engine(void)
 
 static struct Hook previewhook;
 
+/* The Install and Download tabs share one preview buffer: the page whose
+   font it holds (0 or 3), -1 for none */
+static LONG pvpage = -1;
+
 /* The preview box: copy the rendered sample lines (render hook) */
 static ULONG PreviewRender(struct Hook *hook, Object *obj,
                            struct gpRender *gpr)
@@ -278,10 +282,20 @@ static ULONG PreviewRender(struct Hook *hook, Object *obj,
     struct IBox *box = NULL;
 
     GetAttr(SPACE_AreaBox, obj, (ULONG *)&box);
-    if (gpr->gpr_RPort && box)
-        pv_Draw(gpr->gpr_RPort, box->Left, box->Top, box->Width,
-                box->Height, dri ? dri->dri_Pens[BACKGROUNDPEN] : 0,
-                dri ? dri->dri_Pens[TEXTPEN] : 1, GetString(MSG_PV_NOTRTG));
+    if (!gpr->gpr_RPort || !box || box->Width <= 0 || box->Height <= 0)
+        return 0;
+    if (pvpage != ((Object *)gads[GID_PREVIEW] == obj ? 0 : 3))
+    {
+        /* the buffer holds the other tab's font: an empty box until
+           this tab's font is rendered again */
+        SetAPen(gpr->gpr_RPort, dri ? dri->dri_Pens[BACKGROUNDPEN] : 0);
+        RectFill(gpr->gpr_RPort, box->Left, box->Top,
+                 box->Left + box->Width - 1, box->Top + box->Height - 1);
+        return 0;
+    }
+    pv_Draw(gpr->gpr_RPort, box->Left, box->Top, box->Width,
+            box->Height, dri ? dri->dri_Pens[BACKGROUNDPEN] : 0,
+            dri ? dri->dri_Pens[TEXTPEN] : 1, GetString(MSG_PV_NOTRTG));
     return 0;
 }
 
@@ -299,6 +313,7 @@ static void ShowPreview(void)
                   GetString(MSG_PV_ALPHABET), GetString(MSG_PV_SENTENCE));
     else
         pv_Render(win->WScreen, NULL, 0, NULL, NULL);
+    pvpage = 0;
     Busy(FALSE);
     if (page == 0)
         RefreshGList(gads[GID_PREVIEW], win, NULL, 1);
@@ -337,8 +352,12 @@ static void ShowFiles(void)
 /* Add a file: one entry per face; FALSE if FreeType cannot read it */
 static BOOL AddFile(const char *path)
 {
-    LONG face = 0, faces = 1;
+    LONG face = 0, faces = 1, i;
 
+    /* listed already (added twice): nothing new */
+    for (i = 0; i < numfiles; i++)
+        if (!Stricmp((CONST_STRPTR)files[i].path, (CONST_STRPTR)path))
+            return TRUE;
     while (face < faces && numfiles < MAX_FILES)
     {
         struct FileEntry *f = &files[numfiles];
@@ -1602,6 +1621,7 @@ static void DlPreview(void)
 
     if (i < 0)
     {
+        pvpage = 3;
         pv_Render(win->WScreen, NULL, 0, NULL, NULL);
         RefreshGList(gads[GID_DLPREVIEWBOX], win, NULL, 1);
         return;
@@ -1611,6 +1631,7 @@ static void DlPreview(void)
     {
         /* there already: no network needed */
         Busy(TRUE);
+        pvpage = 3;
         pv_Render(win->WScreen, path, 0, GetString(MSG_PV_ALPHABET),
                   GetString(MSG_PV_SENTENCE));
         Busy(FALSE);
@@ -1627,10 +1648,30 @@ static void DlPreview(void)
     net_Close(&net);
     if (ok)
     {
+        pvpage = 3;
         pv_Render(win->WScreen, path, 0, GetString(MSG_PV_ALPHABET),
                   GetString(MSG_PV_SENTENCE));
         SetStatus("");
     }
+    Busy(FALSE);
+    RefreshGList(gads[GID_DLPREVIEWBOX], win, NULL, 1);
+}
+
+/* Back on the Download tab: render its selected font again if it is
+   downloaded already (no network for a tab switch), else clear */
+static void DlShowAgain(void)
+{
+    static char path[256];
+    LONG i = OnlySelected();
+
+    Busy(TRUE);
+    pvpage = 3;
+    if (i >= 0 && (LocalPath(&cat[i], path, sizeof(path)),
+                   cat[i].bytes > 0 && SizeOf(path) == cat[i].bytes))
+        pv_Render(win->WScreen, path, 0, GetString(MSG_PV_ALPHABET),
+                  GetString(MSG_PV_SENTENCE));
+    else
+        pv_Render(win->WScreen, NULL, 0, NULL, NULL);
     Busy(FALSE);
     RefreshGList(gads[GID_DLPREVIEWBOX], win, NULL, 1);
 }
@@ -2070,6 +2111,13 @@ static void Action(ULONG id)
     switch (id)
     {
         case GID_FILES:     ShowPreview();  break;
+        case GID_TABS:
+            /* the shared preview buffer: this tab's font again */
+            if (GetGad(GID_TABS, CLICKTAB_Current) == 0 && pvpage != 0)
+                ShowPreview();
+            else if (GetGad(GID_TABS, CLICKTAB_Current) == 3 && pvpage != 3)
+                DlShowAgain();
+            break;
         case GID_ADD:       AddFiles();     break;
         case GID_REMOVE:    RemoveFile();   break;
         case GID_INSTALL:   Install();      break;

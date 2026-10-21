@@ -14,7 +14,7 @@
 #include <intuition/intuition.h>
 #include <graphics/rastport.h>
 
-#define PV_WIDTH   720          /* the buffer; the box shows what fits */
+#define PV_WIDTH   1280         /* the buffer; the box shows what fits */
 #define PV_HEIGHT  160
 
 /* Buffers (and cybergraphics.library if there); FALSE: no preview. */
