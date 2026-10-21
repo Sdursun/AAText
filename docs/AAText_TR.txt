@@ -1,4 +1,4 @@
-AAText 0.35 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.36 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -455,6 +455,17 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.36  Kod incelemesi düzeltmeleri: bozuk bir .otag AAText'in dosya
+      dışını okumasına yol açabiliyordu; AAText çalışırken kurulan
+      fontlar AATextPrefs'te Kaydet/Kullan ya da AATextManager ile
+      kurulumdan sonra yeniden başlatmadan bulunur; paletli ekranlarda
+      alt piksel açıkken büyük harfler de çizilir; ayar değişirken eksik
+      harf çıkmaz. Daha hızlı: uzun satırlar ve paletli ekranlar her
+      Text() için bellek ayırmaz, çok fontlu ekranlarda fontlar daha
+      çabuk bulunur, AATextManager önizlemesi hızlandı.
+      ftcodepage.latin5 artık pakette yok (AATextPrefs her karakter seti
+      için ENV:ftcodepage'i yazar).
 
 0.35  AATextManager: Kur sekmesinin önizlemesi İndir sekmesinde en son
       önizlenen fontu gösteriyordu (ikisi tek tamponu paylaşıyor); artık

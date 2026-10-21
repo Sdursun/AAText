@@ -1,4 +1,4 @@
-AAText 0.35 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.36 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -442,6 +442,16 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.36  Code review fixes: a damaged .otag could make AAText read outside
+      the file; fonts installed while AAText runs are found after
+      AATextPrefs Save/Use or an AATextManager install, without a
+      restart; palette screens with subpixel on draw large letters too;
+      no missing letter while settings change. Faster: long lines and
+      palette screens need no memory allocation per Text(), screens
+      with many fonts find them quicker, AATextManager previews faster.
+      ftcodepage.latin5 is no longer in the package (AATextPrefs writes
+      ENV:ftcodepage for every character set).
 
 0.35  AATextManager: the Install tab's preview showed the font last
       previewed on the Download tab (they share one buffer); each tab
