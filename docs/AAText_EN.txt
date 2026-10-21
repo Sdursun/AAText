@@ -1,4 +1,4 @@
-AAText 0.36 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.37 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -452,6 +452,12 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.37  "fontmem" (AATextPrefs: Advanced, default 8 MB): over it, the
+      TrueType files of fonts no longer open are freed and loaded again
+      when used again. No more fixed limits of 32 files and 64 font
+      sizes. STATUS shows the loaded files' memory. AAText and
+      AATextPrefs must be updated together (message version 6).
 
 0.36  Code review fixes: a damaged .otag could make AAText read outside
       the file; fonts installed while AAText runs are found after

@@ -1,4 +1,4 @@
-AAText 0.36 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.37 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -466,6 +466,13 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.37  "fontmem" (AATextPrefs: Gelişmiş, varsayılan 8 MB): bunun
+      üstünde artık açık olmayan fontların TrueType dosyaları
+      bırakılır, yeniden kullanılınca tekrar yüklenir. 32 dosya ve 64
+      font boyutu sınırları kalktı. STATUS yüklü dosyaların belleğini
+      gösterir. AAText ve AATextPrefs birlikte güncellenmeli (mesaj
+      sürümü 6).
 
 0.36  Kod incelemesi düzeltmeleri: bozuk bir .otag AAText'in dosya
       dışını okumasına yol açabiliyordu; AAText çalışırken kurulan
