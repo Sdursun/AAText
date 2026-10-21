@@ -320,6 +320,26 @@ $(BUILDDIR)/mgr/%.o: src/%.c src/*.h src/manager/*.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/aatextlib -Wno-pointer-sign -c -o $@ $<
 
+# AATextManager for MUI 3.8: the same program with gui.c from manager_mui
+MGRMUI_TARGET := $(BUILDDIR)/AATextManager_MUI
+MGRMUI_OBJS   := $(filter-out $(BUILDDIR)/mgr/manager/gui.o,$(MGR_OBJS)) \
+                 $(BUILDDIR)/mgrmui/manager_mui/gui.o \
+                 $(BUILDDIR)/mgrmui/mui/muistubs.o
+
+.PHONY: manager_mui
+manager_mui: $(MGRMUI_TARGET)
+
+$(MGRMUI_TARGET): $(MGRMUI_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ -lamiga
+ifneq ($(DEBUG),1)
+	$(STRIP) --strip-unneeded $@
+endif
+	@ls -l $@
+
+$(BUILDDIR)/mgrmui/%.o: src/%.c src/*.h src/manager/*.h $(MUI_INC)/libraries/mui.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(MUI_FLAGS) -Wno-pointer-sign -c -o $@ $<
+
 # Turkish catalog for AATextManager
 MGR_CATALOG := build/catalogs/aatextmanager.catalog
 catalogs: $(MGR_CATALOG)
