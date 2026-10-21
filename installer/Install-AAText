@@ -4,7 +4,8 @@
 ; UTF-8 here; "make dist" converts it to ISO-8859-9 for the package.
 ;
 ; Installs: C:AAText (68020 or 68060 build), SYS:Prefs/AATextPrefs,
-; SYS:System/AATextManager with LIBS:aatext.library, the Turkish
+; SYS:System/AATextManager with LIBS:aatext.library (both programs as
+; ReAction or, with MUI 3.8 or newer, MUI build), the Turkish
 ; catalogs, the documents in LOCALE:Help/türkçe and LOCALE:Help/english,
 ; and "Run >NIL: C:AAText" in S:Startup-Sequence right after IPrefs
 ; (C:AAText STARTUP=ADD; S:User-Startup if that is not possible).
@@ -113,6 +114,32 @@
              (if #tr "Belgeler" "Documents"))
     (default 15)))
 
+;  The window of AATextPrefs and AATextManager: ReAction (part of the
+;  OS) or MUI (needs muimaster.library 19, MUI 3.8, or newer). The MUI
+;  programs are in MUI/ and get the same names, so icons, the
+;  AATextManager button of AATextPrefs and the documents stay valid.
+(set #gui 0)
+(if (OR (IN #parts 0) (IN #parts 1))
+(
+  (set #muiver 0)
+  (if (exists "LIBS:muimaster.library")
+    (set #muiver (getversion "LIBS:muimaster.library"))
+    (if (exists "MUI:Libs/muimaster.library")
+      (set #muiver (getversion "MUI:Libs/muimaster.library"))))
+  (if (>= (/ #muiver 65536) 19)
+    (set #gui
+      (askchoice
+        (prompt (if #tr "AATextPrefs ve AATextManager hangi arayüzle kurulsun?"
+                        "Which user interface should AATextPrefs and AATextManager use?"))
+        (help (if #tr "ReAction: AmigaOS 3.2'nin kendi arayüzü.\nMUI: MUI 3.8 veya üstü gerekir; görünüşü MUI ayarlarınıza uyar.\n\nİki sürüm de aynı ayarları ve katalogları kullanır. Daha sonra kurulumu yeniden çalıştırıp değiştirebilirsiniz."
+                      "ReAction: the user interface of AmigaOS 3.2.\nMUI: needs MUI 3.8 or newer; it looks as your MUI settings say.\n\nBoth builds use the same settings and catalogs. You can run the installer again to change it later."))
+        (choices "ReAction" "MUI")
+        (default 1)))
+    (message (if #tr "MUI 3.8 veya üstü bulunamadı (muimaster.library 19); AATextPrefs ve AATextManager ReAction arayüzüyle kurulacak."
+                     "MUI 3.8 or newer was not found (muimaster.library 19); AATextPrefs and AATextManager are installed with the ReAction user interface.")))
+))
+(set #guidir (if (= #gui 1) "MUI/" ""))
+
 (copyfiles
   (prompt (if #tr "AAText, C: içine kopyalanıyor." "Copying AAText to C:."))
   (help @copyfiles-help)
@@ -126,7 +153,10 @@
   (copyfiles
     (prompt (if #tr "AATextPrefs, SYS:Prefs içine kopyalanıyor." "Copying AATextPrefs to SYS:Prefs."))
     (help @copyfiles-help)
-    (source "AATextPrefs") (dest "SYS:Prefs") (infos)))
+    (source (cat #guidir "AATextPrefs")) (dest "SYS:Prefs")
+    (newname "AATextPrefs")))
+(if (IN #parts 0)
+  (copyfiles (source "AATextPrefs.info") (dest "SYS:Prefs")))
 (complete 40)
 
 (if (IN #parts 1)
@@ -134,7 +164,9 @@
   (copyfiles
     (prompt (if #tr "AATextManager, SYS:System içine kopyalanıyor." "Copying AATextManager to SYS:System."))
     (help @copyfiles-help)
-    (source "AATextManager") (dest "SYS:System") (infos))
+    (source (cat #guidir "AATextManager")) (dest "SYS:System")
+    (newname "AATextManager"))
+  (copyfiles (source "AATextManager.info") (dest "SYS:System"))
   (copylib
     (prompt (if #tr "aatext.library, LIBS: içine kopyalanıyor." "Copying aatext.library to LIBS:."))
     (help @copylib-help)

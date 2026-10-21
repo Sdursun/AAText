@@ -182,7 +182,7 @@ dist:
 	$(MAKE) CPU=68020 DEBUG=0
 	$(MAKE) CPU=68060 DEBUG=0
 	$(MAKE) CPU=68020 DEBUG=1
-	$(MAKE) CPU=68020 DEBUG=0 gui manager catalogs icons
+	$(MAKE) CPU=68020 DEBUG=0 gui manager gui_mui manager_mui catalogs icons
 	rm -rf $(DISTDIR)
 	mkdir -p $(DISTDIR)/AAText
 	cp build/68020/AAText $(DISTDIR)/AAText/AAText
@@ -204,6 +204,11 @@ dist:
 	chmod 644 $(DISTDIR)/AAText/AATextManager.info
 	cp $(MGR_CATALOG) "$(DISTDIR)/AAText/Catalogs/türkçe/"
 	chmod 644 "$(DISTDIR)/AAText/Catalogs/türkçe/aatextmanager.catalog"
+	# the MUI programs: the installer copies them under the same names
+	mkdir -p $(DISTDIR)/AAText/MUI
+	cp build/68020/AATextPrefs_MUI $(DISTDIR)/AAText/MUI/AATextPrefs
+	cp build/68020/AATextManager_MUI $(DISTDIR)/AAText/MUI/AATextManager
+	chmod 755 $(DISTDIR)/AAText/MUI/AATextPrefs $(DISTDIR)/AAText/MUI/AATextManager
 	mkdir -p $(DISTDIR)/AAText/Libs
 	cp $(AATEXTLIB_PKG)/aatext.library $(DISTDIR)/AAText/Libs/
 	cp $(AATEXTLIB_PKG)/LICENSE.txt $(DISTDIR)/AAText/LICENSE.aatext.txt

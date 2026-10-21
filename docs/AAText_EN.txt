@@ -28,6 +28,8 @@ Requirements
 - TrueType or OpenType fonts installed with a font manager (e.g.
   ttf.library, or freetype2.library with FTManager), so that each font
   has a .otag file next to its .font file in FONTS:
+- MUI 3.8 or newer for the MUI builds of AATextPrefs and AATextManager
+  (optional; the ReAction builds use the classes that come with the OS)
 
 Screens with 15, 16, 24 or 32 bit colour are drawn antialiased. AGA and
 other palette screens (256 colours or fewer) are not changed, unless
@@ -58,7 +60,11 @@ asks which build to install (68060 is preselected on a 68060; choose
 68020/030/040 on PiStorm/Emu68 and WinUAE, see "Which file?"), and
 which parts: AATextPrefs, AATextManager with aatext.library, the
 Turkish catalogs, the documents (LOCALE:Help/english/AAText_EN.txt and
-LOCALE:Help/türkçe/AAText_TR.txt). It adds "Run >NIL: C:AAText" to
+LOCALE:Help/türkçe/AAText_TR.txt). With MUI 3.8 or newer installed it
+also asks which user interface AATextPrefs and AATextManager get:
+ReAction (the one of the OS) or MUI. Both builds are installed under
+the same names and use the same settings and catalogs; run the
+installer again to change the choice. It adds "Run >NIL: C:AAText" to
 S:Startup-Sequence right after IPrefs, after asking (the original is
 kept as S:Startup-Sequence.AAText-bak; a line that starts AAText
 already is left alone); if that is not possible, to S:User-Startup.
@@ -98,6 +104,10 @@ By hand:
        Copy Catalogs/türkçe/aatextmanager.catalog LOCALE:Catalogs/türkçe/
 
    AAText itself does not need aatext.library.
+
+   For the MUI user interface copy AATextPrefs and AATextManager from
+   the MUI drawer in steps 2 and 3 instead (MUI 3.8 or newer needed);
+   the icons and catalogs are the same.
 
 4. Reboot, or start AAText by hand. Windows that were already open are
    drawn smoothly as soon as they are redrawn (e.g. resize them or

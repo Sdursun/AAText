@@ -27,7 +27,8 @@ Features
 - Zero configuration; optional ENVARC:AAText.prefs for gamma, hinting
   (none/light/normal/full), glyph cache size, program blacklist and
   explicit font mappings
-- Preferences program AATextPrefs (English and Turkish, ReAction): a
+- Preferences program AATextPrefs (English and Turkish, ReAction or
+  MUI 3.8+, chosen in the installer): a
   running AAText takes every change at once, so you see it while you
   try it; Save/Use/Cancel and the usual Prefs menus
 - Character sets for fonts without a code page: Latin-1 to Latin-5,
@@ -64,7 +65,8 @@ can also remove AAText again). By hand: copy AAText to C: and add "Run >NIL: C:A
 S:Startup-Sequence, after the monitor drivers and before LoadWB (not
 WBStartup); copy AATextPrefs and its icon to SYS:Prefs for the
 preferences program, AATextManager and its icon to SYS:System and
-Libs/aatext.library to LIBS: for the font installer. See AAText_EN.txt
+Libs/aatext.library to LIBS: for the font installer (the MUI drawer
+holds both programs for MUI 3.8 or newer). See AAText_EN.txt
 (English) or AAText_TR.txt (Turkish, ISO-8859-9) for details.
 
 License: MIT (free for any use, commercial or not; keep the copyright
