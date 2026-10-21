@@ -65,6 +65,7 @@
 #include "preview.h"
 #include "update.h"
 #include "settings.h"
+#include "core.h"
 #include "../fontscan.h"
 #include "../aamsg.h"
 #include "../aaclient.h"
@@ -93,16 +94,6 @@ enum
     GID_COUNT
 };
 
-#define MAX_FILES  64
-#define MAX_FONTS  1024
-
-struct FileEntry
-{
-    char  path[256];
-    LONG  face;
-    char  facetext[8];
-    struct AAFontInfo info;
-};
 
 static struct Gadget *gads[GID_COUNT];
 static Object *winobj, *pages;
@@ -110,16 +101,7 @@ static struct Window *win;
 static struct List pvsplist, dlsplist;
 static struct List tablist, charsetlist, defcharsetlist, enginelist, filelb, repairlb,
                    diaglb, dllb;
-static struct FileEntry *files;
-static LONG numfiles;
-static struct AADiagEntry *diag;
-static LONG numdiag;
-/* the Diagnostics tab has its own scan: the Repair list points into diag */
-#define MAX_DIAG 300
-static struct AADiagEntry *dscan;       /* MAX_DIAG entries */
-static LONG numdscan = -1;              /* -1: not scanned yet */
 static char statustext[200];
-static struct MgrSettings settings;
 static char sizestext[80] = "8-16,18,20,24";
 
 static const char *const engines[2] = { "aatext", "freetype2" };
@@ -310,8 +292,8 @@ static void ShowPreview(void)
     if (!win)
         return;
     Busy(TRUE);
-    if (sel >= 0 && sel < numfiles)
-        pv_Render(win->WScreen, files[sel].path, files[sel].face,
+    if (sel >= 0 && sel < mcore.numfiles)
+        pv_Render(win->WScreen, mcore.files[sel].path, mcore.files[sel].face,
                   GetString(MSG_PV_ALPHABET), GetString(MSG_PV_SENTENCE));
     else
         pv_Render(win->WScreen, NULL, 0, NULL, NULL);
@@ -325,14 +307,6 @@ static void ShowPreview(void)
 /* Install tab                                                          */
 /* ------------------------------------------------------------------ */
 
-/* A running AAText looks for the new fonts (RELOAD); no answer is fine */
-static void TellAAText(void)
-{
-    struct AAMessage *m = aa_SendCommand(AACMD_RELOAD, NULL, NULL, 100);
-
-    if (m != AACLIENT_NOTRUNNING && m != AACLIENT_TIMEOUT)
-        aa_FreeReply(m);
-}
 
 static void ShowFiles(void)
 {
@@ -340,19 +314,17 @@ static void ShowFiles(void)
 
     SetGad(GID_FILES, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&filelb);
-    for (i = 0; i < numfiles; i++)
+    for (i = 0; i < mcore.numfiles; i++)
     {
-        struct FileEntry *f = &files[i];
-        struct Node *n;
-
-        snprintf(f->facetext, sizeof(f->facetext), "%ld", (long)f->face);
-        n = AllocListBrowserNode(4,
+        struct FileEntry *f = &mcore.files[i];
+        struct Node *n = AllocListBrowserNode(4,
             LBNA_Column, 0, LBNCA_Text, (ULONG)f->info.family,
             LBNA_Column, 1, LBNCA_Text, (ULONG)f->info.style,
             LBNA_Column, 2, LBNCA_Text, (ULONG)f->facetext,
             LBNA_Column, 3, LBNCA_Text,
                 (ULONG)FilePart((CONST_STRPTR)f->path),
             TAG_DONE);
+
         if (n)
             AddTail(&filelb, n);
     }
@@ -360,29 +332,6 @@ static void ShowFiles(void)
     ShowPreview();
 }
 
-/* Add a file: one entry per face; FALSE if FreeType cannot read it */
-static BOOL AddFile(const char *path)
-{
-    LONG face = 0, faces = 1, i;
-
-    /* listed already (added twice): nothing new */
-    for (i = 0; i < numfiles; i++)
-        if (!Stricmp((CONST_STRPTR)files[i].path, (CONST_STRPTR)path))
-            return TRUE;
-    while (face < faces && numfiles < MAX_FILES)
-    {
-        struct FileEntry *f = &files[numfiles];
-
-        if (!aa_GetFontInfo(path, face, &f->info))
-            return face > 0;
-        snprintf(f->path, sizeof(f->path), "%s", path);
-        f->face = face;
-        faces = f->info.numfaces;
-        numfiles++;
-        face++;
-    }
-    return TRUE;
-}
 
 static void AddFiles(void)
 {
@@ -413,7 +362,7 @@ static void AddFiles(void)
             if (!NameFromLock(a->wa_Lock, (STRPTR)path, sizeof(path)) ||
                 !AddPart((STRPTR)path, a->wa_Name, sizeof(path)))
                 continue;
-            if (!AddFile(path))
+            if (!mc_AddFile(path))
                 snprintf(msg, sizeof(msg), GetString(MSG_NOTFONT),
                          (const char *)a->wa_Name);
         }
@@ -428,11 +377,9 @@ static void RemoveFile(void)
 {
     LONG sel = (LONG)GetGad(GID_FILES, LISTBROWSER_Selected);
 
-    if (sel < 0 || sel >= numfiles)
+    if (sel < 0 || sel >= mcore.numfiles)
         return;
-    memmove(&files[sel], &files[sel + 1],
-            (numfiles - sel - 1) * sizeof(files[0]));
-    numfiles--;
+    mc_RemoveFile(sel);
     ShowFiles();
 }
 
@@ -446,68 +393,61 @@ static void ReadDirs(void)
 
     for (i = 0; i < MGR_NUM_DIRS; i++)
         if ((t = (const char *)GetGad(dirgad[i], STRINGA_TextVal)) && t[0])
-            snprintf(settings.dir[i], sizeof(settings.dir[i]), "%s", t);
+            snprintf(mcore.settings.dir[i], sizeof(mcore.settings.dir[i]), "%s", t);
+}
+
+/* "3 installed, 1 skipped..." and the font diskfont cannot open */
+static void ShowResult(const struct MCResult *r)
+{
+    char msg[sizeof(statustext)];
+
+    snprintf(msg, sizeof(msg), GetString(MSG_INSTALLED), (long)r->ok,
+             (long)r->skipped, (long)r->failed);
+    if (r->notopen[0])
+    {
+        snprintf(msg + strlen(msg), sizeof(msg) - strlen(msg), " ");
+        snprintf(msg + strlen(msg), sizeof(msg) - strlen(msg),
+                 GetString(MSG_NOTOPEN), r->notopen);
+    }
+    SetStatus(msg);
+}
+
+/* The install settings of the window into in; FALSE: sizes wrong */
+static BOOL InstallSettings(struct AAInstall *in)
+{
+    aa_InstallDefaults(in);
+    if (!mgr_ParseSizes((const char *)GetGad(GID_SIZES, STRINGA_TextVal),
+                        in))
+    {
+        SetStatus(GetString(MSG_BADSIZES));
+        return FALSE;
+    }
+    in->charset = Charset();
+    in->engine = Engine();
+    in->overwrite = GetGad(GID_OVERWRITE, GA_Selected) != 0;
+    ReadDirs();
+    return TRUE;
 }
 
 static void Install(void)
 {
     static struct AAInstall in;
-    char msg[sizeof(statustext)], notopen[100] = "";
-    LONG i, ok = 0, skipped = 0, failed = 0;
+    struct MCResult r;
 
-    if (!numfiles)
+    if (!mcore.numfiles)
     {
         SetStatus(GetString(MSG_NOFONTS));
         return;
     }
-    aa_InstallDefaults(&in);
-    if (!mgr_ParseSizes((const char *)GetGad(GID_SIZES, STRINGA_TextVal),
-                        &in))
-    {
-        SetStatus(GetString(MSG_BADSIZES));
+    if (!InstallSettings(&in))
         return;
-    }
-    in.charset = Charset();
-    in.engine = Engine();
-    in.overwrite = GetGad(GID_OVERWRITE, GA_Selected) != 0;
-    ReadDirs();
-
+    memset(&r, 0, sizeof(r));
     Busy(TRUE);
-    for (i = 0; i < numfiles; i++)
-    {
-        in.source = files[i].path;
-        in.face = files[i].face;
-        in.fontdir = settings.dir[mgr_DirKind(in.source)];
-        switch (aa_InstallFont(&in))
-        {
-            case AA_INSTALL_OK:
-                ok++;
-                if (!mgr_CheckFont(&in))
-                    snprintf(notopen, sizeof(notopen), GetString(MSG_NOTOPEN),
-                             in.name);
-                break;
-            case AA_INSTALL_EXISTS:
-                skipped++;
-                break;
-            default:
-                failed++;
-                break;
-        }
-    }
+    mc_InstallAll(&in, &r);
     Busy(FALSE);
-    if (ok)
-        TellAAText();
-    snprintf(msg, sizeof(msg), GetString(MSG_INSTALLED), (long)ok,
-             (long)skipped, (long)failed);
-    if (notopen[0])
-        snprintf(msg + strlen(msg), sizeof(msg) - strlen(msg), " %s",
-                 notopen);
-    SetStatus(msg);
-    if (!skipped && !failed)
-    {
-        numfiles = 0;
+    ShowResult(&r);
+    if (!mcore.numfiles)
         ShowFiles();
-    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -541,11 +481,6 @@ static void Problems(ULONG what, char *buf, LONG len)
                      buf[0] ? ", " : "", GetString(msg[i]));
 }
 
-/* "Verdana Bold" from the .otag, or its file name ("verdanabold") */
-static const char *FontLabel(const struct AADiagEntry *e)
-{
-    return e->display[0] ? e->display : e->name;
-}
 
 /* the problems text of each listed font, kept while the list shows */
 static char (*problems)[64];
@@ -554,36 +489,32 @@ static LONG CheckFonts(void)
 {
     struct AARepair r;
     char msg[sizeof(statustext)];
-    LONG i, todo = 0;
+    LONG i, todo;
 
     SetGad(GID_REPAIRLIST, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&repairlb);
     FreeListBrowserList(&diaglb);
     FreeListBrowserList(&dllb);
-    FreeVec(dscan);
-    dscan = NULL;
     Repair_Settings(&r);
     Busy(TRUE);
-    numdiag = aa_ScanFonts(diag, MAX_FONTS);
+    todo = mc_Check(&r);
     Busy(FALSE);
-    for (i = 0; i < numdiag; i++)
+    for (i = 0; i < mcore.numdiag; i++)
     {
-        ULONG what = aa_RepairNeeded(&diag[i], &r);
         struct Node *n;
 
-        if (!what)
+        if (!mcore.need[i])
             continue;
-        Problems(what, problems[i], sizeof(problems[i]));
+        Problems(mcore.need[i], problems[i], sizeof(problems[i]));
         n = AllocListBrowserNode(2,
-            LBNA_Column, 0, LBNCA_Text, (ULONG)FontLabel(&diag[i]),
+            LBNA_Column, 0, LBNCA_Text, (ULONG)mc_FontLabel(&mcore.diag[i]),
             LBNA_Column, 1, LBNCA_Text, (ULONG)problems[i],
             TAG_DONE);
         if (n)
             AddTail(&repairlb, n);
-        todo++;
     }
     SetGad(GID_REPAIRLIST, LISTBROWSER_Labels, (ULONG)&repairlb);
-    if (numdiag < 0)
+    if (todo < 0)
         SetStatus(GetString(MSG_FONTSERR));
     else if (!todo)
         SetStatus(GetString(MSG_NOTHING));
@@ -592,18 +523,17 @@ static LONG CheckFonts(void)
         snprintf(msg, sizeof(msg), GetString(MSG_TOREPAIR), (long)todo);
         SetStatus(msg);
     }
-    SetGad(GID_REPAIR, GA_Disabled, todo == 0);
-    return todo;
+    SetGad(GID_REPAIR, GA_Disabled, todo <= 0);
+    return todo > 0 ? todo : 0;
 }
 
 static void RepairAll(void)
 {
-    static char backup[AA_FONTFILE_LEN];
     struct EasyStruct es;
     struct AARepair r;
     char msg[sizeof(statustext)];
     ULONG args[1];
-    LONG i, todo, done = 0;
+    LONG todo, done;
 
     /* again, with the settings as they are now */
     if (!(todo = CheckFonts()))
@@ -619,10 +549,7 @@ static void RepairAll(void)
 
     Repair_Settings(&r);
     Busy(TRUE);
-    for (i = 0; i < numdiag; i++)
-        if (aa_RepairNeeded(&diag[i], &r) &&
-            aa_RepairOTag(&diag[i], &r, backup) == AA_FIX_OK)
-            done++;
+    done = mc_RepairAll(&r);
     Busy(FALSE);
     CheckFonts();
     snprintf(msg, sizeof(msg), GetString(MSG_REPAIRED), (long)done,
@@ -857,11 +784,6 @@ static const LONG diag_advice[AA_DIAG_NUM] =
     MSG_DIAG_ADV_BADFILE, MSG_DIAG_ADV_BADOTAG, MSG_DIAG_ADV_OTHER
 };
 
-/* English status names for the report, which goes into bug reports */
-static const char *const diag_name[AA_DIAG_NUM] =
-{
-    "ok", "moved", "missing", "not a font", "bad .otag", "other engine"
-};
 
 static struct ColumnInfo diagcols[] =
 {
@@ -886,9 +808,9 @@ static void DiagDetail(void)
         advice[0] = 0;
     if (gads[GID_DFONTLIST])
         GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_DFONTLIST], &sel);
-    if ((LONG)sel >= 0 && (LONG)sel < numdscan)
+    if ((LONG)sel >= 0 && (LONG)sel < mcore.numdscan)
     {
-        e = &dscan[sel];
+        e = &mcore.dscan[sel];
         snprintf(detail1, sizeof(detail1), "%s", e->otag);
         snprintf(detail2, sizeof(detail2), "%s", e->want);
         snprintf(detail3, sizeof(detail3), "%s", e->found);
@@ -932,7 +854,7 @@ static void DiagDetail(void)
     SetGad(GID_DDETAIL4, STRINGA_TextVal, (ULONG)detail4);
     SetGad(GID_DDETAIL5, STRINGA_TextVal, (ULONG)detail5);
     SetGad(GID_DADVICE, GA_Text, (ULONG)advice);
-    SetGad(GID_DDELETE, GA_Disabled, (LONG)sel < 0 || (LONG)sel >= numdscan);
+    SetGad(GID_DDELETE, GA_Disabled, (LONG)sel < 0 || (LONG)sel >= mcore.numdscan);
 }
 
 /* Show the scan results; sel is the entry to select, or -1. */
@@ -942,11 +864,11 @@ static void DiagShow(LONG sel)
 
     SetGad(GID_DFONTLIST, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&diaglb);
-    for (i = 0; i < numdscan; i++)
+    for (i = 0; i < mcore.numdscan; i++)
     {
-        struct AADiagEntry *e = &dscan[i];
+        struct AADiagEntry *e = &mcore.dscan[i];
         struct Node *n = AllocListBrowserNode(3,
-            LBNA_Column, 0, LBNCA_Text, (ULONG)FontLabel(e),
+            LBNA_Column, 0, LBNCA_Text, (ULONG)mc_FontLabel(e),
             LBNA_Column, 1, LBNCA_Text, (ULONG)GetString(diag_msg[e->status]),
             LBNA_Column, 2, LBNCA_Text,
                 (ULONG)(e->found[0] ? e->found : e->want),
@@ -960,124 +882,29 @@ static void DiagShow(LONG sel)
     SetGad2(GID_DFONTLIST, LISTBROWSER_Labels, (ULONG)&diaglb,
             LISTBROWSER_Selected, (ULONG)sel);
 
-    if (numdscan < 0)
+    if (mcore.numdscan < 0)
         snprintf(scansum, sizeof(scansum), "%s", GetString(MSG_DIAG_NOFONTS));
-    else if (numdscan == MAX_DIAG)
+    else if (mcore.numdscan == MC_MAX_DIAG)
         snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_LISTFULL),
-                 (long)MAX_DIAG);
+                 (long)MC_MAX_DIAG);
     else
         snprintf(scansum, sizeof(scansum), GetString(MSG_DIAG_SUMMARY),
-                 (long)numdscan, (long)ok, (long)(numdscan - ok));
+                 (long)mcore.numdscan, (long)ok, (long)(mcore.numdscan - ok));
     SetGad(GID_DSCANSUM, GA_Text, (ULONG)scansum);
     DiagDetail();
 }
 
 static void DiagScan(void)
 {
-    if (!dscan)
-        dscan = AllocVec(MAX_DIAG * sizeof(*dscan), MEMF_ANY);
-    if (!dscan)
-        return;
-
     Busy(TRUE);
-    numdscan = aa_ScanFonts(dscan, MAX_DIAG);
+    mc_Scan();
     Busy(FALSE);
     DiagShow(-1);
 }
 
-/* the font file of e, if it has one ("" if not) */
-static const char *DiagFontFile(const struct AADiagEntry *e)
-{
-    if (e->status == AA_DIAG_OK || e->status == AA_DIAG_MOVED)
-        return e->found[0] ? e->found : e->want;
-    if (e->status == AA_DIAG_BADFILE)
-        return e->want;
-    return "";
-}
 
-/* another scanned font that uses file (a .ttc face, or the same file
-   installed twice), or NULL */
-static const struct AADiagEntry *DiagSharedBy(const struct AADiagEntry *e,
-                                              const char *file)
-{
-    LONG i;
 
-    for (i = 0; i < numdscan; i++)
-        if (&dscan[i] != e &&
-            !Stricmp((CONST_STRPTR)DiagFontFile(&dscan[i]),
-                     (CONST_STRPTR)file))
-            return &dscan[i];
-    return NULL;
-}
 
-/* delete the files in dir and dir itself (a font's size directory:
-   only files in it); FALSE if something stays */
-static BOOL DeleteSizeDir(const char *dir)
-{
-    static char path[AA_FONTFILE_LEN + 40];
-    struct FileInfoBlock *fib;
-    BPTR lock = Lock((CONST_STRPTR)dir, ACCESS_READ);
-    BOOL ok = TRUE;
-
-    if (!lock)
-        return TRUE;            /* no size directory */
-    if (!(fib = AllocDosObject(DOS_FIB, NULL)))
-    {
-        UnLock(lock);
-        return FALSE;
-    }
-    if (Examine(lock, fib) && fib->fib_DirEntryType > 0)
-    {
-        /* collect first, delete after: deleting while ExNext() walks
-           the directory is not safe on every file system */
-        char (*names)[108] = AllocVec(64 * 108, MEMF_ANY);
-        LONG n = 0, i;
-
-        if (!names)
-            ok = FALSE;
-        else
-        {
-            while (ExNext(lock, fib))
-            {
-                if (fib->fib_DirEntryType > 0 || n >= 64)
-                {
-                    ok = FALSE;     /* not a plain size directory */
-                    continue;
-                }
-                snprintf(names[n++], 108, "%s", (char *)fib->fib_FileName);
-            }
-        }
-        UnLock(lock);
-        lock = 0;
-        for (i = 0; ok && i < n; i++)
-        {
-            snprintf(path, sizeof(path), "%s/%s", dir, names[i]);
-            if (!DeleteFile((CONST_STRPTR)path))
-                ok = FALSE;
-        }
-        if (names)
-            FreeVec(names);
-        if (ok && !DeleteFile((CONST_STRPTR)dir))
-            ok = FALSE;
-    }
-    else
-        ok = FALSE;             /* a file of that name: leave it */
-    if (lock)
-        UnLock(lock);
-    FreeDosObject(DOS_FIB, fib);
-    return ok;
-}
-
-/* delete path if it exists; FALSE if it exists and stays */
-static BOOL DeleteIfThere(const char *path)
-{
-    BPTR lock = Lock((CONST_STRPTR)path, ACCESS_READ);
-
-    if (!lock)
-        return TRUE;
-    UnLock(lock);
-    return DeleteFile((CONST_STRPTR)path) != 0;
-}
 
 /*
  * Delete the selected font after asking: its .otag, .font and size
@@ -1086,34 +913,26 @@ static BOOL DeleteIfThere(const char *path)
  */
 static void DiagDelete(void)
 {
-    static char base[AA_FONTFILE_LEN], path[AA_FONTFILE_LEN + 16],
-                msg[sizeof(statustext)], failed[AA_FONTFILE_LEN + 16];
+    static char label[64], failed[AA_FONTFILE_LEN + 16];
+    char msg[sizeof(statustext)];
     const struct AADiagEntry *other = NULL;
     struct EasyStruct es;
     struct AADiagEntry *e;
     const char *file;
     ULONG sel = ~0UL, args[3];
-    LONG r, len;
+    LONG r;
     BOOL withfile;
 
     GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_DFONTLIST], &sel);
-    if ((LONG)sel < 0 || (LONG)sel >= numdscan)
+    if ((LONG)sel < 0 || (LONG)sel >= mcore.numdscan)
         return;
-    e = &dscan[sel];
-    file = DiagFontFile(e);
+    e = &mcore.dscan[sel];
+    file = mc_DeletableFile(e);
     if (file[0])
-    {
-        BPTR lock = Lock((CONST_STRPTR)file, ACCESS_READ);
+        other = mc_SharedBy(e, file);
 
-        if (lock)
-            UnLock(lock);
-        else
-            file = "";          /* nothing to delete */
-    }
-    if (file[0])
-        other = DiagSharedBy(e, file);
-
-    args[0] = (ULONG)FontLabel(e);
+    snprintf(label, sizeof(label), "%s", mc_FontLabel(e));
+    args[0] = (ULONG)label;
     args[1] = (ULONG)e->otag;
     args[2] = (ULONG)(file[0] ? file : "-");
     es.es_StructSize = sizeof(es);
@@ -1128,89 +947,18 @@ static void DiagDelete(void)
         return;
     withfile = r == 2;
 
-    /* FONTS:x.otag -> FONTS:x */
-    snprintf(base, sizeof(base), "%s", e->otag);
-    len = strlen(base);
-    if (len > 5 && !Stricmp((CONST_STRPTR)base + len - 5,
-                            (CONST_STRPTR)".otag"))
-        base[len - 5] = 0;
-
-    failed[0] = 0;
-    snprintf(path, sizeof(path), "%s.otag", base);
-    if (!DeleteIfThere(path))
-        snprintf(failed, sizeof(failed), "%s", path);
-    snprintf(path, sizeof(path), "%s.font", base);
-    if (!failed[0] && !DeleteIfThere(path))
-        snprintf(failed, sizeof(failed), "%s", path);
-    /* Repair's backups of them would only bring the font back half */
-    snprintf(path, sizeof(path), "%s.otag.bak", base);
-    if (!failed[0] && !DeleteIfThere(path))
-        snprintf(failed, sizeof(failed), "%s", path);
-    snprintf(path, sizeof(path), "%s.font.bak", base);
-    if (!failed[0] && !DeleteIfThere(path))
-        snprintf(failed, sizeof(failed), "%s", path);
-    if (!failed[0] && !DeleteSizeDir(base))
-        snprintf(failed, sizeof(failed), "%s/", base);
-    if (!failed[0] && withfile && !DeleteIfThere(file))
-        snprintf(failed, sizeof(failed), "%s", file);
-
-    if (failed[0])
+    if (!mc_DeleteFont(sel, withfile, failed, sizeof(failed)))
         snprintf(msg, sizeof(msg), GetString(MSG_DEL_FAILED), failed);
     else if (other)
         snprintf(msg, sizeof(msg), GetString(MSG_DEL_SHARED),
-                 FontLabel(other));
+                 mc_FontLabel(other));
     else
         snprintf(msg, sizeof(msg), GetString(withfile ? MSG_DEL_DONEFILE :
-                                                        MSG_DEL_DONE),
-                 (char *)args[0]);
+                                                        MSG_DEL_DONE), label);
     DiagScan();
     SetStatus(msg);
 }
 
-/* Plain text, English: meant to be attached to bug reports. */
-static BOOL DiagWrite(const char *path)
-{
-    BPTR fh = Open((CONST_STRPTR)path, MODE_NEWFILE);
-    LONG i;
-    BOOL ok = TRUE;
-
-    if (!fh)
-        return FALSE;
-    FPrintf(fh, (CONST_STRPTR)"AAText font report (%s)\n",
-            (ULONG)"AATextManager " AAMGR_VERSION);
-    FPrintf(fh, (CONST_STRPTR)"%ld font(s) in FONTS:\n", (ULONG)numdscan);
-    for (i = 0; i < numdscan && ok; i++)
-    {
-        struct AADiagEntry *e = &dscan[i];
-
-        FPrintf(fh, (CONST_STRPTR)"\n%s: %s\n  .otag:    %s\n",
-                (ULONG)e->name, (ULONG)diag_name[e->status], (ULONG)e->otag);
-        if (e->display[0])
-            FPrintf(fh, (CONST_STRPTR)"  family:   %s\n", (ULONG)e->display);
-        if (e->want[0])
-            FPrintf(fh, (CONST_STRPTR)"  in .otag: %s\n", (ULONG)e->want);
-        if (e->found[0] && strcmp(e->found, e->want))
-            FPrintf(fh, (CONST_STRPTR)"  found:    %s\n", (ULONG)e->found);
-        ok = FPrintf(fh, (CONST_STRPTR)"  engine:   %s (%s.library %s), "
-                     "face %ld, code page %s",
-                     (ULONG)(e->engine[0] ? e->engine : "?"),
-                     (ULONG)(e->engine[0] ? e->engine : "?"),
-                     (ULONG)(e->enginever[0] ? e->enginever : "not installed"),
-                     (ULONG)e->facenum,
-                     (ULONG)(e->charset >= 0 ? aa_CharsetNames[e->charset] :
-                             e->charset == AA_CS_OWN ? "own table" :
-                             e->charset == AA_CS_NONE ? "none" : "?")) >= 0;
-        if (ok && e->charset == AA_CS_OWN)
-            FPrintf(fh, (CONST_STRPTR)" (nearest %s, %ld differ)",
-                    (ULONG)aa_CharsetNames[e->nearcharset],
-                    (ULONG)e->neardiff);
-        if (ok)
-            ok = FPrintf(fh, (CONST_STRPTR)"\n") >= 0;
-    }
-    if (!Close(fh))
-        ok = FALSE;
-    return ok;
-}
 
 static void DiagReport(void)
 {
@@ -1218,9 +966,9 @@ static void DiagReport(void)
     struct FileRequester *fr;
     char msg[AA_PATH_LEN + 40];
 
-    if (numdscan < 0)
+    if (mcore.numdscan < 0)
         DiagScan();
-    if (numdscan < 0)
+    if (mcore.numdscan < 0)
         return;
     fr = AllocAslRequestTags(ASL_FileRequest,
                              ASLFR_Window, (ULONG)win,
@@ -1238,7 +986,7 @@ static void DiagReport(void)
     {
         snprintf(path, sizeof(path), "%s", (char *)fr->fr_Drawer);
         AddPart((STRPTR)path, fr->fr_File, sizeof(path));
-        snprintf(msg, sizeof(msg), GetString(DiagWrite(path) ?
+        snprintf(msg, sizeof(msg), GetString(mc_WriteReport(path) ?
                  MSG_DIAG_SAVED : MSG_DIAG_WRITEERR), path);
         SetStatus(msg);
     }
@@ -1354,25 +1102,6 @@ static Object *DiagPage(void)
 /* Download tab: fonts from the catalog (fonts/catalog.txt)             */
 /* ------------------------------------------------------------------ */
 
-#define MAX_CAT      1500
-#define MAX_CATTEXT  (256 * 1024)
-#define DL_DIR       "T:AATextFonts"
-
-struct CatEntry
-{
-    char family[40];
-    char style[28];
-    char licence[8];
-    char size[12];          /* "331 KB" */
-    LONG bytes;
-    char path[120];         /* relative to catbase, or an https:// url */
-};
-
-static struct CatEntry *cat;
-static LONG numcat;
-static LONG *shown;         /* list row -> cat index */
-static LONG numshown;
-static char catbase[128];
 
 static struct ColumnInfo catcols[] =
 {
@@ -1380,99 +1109,39 @@ static struct ColumnInfo catcols[] =
     { -1, NULL, 0 }
 };
 
-/* Copy one tab-separated field; returns the start of the next one. */
-static char *Field(char *p, char *dst, LONG len)
-{
-    LONG n = 0;
 
-    while (*p && *p != '\t')
-    {
-        if (n < len - 1)
-            dst[n++] = *p;
-        p++;
-    }
-    dst[n] = 0;
-    return *p ? p + 1 : p;
-}
 
-static void ParseCatalog(char *text)
-{
-    char *line, *nl, num[16];
-    struct CatEntry *e;
-
-    numcat = 0;
-    catbase[0] = 0;
-    for (line = text; line && numcat < MAX_CAT; line = nl)
-    {
-        if ((nl = strchr(line, '\n')))
-            *nl++ = 0;
-        if (strchr(line, '\r'))
-            *strchr(line, '\r') = 0;
-        if (!line[0] || line[0] == '#')
-            continue;
-        if (!strncmp(line, "base ", 5))
-        {
-            snprintf(catbase, sizeof(catbase), "%s", line + 5);
-            continue;
-        }
-        e = &cat[numcat];
-        line = Field(line, e->family, sizeof(e->family));
-        line = Field(line, e->style, sizeof(e->style));
-        line = Field(line, e->licence, sizeof(e->licence));
-        line = Field(line, num, sizeof(num));
-        Field(line, e->path, sizeof(e->path));
-        if (!e->family[0] || !e->path[0])
-            continue;
-        e->bytes = atol(num);
-        snprintf(e->size, sizeof(e->size), "%ld KB",
-                 (long)((e->bytes + 1023) / 1024));
-        numcat++;
-    }
-}
-
-/* Case-insensitive "needle in hay" (ASCII is enough for family names) */
-static BOOL Contains(const char *hay, const char *needle)
-{
-    LONG n = strlen(needle);
-
-    for (; *hay; hay++)
-        if (!Strnicmp((CONST_STRPTR)hay, (CONST_STRPTR)needle, n))
-            return TRUE;
-    return !n;
-}
 
 /* The catalog rows whose family matches the search text */
 static void ShowCatalog(void)
 {
-    const char *filter = (const char *)GetGad(GID_DLFILTER, STRINGA_TextVal);
     LONG i;
 
     SetGad(GID_DLLIST, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&dllb);
-    numshown = 0;
-    for (i = 0; i < numcat; i++)
+    mc_Filter((const char *)GetGad(GID_DLFILTER, STRINGA_TextVal));
+    for (i = 0; i < mcore.numshown; i++)
     {
-        struct CatEntry *e = &cat[i];
-        struct Node *n;
-
-        if (filter && !Contains(e->family, filter))
-            continue;
-        n = AllocListBrowserNode(4,
+        struct CatEntry *e = &mcore.cat[mcore.shown[i]];
+        struct Node *n = AllocListBrowserNode(4,
             LBNA_Column, 0, LBNCA_Text, (ULONG)e->family,
             LBNA_Column, 1, LBNCA_Text, (ULONG)e->style,
             LBNA_Column, 2, LBNCA_Text, (ULONG)e->licence,
             LBNA_Column, 3, LBNCA_Text, (ULONG)e->size,
             TAG_DONE);
+
         if (!n)
+        {
+            mcore.numshown = i;
             break;
+        }
         AddTail(&dllb, n);
-        shown[numshown++] = i;
     }
     SetGad(GID_DLLIST, LISTBROWSER_Labels, (ULONG)&dllb);
 }
 
-/* Explain why the network could not be opened */
-static void NetFailed(LONG r, struct AANet *n)
+/* Explain why the network could not be opened (or the load failed) */
+static void NetFailed(LONG r, const char *error)
 {
     char msg[sizeof(statustext)];
 
@@ -1482,123 +1151,45 @@ static void NetFailed(LONG r, struct AANet *n)
         SetStatus(GetString(MSG_DL_NOSSL));
     else
     {
-        snprintf(msg, sizeof(msg), GetString(MSG_DL_LOADFAIL), n->error);
+        snprintf(msg, sizeof(msg), GetString(MSG_DL_LOADFAIL), error);
         SetStatus(msg);
     }
 }
 
 static void LoadCatalog(void)
 {
-    static struct AANet net;
-    char msg[sizeof(statustext)];
-    char *text;
-    LONG len = -1, r;
-    BPTR fh;
+    char msg[sizeof(statustext)], error[160];
+    LONG r;
 
-    if (!(text = AllocVec(MAX_CATTEXT, MEMF_ANY)))
-        return;
     SetStatus(GetString(MSG_DL_LOADING));
     Busy(TRUE);
-    if (strncmp(settings.catalog, "https://", 8))
+    r = mc_LoadCatalog(error, sizeof(error));
+    Busy(FALSE);
+    if (r)
     {
-        /* a file (for testing a catalog before it is published) */
-        if ((fh = Open((CONST_STRPTR)settings.catalog, MODE_OLDFILE)))
-        {
-            len = Read(fh, text, MAX_CATTEXT - 1);
-            Close(fh);
-        }
-        strcpy(net.error, "cannot read the file");
-        if (len >= 0)
-            text[len] = 0;
-    }
-    else if ((r = net_Open(&net, AAMGR_VERSION)))
-    {
-        Busy(FALSE);
-        NetFailed(r, &net);
-        FreeVec(text);
+        NetFailed(r, error);
         return;
     }
-    else
-    {
-        len = net_GetMem(&net, settings.catalog, text, MAX_CATTEXT);
-        net_Close(&net);
-    }
-    Busy(FALSE);
-    if (len < 0)
-    {
-        snprintf(msg, sizeof(msg), GetString(MSG_DL_LOADFAIL), net.error);
-        SetStatus(msg);
-    }
-    else
-    {
-        ParseCatalog(text);
-        ShowCatalog();
-        snprintf(msg, sizeof(msg), GetString(MSG_DL_LOADED), (long)numcat);
-        SetStatus(msg);
-    }
-    FreeVec(text);
+    ShowCatalog();
+    snprintf(msg, sizeof(msg), GetString(MSG_DL_LOADED), (long)mcore.numcat);
+    SetStatus(msg);
 }
 
-/* T:AATextFonts/<file name> of a catalog entry */
-static void LocalPath(const struct CatEntry *e, char *buf, LONG len)
-{
-    snprintf(buf, len, "%s", DL_DIR);
-    AddPart((STRPTR)buf, FilePart((CONST_STRPTR)e->path), len);
-}
-
-static LONG SizeOf(const char *path)
-{
-    struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
-    BPTR l = Lock((CONST_STRPTR)path, ACCESS_READ);
-    LONG size = -1;
-
-    if (l && fib && Examine(l, fib))
-        size = fib->fib_Size;
-    if (l)
-        UnLock(l);
-    if (fib)
-        FreeDosObject(DOS_FIB, fib);
-    return size;
-}
-
-/*
- * Make sure the entry is in T:AATextFonts (downloads it unless it is
- * there with the catalog's size); FALSE with the reason in the status.
- */
+/* mc_Fetch(), the reason in the status line when it fails */
 static BOOL Fetch(struct AANet *net, const struct CatEntry *e, char *path,
                   LONG len)
 {
-    static char url[300];
     char msg[sizeof(statustext)];
-    BPTR l;
 
-    LocalPath(e, path, len);
-    if (e->bytes > 0 && SizeOf(path) == e->bytes)
+    if (mc_Fetch(net, e, path, len))
         return TRUE;
-    if (!(l = Lock((CONST_STRPTR)DL_DIR, ACCESS_READ)))
-        l = CreateDir((CONST_STRPTR)DL_DIR);
-    if (l)
-        UnLock(l);
-    if (!strncmp(e->path, "https://", 8))
-        snprintf(url, sizeof(url), "%s", e->path);
-    else
-        snprintf(url, sizeof(url), "%s%s", catbase, e->path);
-    if (net_GetFile(net, url, path))
-    {
-        LONG size = SizeOf(path);
-
-        /* the size the catalog gives: a short file is half a font */
-        if (e->bytes <= 0 || size == e->bytes)
-            return TRUE;
-        DeleteFile((CONST_STRPTR)path);
-        snprintf(net->error, sizeof(net->error),
-                 "incomplete: %ld of %ld bytes", (long)size, (long)e->bytes);
-    }
     snprintf(msg, sizeof(msg), GetString(MSG_DL_GETFAIL),
              FilePart((CONST_STRPTR)e->path), net->error);
     SetStatus(msg);
     return FALSE;
 }
+
+
 
 /* The catalog index of the only selected row; -1 for none or several */
 static LONG OnlySelected(void)
@@ -1617,7 +1208,7 @@ static LONG OnlySelected(void)
             return -1;
         found = row;
     }
-    return found >= 0 && found < numshown ? shown[found] : -1;
+    return found >= 0 && found < mcore.numshown ? mcore.shown[found] : -1;
 }
 
 /*
@@ -1639,8 +1230,7 @@ static void DlPreview(void)
         RefreshGList(gads[GID_DLPREVIEWBOX], win, NULL, 1);
         return;
     }
-    LocalPath(&cat[i], path, sizeof(path));
-    if (cat[i].bytes > 0 && SizeOf(path) == cat[i].bytes)
+    if (mc_LocalCopy(&mcore.cat[i], path, sizeof(path)))
     {
         /* there already: no network needed */
         Busy(TRUE);
@@ -1653,11 +1243,11 @@ static void DlPreview(void)
     }
     if ((r = net_Open(&net, AAMGR_VERSION)))
     {
-        NetFailed(r, &net);
+        NetFailed(r, net.error);
         return;
     }
     Busy(TRUE);
-    ok = Fetch(&net, &cat[i], path, sizeof(path));
+    ok = Fetch(&net, &mcore.cat[i], path, sizeof(path));
     net_Close(&net);
     if (ok)
     {
@@ -1679,8 +1269,7 @@ static void DlShowAgain(void)
 
     Busy(TRUE);
     pvpage = 3;
-    if (i >= 0 && (LocalPath(&cat[i], path, sizeof(path)),
-                   cat[i].bytes > 0 && SizeOf(path) == cat[i].bytes))
+    if (i >= 0 && mc_LocalCopy(&mcore.cat[i], path, sizeof(path)))
         pv_Render(win->WScreen, path, 0, GetString(MSG_PV_ALPHABET),
                   GetString(MSG_PV_SENTENCE));
     else
@@ -1694,9 +1283,10 @@ static void DlInstall(void)
     static struct AAInstall in;
     static struct AANet net;
     static char path[256];
-    char msg[sizeof(statustext)], notopen[100] = "";
+    char msg[sizeof(statustext)];
+    struct MCResult res;
     struct Node *n;
-    LONG row, todo = 0, done = 0, ok = 0, skipped = 0, failed = 0, r;
+    LONG row, todo = 0, done = 0, r;
     ULONG sel;
 
     for (n = dllb.lh_Head; n->ln_Succ; n = n->ln_Succ)
@@ -1710,26 +1300,20 @@ static void DlInstall(void)
         SetStatus(GetString(MSG_DL_NONE));
         return;
     }
-    aa_InstallDefaults(&in);
-    if (!mgr_ParseSizes((const char *)GetGad(GID_SIZES, STRINGA_TextVal), &in))
-    {
-        SetStatus(GetString(MSG_BADSIZES));
+    if (!InstallSettings(&in))
         return;
-    }
-    in.charset = Charset();
-    in.engine = Engine();
-    in.overwrite = GetGad(GID_OVERWRITE, GA_Selected) != 0;
-    ReadDirs();
     if ((r = net_Open(&net, AAMGR_VERSION)))
     {
-        NetFailed(r, &net);
+        NetFailed(r, net.error);
         return;
     }
 
+    memset(&res, 0, sizeof(res));
     Busy(TRUE);
-    for (n = dllb.lh_Head, row = 0; n->ln_Succ; n = n->ln_Succ, row++)
+    for (n = dllb.lh_Head, row = 0; n->ln_Succ && row < mcore.numshown;
+         n = n->ln_Succ, row++)
     {
-        struct CatEntry *e = &cat[shown[row]];
+        struct CatEntry *e = &mcore.cat[mcore.shown[row]];
 
         sel = 0;
         GetListBrowserNodeAttrs(n, LBNA_Selected, &sel, TAG_DONE);
@@ -1740,39 +1324,17 @@ static void DlInstall(void)
         SetStatus(msg);
         if (!Fetch(&net, e, path, sizeof(path)))
         {
-            failed++;
+            res.failed++;
             continue;
         }
-        in.source = path;
-        in.face = 0;
-        in.fontdir = settings.dir[mgr_DirKind(path)];
-        switch (aa_InstallFont(&in))
-        {
-            case AA_INSTALL_OK:
-                ok++;
-                if (!mgr_CheckFont(&in))
-                    snprintf(notopen, sizeof(notopen), GetString(MSG_NOTOPEN),
-                             in.name);
-                break;
-            case AA_INSTALL_EXISTS:
-                skipped++;
-                break;
-            default:
-                failed++;
-                break;
-        }
+        mc_InstallOne(&in, path, 0, &res);
         DeleteFile((CONST_STRPTR)path);     /* installed: a copy is in fontdir */
     }
     net_Close(&net);
     Busy(FALSE);
-    if (ok)
-        TellAAText();
-    snprintf(msg, sizeof(msg), GetString(MSG_INSTALLED), (long)ok,
-             (long)skipped, (long)failed);
-    if (notopen[0])
-        snprintf(msg + strlen(msg), sizeof(msg) - strlen(msg), " %s",
-                 notopen);
-    SetStatus(msg);
+    if (res.ok)
+        mc_TellAAText();
+    ShowResult(&res);
 }
 
 static Object *DownloadPage(void)
@@ -1853,7 +1415,7 @@ static void PickDir(LONG kind)
                              ASLFR_Window, (ULONG)win,
                              ASLFR_TitleText,
                                  (ULONG)GetString(MSG_SET_PICKTITLE),
-                             ASLFR_InitialDrawer, (ULONG)settings.dir[kind],
+                             ASLFR_InitialDrawer, (ULONG)mcore.settings.dir[kind],
                              ASLFR_DrawersOnly, TRUE,
                              ASLFR_SleepWindow, TRUE,
                              TAG_DONE);
@@ -1867,8 +1429,8 @@ static void PickDir(LONG kind)
         if (n && path[n - 1] != ':' && path[n - 1] != '/' &&
             n < (LONG)sizeof(path) - 1)
             strcat(path, "/");
-        snprintf(settings.dir[kind], sizeof(settings.dir[kind]), "%s", path);
-        SetGad(dirgad[kind], STRINGA_TextVal, (ULONG)settings.dir[kind]);
+        snprintf(mcore.settings.dir[kind], sizeof(mcore.settings.dir[kind]), "%s", path);
+        SetGad(dirgad[kind], STRINGA_TextVal, (ULONG)mcore.settings.dir[kind]);
     }
     FreeAslRequest(fr);
 }
@@ -1880,11 +1442,11 @@ static void SaveSettings(void)
     ReadDirs();
     for (i = 0; i < MGR_NUM_DIRS; i++)
     {
-        mgr_FontsRelative(settings.dir[i], sizeof(settings.dir[i]));
-        SetGad(dirgad[i], STRINGA_TextVal, (ULONG)settings.dir[i]);
+        mgr_FontsRelative(mcore.settings.dir[i], sizeof(mcore.settings.dir[i]));
+        SetGad(dirgad[i], STRINGA_TextVal, (ULONG)mcore.settings.dir[i]);
     }
-    settings.charset = (LONG)GetGad(GID_DEFCHARSET, CHOOSER_Selected);
-    SetStatus(GetString(mgr_SaveSettings(&settings) ? MSG_SET_SAVED :
+    mcore.settings.charset = (LONG)GetGad(GID_DEFCHARSET, CHOOSER_Selected);
+    SetStatus(GetString(mgr_SaveSettings(&mcore.settings) ? MSG_SET_SAVED :
                                                        MSG_SET_SAVEERR));
 }
 
@@ -1894,7 +1456,7 @@ static struct Gadget *DirField(ULONG id, LONG kind)
         GA_ID, id,
         GA_TabCycle, TRUE,
         STRINGA_MaxChars, MGR_DIR_LEN - 1,
-        STRINGA_TextVal, (ULONG)settings.dir[kind],
+        STRINGA_TextVal, (ULONG)mcore.settings.dir[kind],
     End;
 }
 
@@ -1936,7 +1498,7 @@ static Object *SettingsPage(void)
                 GA_ID, GID_DEFCHARSET, GA_RelVerify, TRUE,
                 CHOOSER_PopUp, TRUE,
                 CHOOSER_Labels, (ULONG)&defcharsetlist,
-                CHOOSER_Selected, settings.charset,
+                CHOOSER_Selected, mcore.settings.charset,
             End,
             Label(GetString(MSG_SET_CHARSET)),
         End,
@@ -2177,7 +1739,7 @@ static void Action(ULONG id)
         case GID_CHANGEENGINE:
         case GID_CHANGECHARSET:
             /* the repair list depends on these */
-            if (numdiag > 0)
+            if (mcore.numdiag > 0)
                 CheckFonts();
             break;
     }
@@ -2217,25 +1779,18 @@ int mgr_RunGUI(const char *language)
     NewList(&diaglb);
     NewList(&dllb);
 
-    files = AllocVec(MAX_FILES * sizeof(*files), MEMF_ANY | MEMF_CLEAR);
-    diag = AllocVec(MAX_FONTS * sizeof(*diag), MEMF_ANY | MEMF_CLEAR);
-    problems = AllocVec(MAX_FONTS * sizeof(*problems), MEMF_ANY | MEMF_CLEAR);
-    cat = AllocVec(MAX_CAT * sizeof(*cat), MEMF_ANY | MEMF_CLEAR);
-    shown = AllocVec(MAX_CAT * sizeof(*shown), MEMF_ANY | MEMF_CLEAR);
-    if (!files || !diag || !problems || !cat || !shown || !OpenLibs())
+    problems = AllocVec(MC_MAX_FONTS * sizeof(*problems),
+                        MEMF_ANY | MEMF_CLEAR);
+    if (!problems || !OpenLibs() || !mc_Init())
         goto out;
     InitStrings(language);
     pv_Init();              /* without it the box stays empty */
     previewhook.h_Entry = (HOOKFUNC)(APTR)HookEntry;
     previewhook.h_SubEntry = (HOOKFUNC)(APTR)PreviewRender;
 
-    /* the character set saved on the Settings tab, else ISO-8859-1 */
-    mgr_LoadSettings(&settings);
-    if (settings.charset < 0 || settings.charset >= AA_NUM_CHARSETS)
-        settings.charset = AA_CHARSET_LATIN1;
     if (!(scr = LockPubScreen(NULL)))
         goto out;
-    if (!OpenWin(scr, settings.charset))
+    if (!OpenWin(scr, mcore.settings.charset))
         goto out;
     UnlockPubScreen(NULL, scr);
     scr = NULL;
@@ -2306,11 +1861,6 @@ out:
     CloseLibs();
     if (problems)
         FreeVec(problems);
-    FreeVec(cat);
-    FreeVec(shown);
-    if (diag)
-        FreeVec(diag);
-    if (files)
-        FreeVec(files);
+    mc_Cleanup();
     return rc;
 }

@@ -279,7 +279,7 @@ $(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
 
 # Font installer; FreeType from aatext.library
 MGR_TARGET := $(BUILDDIR)/AATextManager
-MGR_SRCS   := src/manager/main.c src/manager/gui.c src/manager/settings.c src/manager/preview.c src/manager/update.c src/manager/strings.c src/prefs.c src/debug.c src/fontinstall.c src/fontinfo.c \
+MGR_SRCS   := src/manager/main.c src/manager/gui.c src/manager/core.c src/manager/settings.c src/manager/preview.c src/manager/update.c src/manager/strings.c src/prefs.c src/debug.c src/fontinstall.c src/fontinfo.c \
               src/otagfile.c src/otag.c src/charsets.c src/fontscan.c src/fontfile.c \
               src/aaclient.c
 MGR_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/mgr/%.o,$(MGR_SRCS)) $(BUILDDIR)/mgr/cgx.o
