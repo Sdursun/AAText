@@ -356,11 +356,14 @@ It is a plain text file with one setting per line; lines starting with
                     720p on a 1080p panel) or a CRT leave it off. RTG
                     screens only; palette screens stay grey.
 
-  offscreen on      Some programs (docks, gauges) draw text into a
-                    hidden bitmap first. AAText cannot tell which screen
-                    colours apply there and leaves such text alone. With
-                    "offscreen on" it uses the Workbench screen colours
-                    (default off).
+  offscreen on      Some programs draw text into a hidden bitmap first
+                    (MUI gadgets, docks, gauges). AAText uses the screen
+                    of the drawing program's window, or for MUI's helper
+                    processes, which have no window, the screen of the
+                    active window. Text in hidden bitmaps of programs
+                    without any window is left alone, unless "offscreen
+                    on" makes AAText use the Workbench screen colours
+                    there (default off).
 
   auto off          Switch off automatic font detection; only the
                     explicit mappings below are used.
@@ -413,8 +416,8 @@ Limitations
 - Palette screens (AGA, 256 colours or fewer) are not antialiased.
 - A font used for the first time is loaded in the background; its very
   first line of text may appear unsmoothed.
-- Text drawn into hidden bitmaps is left alone unless "offscreen on" is
-  set.
+- Text in hidden bitmaps of programs without any window is left alone
+  unless "offscreen on" is set.
 
 
 Speed

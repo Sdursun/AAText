@@ -369,11 +369,14 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                     bırakın. Sadece RTG ekranlar; paletli ekranlar
                     gri kalır.
 
-  offscreen on      Bazı programlar (dock'lar, göstergeler) yazıyı önce
-                    gizli bir bitmap'e çizer. AAText orada hangi ekran
-                    renklerinin geçerli olduğunu bilemez ve bu yazılara
-                    dokunmaz. "offscreen on" ile Workbench ekranının
-                    renkleri kullanılır (varsayılan kapalı).
+  offscreen on      Bazı programlar yazıyı önce gizli bir bitmap'e çizer
+                    (MUI gadget'ları, dock'lar, göstergeler). AAText
+                    çizen programın penceresinin ekranını, penceresi
+                    olmayan MUI yardımcı süreçlerinde ise aktif
+                    pencerenin ekranını kullanır. Hiç penceresi olmayan
+                    programların gizli bitmap'lerindeki yazılara
+                    dokunulmaz; "offscreen on" ile orada Workbench
+                    ekranının renkleri kullanılır (varsayılan kapalı).
 
   auto off          Otomatik font algılamayı kapatır; sadece aşağıdaki
                     elle eşlemeler kullanılır.
@@ -426,8 +429,8 @@ Sınırlamalar
 - Paletli ekranlar (AGA, 256 renk ve altı) yumuşatılmaz.
 - İlk kez kullanılan bir font arka planda yüklenir; ilk yazı satırı
   yumuşatılmamış görünebilir.
-- Gizli bitmap'lere çizilen yazılara, "offscreen on" ayarlanmadıkça
-  dokunulmaz.
+- Hiç penceresi olmayan programların gizli bitmap'lerindeki yazılara,
+  "offscreen on" ayarlanmadıkça dokunulmaz.
 
 
 Hız

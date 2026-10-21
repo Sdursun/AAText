@@ -388,15 +388,58 @@ static void LogNoViewPort(struct RastPort *rp)
  * than LockIBase(): our caller may hold layer locks, and taking the
  * Intuition lock here could deadlock against input.device.
  */
+/* Same kind of pixels: both true colour, or palettes of equal depth. */
+static BOOL DepthsMatch(LONG a, LONG b)
+{
+    return a > 8 ? b > 8 : a == b;
+}
+
+/*
+ * The screen of a window of task me (its active window first), for text
+ * drawn into a bitmap of no screen: MUI and others render gadgets into
+ * an off-screen buffer and copy it to their window. Windows are matched
+ * by the task their IDCMP port signals. Forbid() held.
+ */
+static struct ViewPort *TaskViewPort(struct Task *me, LONG depth)
+{
+    struct Window *w = IntuitionBase->ActiveWindow;
+    struct Screen *scr;
+
+    if (!(w && w->UserPort && w->UserPort->mp_SigTask == me))
+    {
+        struct Window *mine = NULL;
+
+        for (scr = IntuitionBase->FirstScreen; scr && !mine;
+             scr = scr->NextScreen)
+            for (mine = scr->FirstWindow; mine; mine = mine->NextWindow)
+                if (mine->UserPort && mine->UserPort->mp_SigTask == me)
+                    break;
+        /*
+         * A task without windows: MUI renders some gadgets in helper
+         * processes (muigfx.library and others), mostly for the window
+         * the user works with. Then the active window's screen, as for
+         * menus.
+         */
+        if (mine)
+            w = mine;
+    }
+    if (!w || !DepthsMatch(depth, GetBitMapAttr(w->WScreen->RastPort.BitMap,
+                                                BMA_DEPTH)))
+        return NULL;
+    return &w->WScreen->ViewPort;
+}
+
 static struct ViewPort *FindViewPort(struct RastPort *rp)
 {
     struct Layer *layer = rp->Layer;
     struct Screen *scr;
     struct ViewPort *vp = NULL, *wbvp = NULL;
+    LONG depth;
 
     if (layer && layer->Window)
         return &((struct Window *)layer->Window)->WScreen->ViewPort;
 
+    depth = GetBitMapAttr(rp->BitMap, BMA_DEPTH);
     Forbid();
     for (scr = IntuitionBase->FirstScreen; scr; scr = scr->NextScreen)
     {
@@ -408,6 +451,10 @@ static struct ViewPort *FindViewPort(struct RastPort *rp)
         if ((scr->Flags & SCREENTYPE) == WBENCHSCREEN)
             wbvp = &scr->ViewPort;
     }
+
+    /* an off-screen buffer of a program with windows: their screen */
+    if (!vp && !layer)
+        vp = TaskViewPort(FindTask(NULL), depth);
 
     /*
      * Menus: without a menu tool (MagicMenu), Intuition draws the menu
