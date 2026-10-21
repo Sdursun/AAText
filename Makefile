@@ -226,7 +226,8 @@ dist:
 # Preferences program (ReAction); objects in their own directory because
 # both programs have a main.c
 GUI_TARGET := $(BUILDDIR)/AATextPrefs
-GUI_SRCS   := src/prefsgui/main.c src/prefsgui/strings.c src/prefs.c \
+GUI_SRCS   := src/prefsgui/main.c src/prefsgui/core.c src/prefsgui/strings.c \
+              src/prefs.c \
               src/prefswrite.c src/aaclient.c src/charsets.c \
               src/manager/preview.c
 GUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/gui/%.o,$(GUI_SRCS)) \

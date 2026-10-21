@@ -72,6 +72,7 @@
 #include "../aaclient.h"
 #include "../charsets.h"
 #include "../manager/preview.h"
+#include "core.h"
 #include "strings.h"
 
 static const char version[] __attribute__((used)) =
@@ -81,7 +82,6 @@ static const char stackcookie[] __attribute__((used)) = "$STACK:16384";
 
 #define ENV_PREFS     "ENV:AAText.prefs"
 #define ENVARC_PREFS  "ENVARC:AAText.prefs"
-#define REPLY_TICKS   250
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
@@ -119,20 +119,12 @@ static struct List maplb;
 static struct List tablist, hintlist, blacklb, runlist, charsetlist,
                    subpixlist;
 
-static struct AAPrefs cur;      /* what the window shows */
-static struct AAPrefs before;   /* AAText's settings when we started */
-static struct AAPrefs orig;     /* the settings read at start (Restore) */
-static BOOL running;            /* AAText answered STATUS */
-static BOOL tested;             /* new settings were APPLYed to AAText */
 static char statustext[320];
 static char gammatext[8];
 static char fontinfo[80];
 static char cacheused[64];
 static char fontmemused[64];
 
-#define MAX_RUNNING 64
-static char runnames[MAX_RUNNING][AA_NAME_LEN];
-static LONG numrunning;
 
 static struct TextFont *previewfont;
 static struct Hook previewhook;
@@ -275,28 +267,19 @@ static void SetStatus(const char *text)
 
 static void QueryAAText(void)
 {
-    struct AAMessage *m = aa_SendCommand(AACMD_STATUS, NULL, NULL,
-                                         REPLY_TICKS);
-
-    running = FALSE;
-    if (m == AACLIENT_TIMEOUT)
-        SetStatus(GetString(MSG_STATUS_OLD));
-    else if (m == AACLIENT_NOTRUNNING)
-        SetStatus(GetString(MSG_STATUS_STOPPED));
-    else if (m->result != AARES_OK)
+    switch (pc_Query())
     {
-        /* another protocol version: AAText answered without the status */
-        SetStatus(GetString(MSG_STATUS_OLD));
-        aa_FreeReply(m);
-    }
-    else
-    {
-        running = TRUE;
-        CopyMem(&m->active, &before, sizeof(before));
-        snprintf(statustext, sizeof(statustext),
-                 GetString(MSG_STATUS_RUNNING), m->versionstr);
-        SetStatus(statustext);
-        aa_FreeReply(m);
+        case PC_RUNNING:
+            snprintf(statustext, sizeof(statustext),
+                     GetString(MSG_STATUS_RUNNING), pc.version);
+            SetStatus(statustext);
+            break;
+        case PC_STOPPED:
+            SetStatus(GetString(MSG_STATUS_STOPPED));
+            break;
+        default:
+            SetStatus(GetString(MSG_STATUS_OLD));
+            break;
     }
 }
 
@@ -315,26 +298,15 @@ static void ShowRestartNote(void)
 /* APPLY or RELOAD; shows the restart note if AAText asks for it. */
 static void Send(UWORD cmd, const struct AAPrefs *p)
 {
-    struct AAMessage *m;
-
-    if (!running)
-        return;
-    m = aa_SendCommand(cmd, NULL, p, REPLY_TICKS);
-    if (m == AACLIENT_NOTRUNNING || m == AACLIENT_TIMEOUT)
-    {
-        running = FALSE;
-        return;
-    }
-    if (m->result == AARES_RESTART && cmd != AACMD_APPLY)
+    if (pc_Send(cmd, p) == PC_RESTART && cmd != AACMD_APPLY)
         ShowRestartNote();
-    aa_FreeReply(m);
 }
 
 static BOOL WritePrefsFile(const char *path, const char *template_path)
 {
     char msg[160];
 
-    if (aa_WritePrefs(&cur, path, template_path))
+    if (pc_Write(path, template_path))
         return TRUE;
     snprintf(msg, sizeof(msg), GetString(MSG_WRITE_ERROR), path);
     SetStatus(msg);
@@ -406,49 +378,47 @@ static void ReadGadgets(void)
     ULONG v = 0;
 
     if (GetAttr(SLIDER_Level, (Object *)gads[GID_GAMMA], &v) &&
-        (LONG)v != GammaLevel(cur.gamma100))
-        cur.gamma100 = v * GAMMA_STEP;
+        (LONG)v != GammaLevel(pc.cur.gamma100))
+        pc.cur.gamma100 = v * GAMMA_STEP;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_HINTING], &v))
-        cur.hinting = hint_order[v & 3];
+        pc.cur.hinting = hint_order[v & 3];
     if (GetAttr(GA_Selected, (Object *)gads[GID_REAL], &v))
-        cur.autoreal = v != 0;
+        pc.cur.autoreal = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_KERNING], &v))
-        cur.kerning = v != 0;
+        pc.cur.kerning = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_AUTO], &v))
-        cur.autodetect = v != 0;
+        pc.cur.autodetect = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_OFFSCREEN], &v))
-        cur.offscreen = v != 0;
+        pc.cur.offscreen = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_AGA], &v))
-        cur.aga = v != 0;
+        pc.cur.aga = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_ANTIALIAS], &v))
-        cur.antialias = v != 0;
+        pc.cur.antialias = v != 0;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_SUBPIXEL], &v))
-        cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
+        pc.cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
-        cur.cachekb = v;
+        pc.cur.cachekb = v;
     /* 0: no limit; otherwise at least 1 MB, as the prefs file allows */
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_FONTMEM], &v))
-        cur.fontmemkb = v && v < 1024 ? 1024 : v;
+        pc.cur.fontmemkb = v && v < 1024 ? 1024 : v;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_CHARSET], &v))
-        cur.charset = v < AA_NUM_CHARSETS ? v : AA_CHARSET_LATIN1;
+        pc.cur.charset = v < AA_NUM_CHARSETS ? v : AA_CHARSET_LATIN1;
 }
 
 /* "In use: 5 KB, 52 characters" from AAText's STATUS */
 static void UpdateCacheUsed(void)
 {
-    struct AAMessage *m = NULL;
+    ULONG cbytes, glyphs, fbytes;
+    LONG files;
 
     cacheused[0] = fontmemused[0] = 0;
-    if (running)
-        m = aa_SendCommand(AACMD_STATUS, NULL, NULL, REPLY_TICKS);
-    if (m != AACLIENT_NOTRUNNING && m != AACLIENT_TIMEOUT)
+    if (pc_Usage(&cbytes, &glyphs, &fbytes, &files))
     {
         snprintf(cacheused, sizeof(cacheused), GetString(MSG_CACHE_USED),
-                 (long)((m->cachebytes + 1023) / 1024), (long)m->cacheglyphs);
+                 (long)((cbytes + 1023) / 1024), (long)glyphs);
         snprintf(fontmemused, sizeof(fontmemused),
-                 GetString(MSG_FONTMEM_USED),
-                 (long)((m->facebytes + 1023) / 1024), (long)m->numfaces);
-        aa_FreeReply(m);
+                 GetString(MSG_FONTMEM_USED), (long)((fbytes + 1023) / 1024),
+                 (long)files);
     }
     if (win)
     {
@@ -460,7 +430,7 @@ static void UpdateCacheUsed(void)
 static void UpdateGammaText(void)
 {
     snprintf(gammatext, sizeof(gammatext), "%ld.%02ld",
-             (long)(cur.gamma100 / 100), (long)(cur.gamma100 % 100));
+             (long)(pc.cur.gamma100 / 100), (long)(pc.cur.gamma100 % 100));
     if (win)
         SetGad(GID_GAMMAVAL, GA_Text, (ULONG)gammatext);
 }
@@ -471,22 +441,17 @@ static void UpdateGammaText(void)
  */
 static void LiveApply(void)
 {
-    static struct AAPrefs p;    /* ~6.5 KB: not on the stack */
+    BOOL wasrunning = pc.running;
 
     ReadGadgets();
     UpdateGammaText();
-    if (!running)
+    if (!wasrunning)
         return;
-    CopyMem(&cur, &p, sizeof(p));
-    p.autoreal = before.autoreal;
-    p.kerning = before.kerning;
-    Send(AACMD_APPLY, &p);
-    if (!running)
+    if (!pc_LiveApply())
     {
         SetStatus(GetString(MSG_STATUS_STOPPED));
         return;
     }
-    tested = TRUE;
     SetStatus(GetString(MSG_STATUS_TESTED));
     RefreshPreview();
     UpdateCacheUsed();
@@ -504,10 +469,10 @@ static void ShowBlacklist(void)
     if (win)
         SetGad(GID_BLACKLIST, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&blacklb);
-    for (i = 0; i < cur.numblack; i++)
+    for (i = 0; i < pc.cur.numblack; i++)
     {
         struct Node *n = AllocListBrowserNode(1,
-                             LBNCA_Text, (ULONG)cur.blacklist[i], TAG_DONE);
+                             LBNCA_Text, (ULONG)pc.cur.blacklist[i], TAG_DONE);
         if (n)
             AddTail(&blacklb, n);
     }
@@ -518,35 +483,22 @@ static void ShowBlacklist(void)
 
 static void AddProgram(const char *name)
 {
-    char buf[AA_NAME_LEN];
-    LONG i, len;
+    char msg[80];
 
-    /* trim blanks; names are compared without case, as AAText does */
-    while (*name == ' ' || *name == '\t')
-        name++;
-    snprintf(buf, sizeof(buf), "%s", name);
-    for (len = strlen(buf); len > 0 && (buf[len - 1] == ' ' ||
-                                        buf[len - 1] == '\t'); len--)
-        buf[len - 1] = 0;
-    if (!buf[0])
-        return;
-    for (i = 0; i < cur.numblack; i++)
-        if (!Stricmp((CONST_STRPTR)cur.blacklist[i], (CONST_STRPTR)buf))
-            return;
-    if (cur.numblack == AA_MAX_BLACKLIST)
+    switch (pc_AddProgram(name))
     {
-        char msg[80];
-
-        snprintf(msg, sizeof(msg), GetString(MSG_LIST_FULL),
-                 (long)AA_MAX_BLACKLIST);
-        SetStatus(msg);
-        return;
+        case PC_ADDED:
+            ShowBlacklist();
+            if (win)
+                SetGad(GID_PROGNAME, STRINGA_TextVal, (ULONG)"");
+            LiveApply();
+            break;
+        case PC_FULL:
+            snprintf(msg, sizeof(msg), GetString(MSG_LIST_FULL),
+                     (long)AA_MAX_BLACKLIST);
+            SetStatus(msg);
+            break;
     }
-    strcpy(cur.blacklist[cur.numblack++], buf);
-    ShowBlacklist();
-    if (win)
-        SetGad(GID_PROGNAME, STRINGA_TextVal, (ULONG)"");
-    LiveApply();
 }
 
 /*
@@ -575,147 +527,30 @@ static void PickProgram(void)
 static void RemoveProgram(void)
 {
     ULONG sel = ~0UL;
-    LONG i;
 
     GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_BLACKLIST], &sel);
-    if ((LONG)sel < 0 || (LONG)sel >= cur.numblack)
+    if ((LONG)sel < 0 || (LONG)sel >= pc.cur.numblack)
         return;
-    for (i = sel; i < cur.numblack - 1; i++)
-        strcpy(cur.blacklist[i], cur.blacklist[i + 1]);
-    cur.numblack--;
+    pc_RemoveProgram(sel);
     ShowBlacklist();
     LiveApply();
 }
 
-/* Remember name (len chars) once, sorted, for the running list. */
-static void AddRunning(const char *name, LONG len)
-{
-    char buf[AA_NAME_LEN];
-    LONG i, j;
 
-    if (len <= 0 || numrunning == MAX_RUNNING)
-        return;
-    if (len >= AA_NAME_LEN)
-        len = AA_NAME_LEN - 1;
-    CopyMem((APTR)name, buf, len);
-    buf[len] = 0;
-    for (i = 0; i < numrunning; i++)
-    {
-        LONG c = Stricmp((CONST_STRPTR)buf, (CONST_STRPTR)runnames[i]);
 
-        if (c == 0)
-            return;
-        if (c < 0)
-            break;
-    }
-    for (j = numrunning; j > i; j--)
-        strcpy(runnames[j], runnames[j - 1]);
-    strcpy(runnames[i], buf);
-    numrunning++;
-}
-
-/*
- * The names AAText's blacklist can match: task names and, for Shell
- * processes, the running command (without its path).
- */
-static void AddTaskNames(struct Task *t)
-{
-    const char *name = t->tc_Node.ln_Name;
-
-    if (name)
-        AddRunning(name, strlen(name));
-    if (t->tc_Node.ln_Type == NT_PROCESS)
-    {
-        struct CommandLineInterface *cli =
-            BADDR(((struct Process *)t)->pr_CLI);
-
-        if (cli && cli->cli_Module && cli->cli_CommandName)
-        {
-            const UBYTE *b = BADDR(cli->cli_CommandName);
-            const char *cmd = (const char *)b + 1;
-            LONG len = b[0], i;
-
-            for (i = len - 1; i >= 0; i--)
-                if (cmd[i] == '/' || cmd[i] == ':')
-                {
-                    cmd += i + 1;
-                    len -= i + 1;
-                    break;
-                }
-            AddRunning(cmd, len);
-        }
-    }
-}
-
-/*
- * Leave out what nobody blacklists: file systems and handlers (DF0,
- * RAM, CON), library/device tasks and Shell process names.
- */
-static BOOL IsProgramName(const char *name)
-{
-    static const char *const skip[] =
-    {
-        ".device", ".library", ".resource", ".gadget", ".class", ".image",
-        NULL
-    };
-    static const char *const shells[] =
-    {
-        "Background CLI", "Shell Process", "Initial CLI", "New CLI",
-        "AAText", "AATextPrefs", NULL
-    };
-    struct DosList *dl;
-    LONG len = strlen(name), i;
-    BOOL handler;
-
-    for (i = 0; skip[i]; i++)
-    {
-        LONG n = strlen(skip[i]);
-
-        if (len > n && !Stricmp((CONST_STRPTR)name + len - n,
-                                (CONST_STRPTR)skip[i]))
-            return FALSE;
-    }
-    for (i = 0; shells[i]; i++)
-        if (!Stricmp((CONST_STRPTR)name, (CONST_STRPTR)shells[i]))
-            return FALSE;
-
-    dl = LockDosList(LDF_DEVICES | LDF_READ);
-    handler = FindDosEntry(dl, (CONST_STRPTR)name, LDF_DEVICES) != NULL;
-    UnLockDosList(LDF_DEVICES | LDF_READ);
-    return !handler;
-}
 
 static void FillRunning(void)
 {
     struct Node *n;
-    LONG i, j;
+    LONG i;
 
     if (win)
         SetGad(GID_RUNNING, CHOOSER_Labels, ~0UL);
     while ((n = RemHead(&runlist)))
         FreeChooserNode(n);
-
-    numrunning = 0;
-    Forbid();
-    AddTaskNames(FindTask(NULL));
-    for (n = SysBase->TaskReady.lh_Head; n->ln_Succ; n = n->ln_Succ)
-        AddTaskNames((struct Task *)n);
-    for (n = SysBase->TaskWait.lh_Head; n->ln_Succ; n = n->ln_Succ)
-        AddTaskNames((struct Task *)n);
-    Permit();
-
-    /* DOS calls only now, after Permit() */
-    for (i = j = 0; i < numrunning; i++)
-        if (IsProgramName(runnames[i]))
-        {
-            if (i != j)
-                strcpy(runnames[j], runnames[i]);
-            j++;
-        }
-    numrunning = j;
-
-    for (i = 0; i < numrunning; i++)
-        if ((n = AllocChooserNode(CNA_Text, (ULONG)runnames[i], TAG_DONE)))
+    pc_FillRunning();
+    for (i = 0; i < pc.numrunning; i++)
+        if ((n = AllocChooserNode(CNA_Text, (ULONG)pc.runnames[i], TAG_DONE)))
             AddTail(&runlist, n);
     if (win)
         SetGad(GID_RUNNING, CHOOSER_Labels, (ULONG)&runlist);
@@ -734,55 +569,22 @@ static const LONG charset_msg[AA_NUM_CHARSETS] =
     MSG_CHARSET_KOI8R
 };
 
-static BOOL WriteFile(const char *path, const void *data, LONG len)
-{
-    BPTR fh = Open((CONST_STRPTR)path, MODE_NEWFILE);
-    BOOL ok;
 
-    if (!fh)
-        return FALSE;
-    ok = Write(fh, (APTR)data, len) == len;
-    if (!Close(fh))
-        ok = FALSE;
-    return ok;
-}
-
-/* TRUE if page is the table of one of the sets in the chooser. */
-static BOOL KnownCodePage(const UWORD *page)
-{
-    static UWORD known[256];
-    LONG i;
-
-    for (i = 0; i < AA_NUM_CHARSETS; i++)
-    {
-        aa_CharsetPage(i, known);
-        if (!memcmp(known, page, sizeof(known)))
-            return TRUE;
-    }
-    return FALSE;
-}
 
 /*
- * Make ENV:ftcodepage (and with archive ENVARC:ftcodepage) match the
- * chosen character set, so freetype2.library and AAText agree. Latin-1
- * is what both use without the variable, so it is deleted then. A code
- * page that is not one of ours is replaced only when the user agrees.
- * FALSE if a file could not be written (shown in the status line).
+ * ENV:ftcodepage (ENVARC: too with archive) to the chosen character set.
+ * A code page that is not one of ours is replaced only when the user
+ * agrees. FALSE if a file could not be written (shown in the status
+ * line).
  */
 static BOOL WriteCodePage(BOOL archive)
 {
-    static UWORD page[256], old[256];
-    BOOL latin1 = cur.charset == AA_CHARSET_LATIN1;
     char msg[80];
-    LONG len;
 
-    aa_CharsetPage(cur.charset, page);
-    len = GetVar((CONST_STRPTR)"ftcodepage", (STRPTR)old, sizeof(old),
-                 GVF_GLOBAL_ONLY | GVF_BINARY_VAR | GVF_DONT_NULL_TERM);
-    if (len >= 0 && (len != (LONG)sizeof(old) || !KnownCodePage(old)))
+    if (pc_CodePageForeign())
     {
         struct EasyStruct es;
-        ULONG arg = (ULONG)GetString(charset_msg[cur.charset]);
+        ULONG arg = (ULONG)GetString(charset_msg[pc.cur.charset]);
 
         es.es_StructSize = sizeof(es);
         es.es_Flags = 0;
@@ -792,32 +594,18 @@ static BOOL WriteCodePage(BOOL archive)
         if (EasyRequestArgs(win, &es, NULL, &arg) != 1)
             return TRUE;
     }
-
-    if (latin1)
+    switch (pc_WriteCodePage(archive))
     {
-        if (len >= 0)
-            DeleteVar((CONST_STRPTR)"ftcodepage", GVF_GLOBAL_ONLY);
+        case PC_CP_ENVFAIL:
+            SetStatus(GetString(MSG_FTCODEPAGE_FAIL));
+            return FALSE;
+        case PC_CP_ARCFAIL:
+            snprintf(msg, sizeof(msg), GetString(MSG_WRITE_ERROR),
+                     "ENVARC:ftcodepage");
+            SetStatus(msg);
+            return FALSE;
     }
-    else if ((len != (LONG)sizeof(old) || memcmp(old, page, sizeof(page))) &&
-             !SetVar((CONST_STRPTR)"ftcodepage", (STRPTR)page, sizeof(page),
-                     GVF_GLOBAL_ONLY | GVF_BINARY_VAR))
-    {
-        SetStatus(GetString(MSG_FTCODEPAGE_FAIL));
-        return FALSE;
-    }
-    if (!archive)
-        return TRUE;
-
-    /* written by hand: SetVar(GVF_SAVE_VAR) reports success even when
-       ENVARC: cannot be written (seen with ENVARC: not assigned) */
-    if (latin1 ? DeleteFile((CONST_STRPTR)"ENVARC:ftcodepage") ||
-                 IoErr() == ERROR_OBJECT_NOT_FOUND
-               : WriteFile("ENVARC:ftcodepage", page, sizeof(page)))
-        return TRUE;
-    snprintf(msg, sizeof(msg), GetString(MSG_WRITE_ERROR),
-             "ENVARC:ftcodepage");
-    SetStatus(msg);
-    return FALSE;
+    return TRUE;
 }
 
 /* "Screen font: XEN 8", without the ".font" */
@@ -830,7 +618,7 @@ static void MakeFontInfo(const struct TextAttr *ta)
     if ((dot = strstr(name, ".font")))
         *dot = 0;
     snprintf(fontinfo, sizeof(fontinfo),
-             GetString(running ? MSG_PREVIEW_FONT : MSG_PREVIEW_PLAIN),
+             GetString(pc.running ? MSG_PREVIEW_FONT : MSG_PREVIEW_PLAIN),
              name, (long)ta->ta_YSize);
 }
 
@@ -878,7 +666,7 @@ static LONG MapSelected(void)
 
     if (gads[GID_MAPLIST])
         GetAttr(LISTBROWSER_Selected, (Object *)gads[GID_MAPLIST], &sel);
-    return (LONG)sel >= 0 && (LONG)sel < cur.nummaps ? (LONG)sel : -1;
+    return (LONG)sel >= 0 && (LONG)sel < pc.cur.nummaps ? (LONG)sel : -1;
 }
 
 /* the selected mapping's TrueType file in the preview, or nothing */
@@ -891,7 +679,7 @@ static void MapPreview(void)
     if (!pvready && !(pvready = pv_Init()))
         return;
     if (sel >= 0)
-        pv_Render(win->WScreen, cur.map[sel].ttfpath, 0,
+        pv_Render(win->WScreen, pc.cur.map[sel].ttfpath, 0,
                   GetString(MSG_PREVIEW_LINE1), GetString(MSG_PREVIEW_LINE2));
     else
         pv_Render(win->WScreen, NULL, 0, NULL, NULL);
@@ -918,7 +706,7 @@ static void MapSelectionChanged(void)
 {
     LONG sel = MapSelected();
 
-    SetGad2(GID_MAPPX, INTEGER_Number, sel >= 0 ? cur.map[sel].pixelsize : 0,
+    SetGad2(GID_MAPPX, INTEGER_Number, sel >= 0 ? pc.cur.map[sel].pixelsize : 0,
             GA_Disabled, sel < 0);
     SetGad(GID_MAPCHANGE, GA_Disabled, sel < 0);
     SetGad(GID_MAPREMOVE, GA_Disabled, sel < 0);
@@ -933,9 +721,9 @@ static void ShowMappings(LONG sel)
     if (win)
         SetGad(GID_MAPLIST, LISTBROWSER_Labels, ~0UL);
     FreeListBrowserList(&maplb);
-    for (i = 0; i < cur.nummaps; i++)
+    for (i = 0; i < pc.cur.nummaps; i++)
     {
-        const struct AAMapping *mp = &cur.map[i];
+        const struct AAMapping *mp = &pc.cur.map[i];
         struct Node *n;
 
         snprintf(mapfont[i], sizeof(mapfont[i]), "%s %ld", mp->fontname,
@@ -975,7 +763,7 @@ static void EditMapping(LONG replace)
     LONG len;
     BOOL ok = FALSE;
 
-    if (replace < 0 && cur.nummaps == AA_MAX_MAPPINGS)
+    if (replace < 0 && pc.cur.nummaps == AA_MAX_MAPPINGS)
     {
         char msg[80];
 
@@ -985,7 +773,7 @@ static void EditMapping(LONG replace)
         return;
     }
     if (replace >= 0)
-        m = cur.map[replace];
+        m = pc.cur.map[replace];
     else
         memset(&m, 0, sizeof(m));
 
@@ -1046,21 +834,20 @@ static void EditMapping(LONG replace)
         return;
 
     if (replace < 0)
-        replace = cur.nummaps++;
-    cur.map[replace] = m;
+        replace = pc_AddMapping(&m);
+    else
+        pc_SetMapping(replace, &m);
     ShowMappings(replace);
     LiveApply();
 }
 
 static void RemoveMapping(void)
 {
-    LONG sel = MapSelected(), i;
+    LONG sel = MapSelected();
 
     if (sel < 0)
         return;
-    for (i = sel; i < cur.nummaps - 1; i++)
-        cur.map[i] = cur.map[i + 1];
-    cur.nummaps--;
+    pc_RemoveMapping(sel);
     ShowMappings(-1);
     LiveApply();
 }
@@ -1073,9 +860,8 @@ static void MapPixelSize(void)
     if (sel < 0)
         return;
     GetAttr(INTEGER_Number, (Object *)gads[GID_MAPPX], &v);
-    if (v == cur.map[sel].pixelsize)
+    if (!pc_SetMapPixel(sel, v))
         return;
-    cur.map[sel].pixelsize = v;
     ShowMappings(sel);
     LiveApply();
 }
@@ -1235,7 +1021,7 @@ static Object *ProgramsPage(void)
                 CHOOSER_DropDown, TRUE,
                 CHOOSER_Title, (ULONG)GetString(MSG_RUNNING),
                 CHOOSER_Labels, (ULONG)&runlist,
-                CHOOSER_MaxLabels, MAX_RUNNING,
+                CHOOSER_MaxLabels, PC_MAX_RUNNING,
             End,
             LAYOUT_AddChild, gads[GID_PICKFILE] = (struct Gadget *)ButtonObject,
                 GA_ID, GID_PICKFILE, GA_RelVerify, TRUE,
@@ -1257,21 +1043,21 @@ static Object *AdvancedPage(void)
             GA_ID, GID_AUTO,
             GA_RelVerify, TRUE,
             GA_Text, (ULONG)GetString(MSG_AUTODETECT),
-            GA_Selected, cur.autodetect,
+            GA_Selected, pc.cur.autodetect,
         End,
         CHILD_WeightedHeight, 0,
         LAYOUT_AddChild, gads[GID_OFFSCREEN] = (struct Gadget *)CheckBoxObject,
             GA_ID, GID_OFFSCREEN,
             GA_RelVerify, TRUE,
             GA_Text, (ULONG)GetString(MSG_OFFSCREEN),
-            GA_Selected, cur.offscreen,
+            GA_Selected, pc.cur.offscreen,
         End,
         CHILD_WeightedHeight, 0,
         LAYOUT_AddChild, gads[GID_AGA] = (struct Gadget *)CheckBoxObject,
             GA_ID, GID_AGA,
             GA_RelVerify, TRUE,
             GA_Text, (ULONG)GetString(MSG_AGA),
-            GA_Selected, cur.aga,
+            GA_Selected, pc.cur.aga,
         End,
         CHILD_WeightedHeight, 0,
 
@@ -1282,7 +1068,7 @@ static Object *AdvancedPage(void)
                 GA_TabCycle, TRUE,
                 INTEGER_Minimum, 32,
                 INTEGER_Maximum, 16384,
-                INTEGER_Number, cur.cachekb,
+                INTEGER_Number, pc.cur.cachekb,
                 INTEGER_Arrows, TRUE,
             End,
             CHILD_WeightedWidth, 0,
@@ -1307,7 +1093,7 @@ static Object *AdvancedPage(void)
                 GA_TabCycle, TRUE,
                 INTEGER_Minimum, 0,
                 INTEGER_Maximum, 262144,
-                INTEGER_Number, cur.fontmemkb,
+                INTEGER_Number, pc.cur.fontmemkb,
                 INTEGER_Arrows, TRUE,
             End,
             CHILD_WeightedWidth, 0,
@@ -1330,7 +1116,7 @@ static Object *AdvancedPage(void)
             GA_RelVerify, TRUE,
             CHOOSER_PopUp, TRUE,
             CHOOSER_Labels, (ULONG)&charsetlist,
-            CHOOSER_Selected, cur.charset,
+            CHOOSER_Selected, pc.cur.charset,
         End,
         CHILD_WeightedHeight, 0,
         Label(GetString(MSG_CHARSET)),
@@ -1411,7 +1197,7 @@ static Object *AppearancePage(void)
                 GA_RelVerify, TRUE,
                 SLIDER_Min, 50 / GAMMA_STEP,
                 SLIDER_Max, 400 / GAMMA_STEP,
-                SLIDER_Level, GammaLevel(cur.gamma100),
+                SLIDER_Level, GammaLevel(pc.cur.gamma100),
                 SLIDER_Orientation, SLIDER_HORIZONTAL,
             End,
             LAYOUT_AddChild, gads[GID_GAMMAVAL] = (struct Gadget *)ButtonObject,
@@ -1431,7 +1217,7 @@ static Object *AppearancePage(void)
             GA_ID, GID_ANTIALIAS,
             GA_RelVerify, TRUE,
             GA_Text, (ULONG)GetString(MSG_ANTIALIAS),
-            GA_Selected, cur.antialias,
+            GA_Selected, pc.cur.antialias,
         End,
         CHILD_WeightedHeight, 0,
 
@@ -1440,7 +1226,7 @@ static Object *AppearancePage(void)
             GA_RelVerify, TRUE,
             CHOOSER_PopUp, TRUE,
             CHOOSER_Labels, (ULONG)&subpixlist,
-            CHOOSER_Selected, cur.subpixel,
+            CHOOSER_Selected, pc.cur.subpixel,
         End,
         CHILD_WeightedHeight, 0,
         Label(GetString(MSG_SUBPIXEL)),
@@ -1450,7 +1236,7 @@ static Object *AppearancePage(void)
             GA_RelVerify, TRUE,
             CHOOSER_PopUp, TRUE,
             CHOOSER_Labels, (ULONG)&hintlist,
-            CHOOSER_Selected, HintIndex(cur.hinting),
+            CHOOSER_Selected, HintIndex(pc.cur.hinting),
         End,
         CHILD_WeightedHeight, 0,
         Label(GetString(MSG_HINTING)),
@@ -1459,14 +1245,14 @@ static Object *AppearancePage(void)
             GA_ID, GID_REAL,
             GA_RelVerify, TRUE,
             GA_Text, (ULONG)GetString(MSG_REAL),
-            GA_Selected, cur.autoreal,
+            GA_Selected, pc.cur.autoreal,
         End,
         CHILD_WeightedHeight, 0,
         LAYOUT_AddChild, gads[GID_KERNING] = (struct Gadget *)CheckBoxObject,
             GA_ID, GID_KERNING,
             GA_RelVerify, TRUE,
             GA_Text, (ULONG)GetString(MSG_KERNING),
-            GA_Selected, cur.kerning,
+            GA_Selected, pc.cur.kerning,
         End,
         CHILD_WeightedHeight, 0,
         LAYOUT_AddImage, LabelObject,
@@ -1715,8 +1501,8 @@ static BOOL Action(ULONG id)
             ULONG sel = ~0UL;
 
             GetAttr(CHOOSER_Selected, (Object *)gads[GID_RUNNING], &sel);
-            if ((LONG)sel >= 0 && (LONG)sel < numrunning)
-                AddProgram(runnames[sel]);
+            if ((LONG)sel >= 0 && (LONG)sel < pc.numrunning)
+                AddProgram(pc.runnames[sel]);
             break;
         }
 
@@ -1742,8 +1528,8 @@ static BOOL Action(ULONG id)
             break;
 
         case GID_CANCEL:
-            if (tested)
-                Send(AACMD_APPLY, &before);
+            if (pc.tested)
+                Send(AACMD_APPLY, &pc.before);
             return TRUE;
     }
     return FALSE;
@@ -1752,18 +1538,18 @@ static BOOL Action(ULONG id)
 /* Show cur in every gadget and let AAText use it. */
 static void ShowPrefs(void)
 {
-    SetGad(GID_GAMMA, SLIDER_Level, GammaLevel(cur.gamma100));
-    SetGad(GID_HINTING, CHOOSER_Selected, HintIndex(cur.hinting));
-    SetGad(GID_REAL, GA_Selected, cur.autoreal);
-    SetGad(GID_KERNING, GA_Selected, cur.kerning);
-    SetGad(GID_AUTO, GA_Selected, cur.autodetect);
-    SetGad(GID_OFFSCREEN, GA_Selected, cur.offscreen);
-    SetGad(GID_AGA, GA_Selected, cur.aga);
-    SetGad(GID_ANTIALIAS, GA_Selected, cur.antialias);
-    SetGad(GID_SUBPIXEL, CHOOSER_Selected, cur.subpixel);
-    SetGad(GID_CACHE, INTEGER_Number, cur.cachekb);
-    SetGad(GID_FONTMEM, INTEGER_Number, cur.fontmemkb);
-    SetGad(GID_CHARSET, CHOOSER_Selected, cur.charset);
+    SetGad(GID_GAMMA, SLIDER_Level, GammaLevel(pc.cur.gamma100));
+    SetGad(GID_HINTING, CHOOSER_Selected, HintIndex(pc.cur.hinting));
+    SetGad(GID_REAL, GA_Selected, pc.cur.autoreal);
+    SetGad(GID_KERNING, GA_Selected, pc.cur.kerning);
+    SetGad(GID_AUTO, GA_Selected, pc.cur.autodetect);
+    SetGad(GID_OFFSCREEN, GA_Selected, pc.cur.offscreen);
+    SetGad(GID_AGA, GA_Selected, pc.cur.aga);
+    SetGad(GID_ANTIALIAS, GA_Selected, pc.cur.antialias);
+    SetGad(GID_SUBPIXEL, CHOOSER_Selected, pc.cur.subpixel);
+    SetGad(GID_CACHE, INTEGER_Number, pc.cur.cachekb);
+    SetGad(GID_FONTMEM, INTEGER_Number, pc.cur.fontmemkb);
+    SetGad(GID_CHARSET, CHOOSER_Selected, pc.cur.charset);
     ShowBlacklist();
     ShowMappings(-1);
     LiveApply();
@@ -1776,7 +1562,7 @@ static void LoadPrefs(const char *path)
 
     if (aa_ReadPrefs(&p, path, FALSE))
     {
-        CopyMem(&p, &cur, sizeof(cur));
+        CopyMem(&p, &pc.cur, sizeof(pc.cur));
         ShowPrefs();
     }
     else
@@ -1843,7 +1629,7 @@ static BOOL MenuAction(ULONG id)
             return Action(GID_CANCEL);
 
         case MENU_DEFAULTS:
-            aa_DefaultPrefs(&cur);
+            aa_DefaultPrefs(&pc.cur);
             ShowPrefs();
             break;
 
@@ -1852,7 +1638,7 @@ static BOOL MenuAction(ULONG id)
             break;
 
         case MENU_RESTORE:
-            CopyMem(&orig, &cur, sizeof(cur));
+            CopyMem(&pc.orig, &pc.cur, sizeof(pc.cur));
             ShowPrefs();
             break;
     }
@@ -1895,9 +1681,7 @@ int main(int argc, char **argv)
     AATextBase = OpenLibrary((CONST_STRPTR)"aatext.library", 1);
     InitStrings(language[0] ? language : NULL);
 
-    aa_ReadPrefs(&cur, NULL, FALSE);   /* defaults if there is no file */
-    CopyMem(&cur, &before, sizeof(before));
-    CopyMem(&cur, &orig, sizeof(orig));
+    pc_Init();
     UpdateGammaText();
     QueryAAText();
     UpdateCacheUsed();
