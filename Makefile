@@ -256,6 +256,28 @@ $(BUILDDIR)/gui/cgx.o: src/cgx.s
 	@mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) -c -o $@ $<
 
+# AATextPrefs for MUI 3.8: the same core, strings and preview
+GUIMUI_TARGET := $(BUILDDIR)/AATextPrefs_MUI
+GUIMUI_SRCS   := src/prefsgui_mui/main.c src/prefsgui/core.c \
+                 src/prefsgui/strings.c src/prefs.c src/prefswrite.c \
+                 src/aaclient.c src/charsets.c src/mui/muistubs.c
+GUIMUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/guimui/%.o,$(GUIMUI_SRCS)) \
+                 $(BUILDDIR)/gui/manager/preview.o $(BUILDDIR)/gui/cgx.o
+
+.PHONY: gui_mui
+gui_mui: $(GUIMUI_TARGET)
+
+$(GUIMUI_TARGET): $(GUIMUI_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ -lamiga
+ifneq ($(DEBUG),1)
+	$(STRIP) --strip-unneeded $@
+endif
+	@ls -l $@
+
+$(BUILDDIR)/guimui/%.o: src/%.c src/*.h src/prefsgui/*.h $(MUI_INC)/libraries/mui.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(MUI_FLAGS) -Wno-pointer-sign -c -o $@ $<
+
 # Turkish catalog for AATextPrefs
 CATALOG := build/catalogs/aatextprefs.catalog
 
