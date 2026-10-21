@@ -1,0 +1,5 @@
+# fttest fontmem: three files, 1 MB for them
+FontA 16 -> third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf 14
+FontB 16 -> third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSerif.ttf 14
+FontC 16 -> third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans-Bold.ttf 14
+fontmem 1024

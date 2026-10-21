@@ -216,6 +216,17 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
             prefs->cachekb = kb;
         return;
     }
+    if (StrIEq(tok[0], "fontmem"))
+    {
+        LONG kb = n == 2 ? ParseUInt(tok[1]) : -1;
+
+        if (kb != 0 && (kb < 1024 || kb > 262144))
+            PrefsError(lineno, "fontmem must be 0 (no limit) or between "
+                       "1024 and 262144 (KB)");
+        else
+            prefs->fontmemkb = kb;
+        return;
+    }
     if (StrIEq(tok[0], "auto") || StrIEq(tok[0], "real") ||
         StrIEq(tok[0], "kerning"))
     {
@@ -368,6 +379,7 @@ void aa_DefaultPrefs(struct AAPrefs *prefs)
     prefs->antialias = TRUE;
     prefs->subpixel = AA_SUBPIXEL_OFF;
     prefs->cachekb = AA_DEFAULT_CACHE_KB;
+    prefs->fontmemkb = AA_DEFAULT_FONTMEM_KB;
     prefs->numblack = 0;
 }
 

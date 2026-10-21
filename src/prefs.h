@@ -9,6 +9,8 @@
 #define AA_PATH_LEN       256
 
 #define AA_DEFAULT_CACHE_KB  256
+/* memory for loaded TrueType files; 0 = no limit */
+#define AA_DEFAULT_FONTMEM_KB 8192
 
 enum
 {
@@ -65,6 +67,7 @@ struct AAPrefs
                                        (one colour), default on */
     UBYTE subpixel;                 /* AA_SUBPIXEL_..., default off */
     ULONG cachekb;                  /* glyph cache size in KB */
+    ULONG fontmemkb;                /* loaded font files in KB, 0: any */
     char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];
     UWORD numblack;
 };

@@ -8,9 +8,10 @@
 
 #include "prefs.h"
 
-#define AA_MAX_FONTS    64      /* bitmap font name + size entries */
-#define AA_MAX_FACES    32      /* loaded TrueType files */
-#define AA_MAX_NAMES    96      /* font names checked for a .otag */
+/* Table sizes; entries are allocated 64 at a time as they are needed. */
+#define AA_MAX_FONTS    2048    /* bitmap font name + size entries */
+#define AA_MAX_FACES    1024    /* TrueType files (loaded or not) */
+#define AA_MAX_NAMES    2048    /* font names checked for a .otag */
 
 /* A rendered glyph: 8 bit coverage (gamma corrected), pitch == width. */
 struct AAGlyph
@@ -147,9 +148,10 @@ BOOL aa_GlyphsReady(void);
  */
 void aa_GlyphsReconfigure(const struct AAPrefs *prefs);
 
-/* Counts for the STATUS message. */
-void aa_GlyphsStatus(LONG *numfonts, LONG *numfaces, ULONG *bytes,
-                     ULONG *glyphs);
+/* Counts for the STATUS message: font entries, loaded files and their
+   bytes, glyph cache bytes and glyphs. */
+void aa_GlyphsStatus(LONG *numfonts, LONG *numfaces, ULONG *facebytes,
+                     ULONG *bytes, ULONG *glyphs);
 
 /*
  * Mapping for a TextFont, or NULL. Lock-free in the common case. With
@@ -166,6 +168,17 @@ struct AAFont *aa_FindFont(struct TextFont *tf);
  */
 void aa_SetHelper(struct Task *task, ULONG sigmask);
 LONG aa_ResolvePending(BOOL report);
+
+/*
+ * TrueType files are kept in memory while a font that uses them is open.
+ * Over the "fontmem" budget, files of fonts no longer open in the system
+ * are freed, least recently used first; a freed file is loaded again
+ * (by the helper, like detection) when its font is used again.
+ * aa_GlyphsSetGfx() gives the font list to look at; without it nothing
+ * is freed.
+ */
+struct GfxBase;
+void aa_GlyphsSetGfx(struct GfxBase *gfx);
 
 /*
  * Check font names without a usable .otag again (a font installed while

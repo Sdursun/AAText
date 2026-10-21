@@ -18,8 +18,8 @@
 
 #define AA_PORTNAME     "AAText"
 #define AAMSG_MAGIC     0x41415458UL        /* 'AATX' */
-#define AAMSG_VERSION   5       /* 2: AAPrefs.kerning (0.12), 3: aga,
-                                   4: antialias, 5: subpixel */
+#define AAMSG_VERSION   6       /* 2: AAPrefs.kerning (0.12), 3: aga,
+                                   4: antialias, 5: subpixel, 6: fontmem */
 
 enum
 {
@@ -59,6 +59,7 @@ struct AAMessage
     ULONG           flags;          /* AASTAT_... */
     LONG            numfonts;       /* bitmap font/size entries */
     LONG            numfaces;       /* loaded TrueType/OpenType files */
+    ULONG           facebytes;      /* their memory */
     ULONG           cachebytes;     /* glyph cache in use */
     ULONG           cacheglyphs;
     struct AAPrefs  active;         /* the settings in effect */

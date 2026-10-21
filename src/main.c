@@ -118,7 +118,7 @@ static int Controller(BOOL reload, BOOL status)
     }
     if (status)
     {
-        LONG args[13];
+        LONG args[15];
 
         m = aa_SendCommand(AACMD_STATUS, NULL, NULL, 250);
         if (!ReplyOk(m))
@@ -138,10 +138,13 @@ static int Controller(BOOL reload, BOOL status)
         args[10] = m->cacheglyphs;
         args[11] = m->cachebytes / 1024;
         args[12] = m->active.cachekb;
+        args[13] = m->facebytes / 1024;
+        args[14] = m->active.fontmemkb;
         MsgFmt("%s%s\n"
                "  fonts: %ld file(s), %ld font size(s), auto detection %s\n"
                "  gamma %ld.%02ld, hinting %s, real metrics %s, kerning %s\n"
-               "  glyph cache: %ld glyphs, %ld of %ld KB\n", args);
+               "  glyph cache: %ld glyphs, %ld of %ld KB\n"
+               "  font files: %ld KB loaded, limit %ld KB (0: none)\n", args);
         aa_FreeReply(m);
     }
     return RETURN_OK;
@@ -233,7 +236,8 @@ static void HandleMessage(struct AAMessage *m)
             m->flags = (prefs.autodetect ? AASTAT_AUTODETECT : 0) |
                        (aa_MeasuringPatched() ? AASTAT_MEASURING : 0) |
                        (aa_IsPassthrough() ? AASTAT_PASSTHROUGH : 0);
-            aa_GlyphsStatus(&m->numfonts, &m->numfaces, &m->cachebytes,
+            aa_GlyphsStatus(&m->numfonts, &m->numfaces, &m->facebytes,
+                            &m->cachebytes,
                             &m->cacheglyphs);
             CopyMem(&prefs, &m->active, sizeof(prefs));
             m->result = AARES_OK;
@@ -305,7 +309,8 @@ struct FontRef
     UWORD ysize;
 };
 
-static struct FontRef refs[AA_MAX_FONTS];
+#define AA_MAX_REFS 128
+static struct FontRef refs[AA_MAX_REFS];
 static LONG numrefs;
 
 static void AddRef(const char *name, UWORD ysize)
@@ -321,7 +326,7 @@ static void AddRef(const char *name, UWORD ysize)
         if (name[n] == refs[i].name[n])
             return;
     }
-    if (numrefs == AA_MAX_FONTS)
+    if (numrefs == AA_MAX_REFS)
         return;
     for (n = 0; n < AA_PATH_LEN - 1 && name[n]; n++)
         refs[numrefs].name[n] = name[n];
@@ -548,6 +553,7 @@ int main(int argc, char **argv)
         return RETURN_FAIL;
     }
 
+    aa_GlyphsSetGfx(GfxBase);
     numfonts = aa_GlyphsInit(&prefs, from_shell);
     if (!aa_GlyphsReady())
     {

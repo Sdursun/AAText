@@ -10,6 +10,9 @@
 #include <string.h>
 #include <exec/types.h>
 #include <graphics/text.h>
+#include <graphics/gfxbase.h>
+#include <exec/memory.h>
+#include <proto/exec.h>
 #include <proto/dos.h>
 
 #include "prefs.h"
@@ -643,6 +646,87 @@ int main(int argc, char **argv)
     }
 
     n = aa_GlyphsInit(&prefs, TRUE);
+
+    /*
+     * "fontmem": tests/fontmem.prefs maps FontA, FontB, FontC (757, 380
+     * and 705 KB) with a 1 MB budget. With only FontA open, the others
+     * are freed; FontC used again is loaded again by the helper and
+     * draws; freeing and loading again many times returns all memory.
+     */
+    if (strcmp(argv[2], "fontmem") == 0)
+    {
+        static struct GfxBase gfx;
+        static struct TextFont open, use;
+        struct AAFont *af;
+        LONG fonts, faces, i;
+        ULONG fbytes, cbytes, glyphs, mem0 = 0, mem1 = 1;
+        BOOL bad = FALSE;
+
+        aa_GlyphsStatus(&fonts, &faces, &fbytes, &cbytes, &glyphs);
+        printf("start: %ld files, %lu KB loaded (no font list: kept)\n",
+               (long)faces, (unsigned long)(fbytes / 1024));
+        if (faces != 3)
+            bad = TRUE;
+
+        /* the system's font list: only FontA is open */
+        gfx.TextFonts.lh_Head = (struct Node *)&gfx.TextFonts.lh_Tail;
+        gfx.TextFonts.lh_Tail = NULL;
+        gfx.TextFonts.lh_TailPred = (struct Node *)&gfx.TextFonts.lh_Head;
+        memset(&open, 0, sizeof(open));
+        open.tf_Message.mn_Node.ln_Name = (char *)"FontA.font";
+        AddTail(&gfx.TextFonts, &open.tf_Message.mn_Node);
+        aa_GlyphsSetGfx(&gfx);
+
+        memset(&use, 0, sizeof(use));
+        use.tf_Message.mn_Node.ln_Name = (char *)"FontC.font";
+        use.tf_YSize = 16;
+        use.tf_XSize = 8;
+        use.tf_Baseline = 12;
+        use.tf_LoChar = 32;
+        use.tf_HiChar = 255;
+
+        for (i = 0; i < 6 && !bad; i++)
+        {
+            struct AAGlyph *gl = NULL;
+
+            /* over the budget: FontB and FontC go, FontA is open */
+            aa_GlyphsReconfigure(&prefs);
+            aa_GlyphsStatus(&fonts, &faces, &fbytes, &cbytes, &glyphs);
+            if (i == 0 || i == 5)
+                printf("trimmed: %ld file(s), %lu KB\n", (long)faces,
+                       (unsigned long)(fbytes / 1024));
+            if (faces != 1 || fbytes != 757076)
+                bad = TRUE;
+            /* same point of the cycle: after one, FreeType's caches exist */
+            if (i == 1)
+                mem0 = AvailMem(MEMF_ANY);
+            if (i == 5)
+                mem1 = AvailMem(MEMF_ANY);
+
+            /* FontC drawn again: none until the helper loaded it */
+            if (aa_FindFont(&use))
+                bad = TRUE;
+            aa_ResolvePending(TRUE);
+            af = aa_FindFont(&use);
+            aa_LockGlyphs();
+            if (af && aa_PrepareFont(af, &use))
+                gl = aa_GetGlyph(af, 'W');
+            if (!gl || !gl->width)
+                bad = TRUE;
+            if (i == 0)
+                printf("FontC again: %s, 'W' %dx%d\n", af ? "loaded" : "none",
+                       gl ? gl->width : -1, gl ? gl->rows : -1);
+            aa_UnlockGlyphs();
+        }
+        printf("memory after 4 more free/load cycles: %ld bytes difference\n",
+               (long)(mem0 - mem1));
+        if (mem0 != mem1)
+            bad = TRUE;
+        aa_GlyphsSetGfx(NULL);
+        aa_GlyphsCleanup();
+        printf("%s\n", bad ? "FAIL" : "OK");
+        return bad ? 10 : 0;
+    }
 
     /* "auto": detect a font via FONTS:<name>.otag like Text() would */
     if (strcmp(argv[2], "auto") == 0 && argc > 3)
