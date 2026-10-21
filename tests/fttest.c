@@ -656,7 +656,7 @@ int main(int argc, char **argv)
     if (strcmp(argv[2], "fontmem") == 0)
     {
         static struct GfxBase gfx;
-        static struct TextFont open, use;
+        static struct TextFont open, closed, use;
         struct AAFont *af;
         LONG fonts, faces, i;
         ULONG fbytes, cbytes, glyphs, mem0 = 0, mem1 = 1;
@@ -674,7 +674,13 @@ int main(int argc, char **argv)
         gfx.TextFonts.lh_TailPred = (struct Node *)&gfx.TextFonts.lh_Head;
         memset(&open, 0, sizeof(open));
         open.tf_Message.mn_Node.ln_Name = (char *)"FontA.font";
+        open.tf_Accessors = 1;
         AddTail(&gfx.TextFonts, &open.tf_Message.mn_Node);
+        /* FontB closed: still in the list (until memory is flushed),
+           without accessors; it must be freed all the same */
+        memset(&closed, 0, sizeof(closed));
+        closed.tf_Message.mn_Node.ln_Name = (char *)"FontB.font";
+        AddTail(&gfx.TextFonts, &closed.tf_Message.mn_Node);
         aa_GlyphsSetGfx(&gfx);
 
         memset(&use, 0, sizeof(use));

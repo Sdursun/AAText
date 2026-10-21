@@ -151,8 +151,9 @@ satırında görürsünüz.
               "Çalışan bir program ekle..." listesinden alın. Programın
               o an çalışması gerekmez; AAText onu adından tanır.
   Gelişmiş    otomatik font algılama, ekran dışı bitmap'ler, paletli
-              (AGA) ekranlarda yumuşatma, önbellek boyutu (o anki
-              kullanımıyla) ve karakter seti (İpuçları bölümüne bakın)
+              (AGA) ekranlarda yumuşatma, önbellek boyutu ve font
+              dosyaları için bellek (ikisi de o anki kullanımıyla) ve
+              karakter seti (İpuçları bölümüne bakın)
               "Fontlar (AATextManager)..." SYS:System/
               AATextManager'ı başlatır: font kurma, onarma ve
               tanılama (Tanılama sekmesi 0.23'e kadar buradaydı)
@@ -342,6 +343,16 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
 
   cache 256         Çizilmiş harfler için bellek, KB cinsinden
                     (32 - 16384, varsayılan 256).
+
+  fontmem 8192      Yüklü TrueType dosyaları için bellek, KB cinsinden
+                    (0 = sınırsız, yoksa 1024 - 262144; varsayılan
+                    8192). AAText bir fontu çizerken dosyasını
+                    bellekte tutar; bu sınırın üstünde, artık hiçbir
+                    programda açık olmayan fontların dosyaları en uzun
+                    süredir kullanılmayandan başlayarak bırakılır.
+                    Bırakılan bir font yeniden kullanılınca tekrar
+                    yüklenir; ilk yazısı bir an bitmap fontla görünür.
+                    Açık fontlar sınırın üstünde de kalır.
 
   antialias off     TrueType yazıyı yumuşatmasız çizer (varsayılan
                     açık): yazı yine AAText tarafından TrueType fonttan,

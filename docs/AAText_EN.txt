@@ -145,8 +145,9 @@ while you try it out.
               one from "Add a running program...". The program need
               not be running; AAText recognises it by its name.
   Advanced    automatic font detection, off-screen bitmaps,
-              antialiasing on palette (AGA) screens, cache size (with
-              the current use) and character set (see Tips)
+              antialiasing on palette (AGA) screens, cache size and
+              memory for font files (each with the current use) and
+              character set (see Tips)
               "Fonts (AATextManager)..." starts SYS:System/
               AATextManager: installing, repairing and checking
               fonts (its Diagnostics tab was here until 0.23)
@@ -332,6 +333,15 @@ It is a plain text file with one setting per line; lines starting with
 
   cache 256         Memory for rendered characters in KB (32 - 16384,
                     default 256).
+
+  fontmem 8192      Memory for loaded TrueType files in KB (0 = no
+                    limit, else 1024 - 262144; default 8192). AAText
+                    keeps a font's file in memory while it draws it;
+                    over this limit, files of fonts no longer open in
+                    any program are freed, least recently used first.
+                    A freed font used again is loaded again; its first
+                    text then appears in the bitmap font for a moment.
+                    Fonts that are open stay, even over the limit.
 
   antialias off     TrueType text without antialiasing (default on):
                     still drawn by AAText from the TrueType font, with

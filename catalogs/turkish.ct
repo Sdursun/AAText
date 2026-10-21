@@ -159,3 +159,7 @@ MSG_SP_RGB
 RGB - 1:1 gösterilen LCD, ölçeklenmeden
 MSG_SP_BGR
 BGR - 1:1 gösterilen LCD, ölçeklenmeden
+MSG_FONTMEM
+Font dosyaları (KB, 0: sınırsız)
+MSG_FONTMEM_USED
+Yüklü: %ld KB, %ld dosya

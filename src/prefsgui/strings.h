@@ -89,7 +89,9 @@
     S(MSG_SUBPIXEL,        121, "Subpixel (LCD)") \
     S(MSG_SP_OFF,          122, "Off (gray)") \
     S(MSG_SP_RGB,          123, "RGB - LCD shown 1:1, not scaled") \
-    S(MSG_SP_BGR,          124, "BGR - LCD shown 1:1, not scaled")
+    S(MSG_SP_BGR,          124, "BGR - LCD shown 1:1, not scaled") \
+    S(MSG_FONTMEM,         125, "Font files (KB, 0: no limit)") \
+    S(MSG_FONTMEM_USED,    126, "Loaded: %ld KB, %ld files")
 
 
 #define S(id, n, s) id = n,

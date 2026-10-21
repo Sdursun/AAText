@@ -517,7 +517,8 @@ static void CollectOpenFonts(void)
     Forbid();
     for (node = aa_Gfx->TextFonts.lh_Head; node->ln_Succ &&
          aa_NumOpen < AA_MAX_OPEN; node = node->ln_Succ)
-        if (node->ln_Name)
+        /* closed fonts stay in the list until memory is flushed */
+        if (node->ln_Name && ((struct TextFont *)node)->tf_Accessors)
             BaseName(node->ln_Name, aa_Open[aa_NumOpen++]);
     Permit();
 }

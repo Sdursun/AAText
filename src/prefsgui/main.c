@@ -95,7 +95,7 @@ enum
     GID_TABS = 1, GID_GAMMA, GID_GAMMAVAL, GID_HINTING, GID_REAL,
     GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
-    GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_CACHEUSED, GID_CHARSET,
+    GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_CACHEUSED, GID_FONTMEM, GID_FONTMEMUSED, GID_CHARSET,
     GID_PICKFILE, GID_KERNING, GID_ANTIALIAS, GID_SUBPIXEL,
     GID_MANAGER,
     GID_COUNT
@@ -122,6 +122,7 @@ static char statustext[320];
 static char gammatext[8];
 static char fontinfo[80];
 static char cacheused[64];
+static char fontmemused[64];
 
 #define MAX_RUNNING 64
 static char runnames[MAX_RUNNING][AA_NAME_LEN];
@@ -417,6 +418,9 @@ static void ReadGadgets(void)
         cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
         cur.cachekb = v;
+    /* 0: no limit; otherwise at least 1 MB, as the prefs file allows */
+    if (GetAttr(INTEGER_Number, (Object *)gads[GID_FONTMEM], &v))
+        cur.fontmemkb = v && v < 1024 ? 1024 : v;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_CHARSET], &v))
         cur.charset = v < AA_NUM_CHARSETS ? v : AA_CHARSET_LATIN1;
 }
@@ -426,17 +430,23 @@ static void UpdateCacheUsed(void)
 {
     struct AAMessage *m = NULL;
 
-    cacheused[0] = 0;
+    cacheused[0] = fontmemused[0] = 0;
     if (running)
         m = aa_SendCommand(AACMD_STATUS, NULL, NULL, REPLY_TICKS);
     if (m != AACLIENT_NOTRUNNING && m != AACLIENT_TIMEOUT)
     {
         snprintf(cacheused, sizeof(cacheused), GetString(MSG_CACHE_USED),
                  (long)((m->cachebytes + 1023) / 1024), (long)m->cacheglyphs);
+        snprintf(fontmemused, sizeof(fontmemused),
+                 GetString(MSG_FONTMEM_USED),
+                 (long)((m->facebytes + 1023) / 1024), (long)m->numfaces);
         aa_FreeReply(m);
     }
     if (win)
+    {
         SetGad(GID_CACHEUSED, GA_Text, (ULONG)cacheused);
+        SetGad(GID_FONTMEMUSED, GA_Text, (ULONG)fontmemused);
+    }
 }
 
 static void UpdateGammaText(void)
@@ -979,6 +989,31 @@ static Object *AdvancedPage(void)
         CHILD_WeightedHeight, 0,
         Label(GetString(MSG_CACHE)),
 
+        LAYOUT_AddChild, HLayoutObject,
+            LAYOUT_AddChild, gads[GID_FONTMEM] = (struct Gadget *)IntegerObject,
+                GA_ID, GID_FONTMEM,
+                GA_RelVerify, TRUE,
+                GA_TabCycle, TRUE,
+                INTEGER_Minimum, 0,
+                INTEGER_Maximum, 262144,
+                INTEGER_Number, cur.fontmemkb,
+                INTEGER_Arrows, TRUE,
+            End,
+            CHILD_WeightedWidth, 0,
+            CHILD_MinWidth, 100,
+            LAYOUT_AddChild, gads[GID_FONTMEMUSED] =
+                             (struct Gadget *)ButtonObject,
+                GA_ID, GID_FONTMEMUSED,
+                GA_ReadOnly, TRUE,
+                GA_Underscore, 0,
+                GA_Text, (ULONG)fontmemused,
+                BUTTON_BevelStyle, BVS_NONE,
+                BUTTON_Justification, BCJ_LEFT,
+            End,
+        End,
+        CHILD_WeightedHeight, 0,
+        Label(GetString(MSG_FONTMEM)),
+
         LAYOUT_AddChild, gads[GID_CHARSET] = (struct Gadget *)ChooserObject,
             GA_ID, GID_CHARSET,
             GA_RelVerify, TRUE,
@@ -1296,6 +1331,7 @@ static BOOL Action(ULONG id)
         case GID_ANTIALIAS:
         case GID_SUBPIXEL:
         case GID_CACHE:
+        case GID_FONTMEM:
         case GID_CHARSET:
             LiveApply();
             break;
@@ -1387,6 +1423,7 @@ static void ShowPrefs(void)
     SetGad(GID_ANTIALIAS, GA_Selected, cur.antialias);
     SetGad(GID_SUBPIXEL, CHOOSER_Selected, cur.subpixel);
     SetGad(GID_CACHE, INTEGER_Number, cur.cachekb);
+    SetGad(GID_FONTMEM, INTEGER_Number, cur.fontmemkb);
     SetGad(GID_CHARSET, CHOOSER_Selected, cur.charset);
     ShowBlacklist();
     LiveApply();
