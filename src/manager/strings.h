@@ -163,7 +163,7 @@
     S(MSG_MENU_SETTINGS,   153, "Settings") \
     S(MSG_MENU_MUISETTINGS, 154, "MUI...") \
     S(MSG_MENU_HELP,       155, "Help...") \
-    S(MSG_ABOUT_TEXT,      156, "%s\n\nAntialiased TrueType text for AmigaOS 3.2\n\nCopyright (C) 2026 Serkan Dursun\nMIT License\nhttps://github.com/Sdursun/AAText\n\nFreeType (C) The FreeType Project (FTL)\nReal metrics code derived from AROS (APL)") \
+    S(MSG_ABOUT_TEXT,      156, "%s\n\nAntialiased TrueType text for AmigaOS 3.2\n(AmigaOS 3.1, 3.5 and 3.9: not tested)\n\nCopyright (C) 2026 Serkan Dursun\nMIT License\nhttps://github.com/Sdursun/AAText\n\nFreeType (C) The FreeType Project (FTL)\nReal metrics code derived from AROS (APL)") \
     S(MSG_HELP_NOFILE,     157, "The documentation is not installed:\n%s\n\nInstall it with Install-AAText (\"Documents\").")
 
 #define S(id, n, s) id = n,
