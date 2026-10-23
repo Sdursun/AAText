@@ -6,6 +6,7 @@ Version:      0.40
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
+              (AmigaOS 3.1/3.5/3.9 untested, MUI GUIs only - reports welcome)
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
 on RTG screens (15/16/24/32 bit): icon labels, menus, window and screen
@@ -58,7 +59,9 @@ Features
   debug version for bug reports
 
 Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68),
-Picasso96.
+Picasso96. AmigaOS 3.1, 3.5 and 3.9 may work but have NOT been
+tested; the ReAction GUIs need 3.2, use the MUI ones there. Please
+report your results: https://github.com/Sdursun/AAText/issues
 
 Installation: double-click Install-AAText (the OS 3.2 Installer; it
 can also remove AAText again). By hand: copy AAText to C: and add "Run >NIL: C:AAText" to

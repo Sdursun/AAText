@@ -71,7 +71,7 @@ enum
 enum
 {
     MENU_BASE = 100, MENU_OPEN, MENU_SAVEAS, MENU_QUIT, MENU_DEFAULTS,
-    MENU_LASTSAVED, MENU_RESTORE, MENU_ABOUT, MENU_ABOUTMUI,
+    MENU_LASTSAVED, MENU_RESTORE, MENU_ABOUT,
     MENU_MUISETTINGS, MENU_HELP
 };
 
@@ -1066,7 +1066,6 @@ static struct NewMenu menu[] =
     { NM_ITEM,  NULL, "A",  0, 0, (APTR)MENU_SAVEAS },
     { NM_ITEM,  NM_BARLABEL, NULL, 0, 0, NULL },
     { NM_ITEM,  NULL, "?",  0, 0, (APTR)MENU_ABOUT },
-    { NM_ITEM,  NULL, NULL, 0, 0, (APTR)MENU_ABOUTMUI },
     { NM_ITEM,  NM_BARLABEL, NULL, 0, 0, NULL },
     { NM_ITEM,  NULL, "Q",  0, 0, (APTR)MENU_QUIT },
     { NM_TITLE, NULL, NULL, 0, 0, NULL },
@@ -1084,7 +1083,7 @@ static void LocalizeMenu(void)
     static const LONG labels[] =
     {
         MSG_MENU_PROJECT, MSG_MENU_OPEN, MSG_MENU_SAVEAS, 0,
-        MSG_MENU_ABOUT, MSG_MENU_ABOUTMUI, 0, MSG_MENU_QUIT,
+        MSG_MENU_ABOUT, 0, MSG_MENU_QUIT,
         MSG_MENU_EDIT, MSG_MENU_DEFAULTS, MSG_MENU_LASTSAVED,
         MSG_MENU_RESTORE,
         MSG_MENU_SETTINGS, MSG_MENU_MUISETTINGS, MSG_MENU_HELP
@@ -1427,9 +1426,6 @@ static BOOL MenuAction(ULONG id)
             break;
         case MENU_ABOUT:
             ShowAbout();
-            break;
-        case MENU_ABOUTMUI:
-            DoMethod(app, MUIM_Application_AboutMUI, (ULONG)win);
             break;
         case MENU_MUISETTINGS:
             DoMethod(app, MUIM_Application_OpenConfigWindow, 0);

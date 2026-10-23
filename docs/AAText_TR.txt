@@ -20,7 +20,14 @@ yamaları temiz şekilde kaldırır.
 Gereksinimler
 -------------
 
-- AmigaOS 3.2 veya üstü (3.2.3 üzerinde geliştirildi ve denendi)
+- AmigaOS 3.2 veya üstü (3.2.3 üzerinde geliştirildi ve denendi).
+  AmigaOS 3.1, 3.5 ve 3.9'da çalışabilir, ama bu sürümlerde
+  DENENMEDİ. AATextPrefs ve AATextManager'ın ReAction arayüzü yalnızca
+  3.2'de çalışır; diğer sürümlerde MUI arayüzünü (MUI 3.8 veya üstü)
+  kullanın. Kurulum sihirbazı 3.2'ye göre yazılmıştır, diğer
+  sürümlerde elle kurulum gerekebilir. Bu sürümlerde deneyenler
+  sonucu (çalıştı ya da çalışmadı) lütfen bildirsin:
+  https://github.com/Sdursun/AAText/issues
 - 68020 veya üstü işlemci; 68030, 68040, 68060 ya da PiStorm önerilir
   ("Hız" bölümüne bakın)
 - cybergraphics.library sunan bir RTG sistemi, örneğin Picasso96 (P96).

@@ -19,7 +19,13 @@ cleanly when you quit it.
 Requirements
 ------------
 
-- AmigaOS 3.2 or newer (developed and tested on 3.2.3)
+- AmigaOS 3.2 or newer (developed and tested on 3.2.3).
+  AmigaOS 3.1, 3.5 and 3.9 may work, but have NOT BEEN TESTED. The
+  ReAction user interface of AATextPrefs and AATextManager works on
+  3.2 only; on other versions use the MUI one (MUI 3.8 or newer). The
+  installer is written for 3.2; other versions may need the manual
+  installation. If you try one of them, please report how it went
+  (working or not): https://github.com/Sdursun/AAText/issues
 - 68020 or better; a 68030, 68040, 68060 or PiStorm is recommended
   (see "Speed")
 - An RTG graphics system with cybergraphics.library, e.g. Picasso96
