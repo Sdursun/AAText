@@ -1,0 +1,31 @@
+.KEY prog/A,lang/A,quiet/S
+.BRA {
+.KET }
+; gui-run - start one GUI program, check that it is still running after
+; a few seconds, stop it with Ctrl-C and check that it is gone.
+; Prints "ok ..." or "FAIL ..."; part of tests/amiga/gui-test.
+; No $variables: not every shell expands them (ClaudeAmi's does not),
+; backticks work everywhere.
+;
+;   Execute gui-run <program> <language> [QUIET]
+
+Run >NIL: {prog} LANGUAGE={lang}
+Wait 5
+Status >NIL: COM={prog}
+If WARN
+  Echo "FAIL {prog} {lang}: not running after 5 s"
+  Skip end
+EndIf
+Break `Status COM={prog}` C
+Wait 3
+Status >NIL: COM={prog}
+If NOT WARN
+  Echo "FAIL {prog} {lang}: still running 3 s after Ctrl-C"
+  Break `Status COM={prog}` C
+  Wait 3
+  Skip end
+EndIf
+If NOT "{quiet}" EQ "QUIET"
+  Echo "ok   {prog} {lang}"
+EndIf
+Lab end

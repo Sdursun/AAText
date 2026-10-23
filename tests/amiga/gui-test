@@ -1,0 +1,36 @@
+.KEY dir/A,loops/N
+.BRA {
+.KET }
+.DEF loops 20
+; gui-test - start and stop AATextPrefs and AATextManager (ReAction and
+; MUI builds) in English and Turkish, then open and close each MUI
+; build <loops> times and compare the free memory before and after.
+; <dir> holds the programs under their build names and these scripts.
+; Started by tools/run-guitests.ps1, which prints the output.
+; A running AAText fills its glyph cache while the windows are drawn
+; (up to its "cache" size): measure leaks with AAText stopped. The
+; script's own Run/Execute loop loses nothing (checked with C:Wait).
+;
+;   Execute gui-test <dir> [<loops>]
+
+FailAt 21
+
+Echo "--- start and stop"
+Execute {dir}gui-run {dir}AATextPrefs english
+Execute {dir}gui-run {dir}AATextPrefs türkçe
+Execute {dir}gui-run {dir}AATextManager english
+Execute {dir}gui-run {dir}AATextManager türkçe
+Execute {dir}gui-run {dir}AATextPrefs_MUI english
+Execute {dir}gui-run {dir}AATextPrefs_MUI türkçe
+Execute {dir}gui-run {dir}AATextManager_MUI english
+Execute {dir}gui-run {dir}AATextManager_MUI türkçe
+
+; measured after the runs above: libraries, classes and fonts the first
+; start loads stay in memory and are no leak
+Echo "--- memory, {loops} times each MUI program"
+Avail TOTAL FLUSH >{dir}mem0
+Execute {dir}gui-loop {dir} {loops}
+Avail TOTAL FLUSH >{dir}mem1
+Eval `Type {dir}mem0` - `Type {dir}mem1` >{dir}mem2
+Echo "free before: `Type {dir}mem0`  after: `Type {dir}mem1`  bytes lost: `Type {dir}mem2`"
+Echo "--- done"

@@ -1,0 +1,11 @@
+.KEY dir/A,n/N/A
+.BRA {
+.KET }
+; gui-loop - open and close both MUI programs n times (it calls itself
+; with n - 1; no $variables, see gui-run). Part of tests/amiga/gui-test.
+
+If {n} GT 0 VAL
+  Execute {dir}gui-run {dir}AATextPrefs_MUI english QUIET
+  Execute {dir}gui-run {dir}AATextManager_MUI english QUIET
+  Execute {dir}gui-loop {dir} `Eval {n} - 1`
+EndIf
