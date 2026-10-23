@@ -1,4 +1,4 @@
-AAText 0.40 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.41 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -492,6 +492,16 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.41  AATextPrefs and AATextManager also come with a MUI user interface
+      (MUI 3.8 or newer); the installer asks which one to install
+      (ReAction or MUI). Both use the same settings and catalogs.
+      Project > About... and Settings > Help... (the document in the
+      window's language), Settings > MUI... in the MUI builds.
+      AATextManager puts .otf files in FONTS:_otf/ and .ttc/.otc in
+      FONTS:_ttc/ by default (saved settings are kept). Files for
+      translating both programs in Catalogs/Translations. AmigaOS 3.1,
+      3.5 and 3.9 are not tested; reports are welcome.
 
 0.40  Font mappings change while AAText runs: added, changed or
       removed in AATextPrefs, they show at once (text already on screen

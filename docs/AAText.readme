@@ -2,11 +2,10 @@ Short:        Antialiased TrueType text for Workbench
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/wb
-Version:      0.40
+Version:      0.41
 Architecture: m68k-amigaos >= 3.2.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
-              (AmigaOS 3.1/3.5/3.9 untested, MUI GUIs only - reports welcome)
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
 on RTG screens (15/16/24/32 bit): icon labels, menus, window and screen
@@ -64,13 +63,14 @@ tested; the ReAction GUIs need 3.2, use the MUI ones there. Please
 report your results: https://github.com/Sdursun/AAText/issues
 
 Installation: double-click Install-AAText (the OS 3.2 Installer; it
-can also remove AAText again). By hand: copy AAText to C: and add "Run >NIL: C:AAText" to
-S:Startup-Sequence, after the monitor drivers and before LoadWB (not
-WBStartup); copy AATextPrefs and its icon to SYS:Prefs for the
-preferences program, AATextManager and its icon to SYS:System and
-Libs/aatext.library to LIBS: for the font installer (the MUI drawer
-holds both programs for MUI 3.8 or newer). See AAText_EN.txt
-(English) or AAText_TR.txt (Turkish, ISO-8859-9) for details.
+can also remove AAText again). By hand: copy AAText to C: and add
+"Run >NIL: C:AAText" to S:Startup-Sequence, after the monitor drivers
+and before LoadWB (not WBStartup); copy AATextPrefs and its icon to
+SYS:Prefs for the preferences program, AATextManager and its icon to
+SYS:System and Libs/aatext.library to LIBS: for the font installer
+(the MUI drawer holds both programs for MUI 3.8 or newer). See
+AAText_EN.txt (English) or AAText_TR.txt (Turkish, ISO-8859-9) for
+details.
 
 License: MIT (free for any use, commercial or not; keep the copyright
 notice). Source code and bug reports: https://github.com/Sdursun/AAText

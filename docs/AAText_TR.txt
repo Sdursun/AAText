@@ -1,4 +1,4 @@
-AAText 0.40 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.41 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -508,6 +508,16 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.41  AATextPrefs ve AATextManager'ın MUI arayüzü de var (MUI 3.8 veya
+      üstü); kurulum hangisinin kurulacağını sorar (ReAction ya da
+      MUI). İkisi aynı ayarları ve katalogları kullanır. Proje >
+      Hakkında... ve Ayarlar > Yardım... (pencerenin dilindeki belge),
+      MUI sürümlerinde Ayarlar > MUI... AATextManager .otf dosyalarını
+      varsayılan olarak FONTS:_otf/, .ttc/.otc dosyalarını FONTS:_ttc/
+      içine koyar (kayıtlı ayarlar korunur). İki programı çevirmek için
+      dosyalar Catalogs/Translations içinde. AmigaOS 3.1, 3.5 ve 3.9
+      denenmedi; geri bildirimler beklenir.
 
 0.40  Font eşlemeleri AAText çalışırken değişir: AATextPrefs'te
       eklenen, değiştirilen ya da silinen eşlemeler hemen görünür
