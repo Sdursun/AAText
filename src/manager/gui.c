@@ -66,6 +66,7 @@
 #include "update.h"
 #include "settings.h"
 #include "core.h"
+#include "../guihelp.h"
 #include "../fontscan.h"
 #include "../aamsg.h"
 #include "../aaclient.h"
@@ -1522,22 +1523,28 @@ static Object *SettingsPage(void)
 /* Menu: update check                                                   */
 /* ------------------------------------------------------------------ */
 
-enum { MENU_UPDATE = 1, MENU_QUIT };
+enum { MENU_UPDATE = 1, MENU_QUIT, MENU_ABOUT, MENU_HELP };
 
 static struct NewMenu menu[] =
 {
     { NM_TITLE, NULL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, (STRPTR)"?", 0, 0, (APTR)MENU_ABOUT },
     { NM_ITEM,  NULL, NULL, 0, 0, (APTR)MENU_UPDATE },
     { NM_ITEM,  NM_BARLABEL, NULL, 0, 0, NULL },
     { NM_ITEM,  NULL, (STRPTR)"Q", 0, 0, (APTR)MENU_QUIT },
+    { NM_TITLE, NULL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, (STRPTR)"H", 0, 0, (APTR)MENU_HELP },
     { NM_END,   NULL, NULL, 0, 0, NULL }
 };
 
 static void LocalizeMenu(void)
 {
     menu[0].nm_Label = (STRPTR)GetString(MSG_MENU_PROJECT);
-    menu[1].nm_Label = (STRPTR)GetString(MSG_MENU_UPDATE);
-    menu[3].nm_Label = (STRPTR)GetString(MSG_MENU_QUIT);
+    menu[1].nm_Label = (STRPTR)GetString(MSG_MENU_ABOUT);
+    menu[2].nm_Label = (STRPTR)GetString(MSG_MENU_UPDATE);
+    menu[4].nm_Label = (STRPTR)GetString(MSG_MENU_QUIT);
+    menu[5].nm_Label = (STRPTR)GetString(MSG_MENU_SETTINGS);
+    menu[6].nm_Label = (STRPTR)GetString(MSG_MENU_HELP);
 }
 
 static void Requester(LONG msg, ULONG *args)
@@ -1590,6 +1597,37 @@ static void CheckUpdate(void)
             Requester(MSG_UPD_FAILED, args);
             break;
     }
+}
+
+/* Program, version, author, licences */
+static void ShowAbout(void)
+{
+    struct EasyStruct es;
+    ULONG arg = (ULONG)("AATextManager " AAMGR_VERSION);
+
+    es.es_StructSize = sizeof(es);
+    es.es_Flags = 0;
+    es.es_Title = (UBYTE *)GetString(MSG_TITLE);
+    es.es_TextFormat = (UBYTE *)GetString(MSG_ABOUT_TEXT);
+    es.es_GadgetFormat = (UBYTE *)GetString(MSG_UPD_OK);
+    EasyRequestArgs(win, &es, NULL, &arg);
+}
+
+/* The documentation in the window's language */
+static void ShowHelp(void)
+{
+    const char *path = gh_HelpFile(StringsLanguage());
+    struct EasyStruct es;
+    ULONG arg = (ULONG)path;
+
+    if (gh_ShowFile(path))
+        return;
+    es.es_StructSize = sizeof(es);
+    es.es_Flags = 0;
+    es.es_Title = (UBYTE *)GetString(MSG_TITLE);
+    es.es_TextFormat = (UBYTE *)GetString(MSG_HELP_NOFILE);
+    es.es_GadgetFormat = (UBYTE *)GetString(MSG_UPD_OK);
+    EasyRequestArgs(win, &es, NULL, &arg);
 }
 
 static BOOL OpenWin(struct Screen *scr, LONG charset)
@@ -1828,6 +1866,11 @@ int mgr_RunGUI(const char *language)
                             break;
                         if (GTMENUITEM_USERDATA(item) == (APTR)MENU_UPDATE)
                             CheckUpdate();
+                        else if (GTMENUITEM_USERDATA(item) ==
+                                 (APTR)MENU_ABOUT)
+                            ShowAbout();
+                        else if (GTMENUITEM_USERDATA(item) == (APTR)MENU_HELP)
+                            ShowHelp();
                         else if (GTMENUITEM_USERDATA(item) == (APTR)MENU_QUIT)
                             done = TRUE;
                         mc = item->NextSelect;

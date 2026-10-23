@@ -157,7 +157,14 @@
     S(MSG_DIAG_CS_NONE,    147, "none in the .otag: AAText uses %s") \
     S(MSG_DIAG_CS_OWN,     148, "own table (nearest: %s, %ld characters differ)") \
     S(MSG_P_CHARSET,       149, "other character set") \
-    S(MSG_CHANGE_CHARSET,  150, "Change other character sets to the chosen one")
+    S(MSG_CHANGE_CHARSET,  150, "Change other character sets to the chosen one") \
+    S(MSG_MENU_ABOUT,      151, "About...") \
+    S(MSG_MENU_ABOUTMUI,   152, "About MUI...") \
+    S(MSG_MENU_SETTINGS,   153, "Settings") \
+    S(MSG_MENU_MUISETTINGS, 154, "MUI...") \
+    S(MSG_MENU_HELP,       155, "Help...") \
+    S(MSG_ABOUT_TEXT,      156, "%s\n\nAntialiased TrueType text for AmigaOS 3.2\n\nCopyright (C) 2026 Serkan Dursun\nMIT License\nhttps://github.com/Sdursun/AAText\n\nFreeType (C) The FreeType Project (FTL)\nReal metrics code derived from AROS (APL)") \
+    S(MSG_HELP_NOFILE,     157, "The documentation is not installed:\n%s\n\nInstall it with Install-AAText (\"Documents\").")
 
 #define S(id, n, s) id = n,
 enum { AA_STRINGS AA_NUM_STRINGS };
@@ -166,6 +173,8 @@ enum { AA_STRINGS AA_NUM_STRINGS };
 /* Open the catalog; language NULL = the user's preferred languages. */
 void InitStrings(const char *language);
 void FreeStrings(void);
+/* The catalog's language ("türkçe"), NULL for the built-in English */
+const char *StringsLanguage(void);
 const char *GetString(LONG id);
 
 #endif

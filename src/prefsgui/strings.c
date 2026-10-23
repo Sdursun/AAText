@@ -48,3 +48,8 @@ const char *GetString(LONG id)
         s = (const char *)GetCatalogStr(catalog, id, (CONST_STRPTR)s);
     return s;
 }
+
+const char *StringsLanguage(void)
+{
+    return catalog ? (const char *)catalog->cat_Language : NULL;
+}

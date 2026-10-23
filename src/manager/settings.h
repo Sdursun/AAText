@@ -8,8 +8,8 @@
  * text:
  *
  *   ttfdir  FONTS:_ttf/
- *   otfdir  FONTS:_ttf/
- *   ttcdir  FONTS:_ttf/
+ *   otfdir  FONTS:_otf/
+ *   ttcdir  FONTS:_ttc/
  *   charset latin1
  *   catalog https://...           (not in the window; for tests a file)
  */
@@ -18,7 +18,9 @@
 
 #define MGR_PREFS_ENV     "ENV:AATextManager.prefs"
 #define MGR_PREFS_ENVARC  "ENVARC:AATextManager.prefs"
-#define MGR_DIR_DEFAULT   "FONTS:_ttf/"
+#define MGR_DIR_DEFAULT   "FONTS:_ttf/"     /* .ttf */
+#define MGR_DIR_OTF_DEFAULT "FONTS:_otf/"   /* .otf */
+#define MGR_DIR_TTC_DEFAULT "FONTS:_ttc/"   /* .ttc, .otc */
 #define MGR_DIR_LEN       256
 #define MGR_CATALOG_URL       "https://raw.githubusercontent.com/Sdursun/AAText/main/fonts/catalog.txt"
 
@@ -31,7 +33,7 @@ struct MgrSettings
     char catalog[MGR_DIR_LEN];      /* the Download tab's font list */
 };
 
-/* Defaults: FONTS:_ttf/ for all, ISO-8859-1. */
+/* Defaults: FONTS:_ttf/, _otf/ and _ttc/, ISO-8859-1. */
 void mgr_DefaultSettings(struct MgrSettings *s);
 
 /* ENV: (then ENVARC:) over the defaults; FALSE if neither was there. */

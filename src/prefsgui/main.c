@@ -72,6 +72,7 @@
 #include "../aaclient.h"
 #include "../charsets.h"
 #include "../manager/preview.h"
+#include "../guihelp.h"
 #include "core.h"
 #include "strings.h"
 
@@ -1285,7 +1286,7 @@ static Object *AppearancePage(void)
 enum
 {
     MENU_OPEN = 1, MENU_SAVEAS, MENU_QUIT, MENU_DEFAULTS, MENU_LASTSAVED,
-    MENU_RESTORE
+    MENU_RESTORE, MENU_ABOUT, MENU_HELP
 };
 
 /* The standard Prefs menus; labels are filled in by OpenWin(). */
@@ -1295,11 +1296,15 @@ static struct NewMenu menu[] =
     { NM_ITEM,  NULL, "O",  0, 0, (APTR)MENU_OPEN },
     { NM_ITEM,  NULL, "A",  0, 0, (APTR)MENU_SAVEAS },
     { NM_ITEM,  NM_BARLABEL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, "?",  0, 0, (APTR)MENU_ABOUT },
+    { NM_ITEM,  NM_BARLABEL, NULL, 0, 0, NULL },
     { NM_ITEM,  NULL, "Q",  0, 0, (APTR)MENU_QUIT },
     { NM_TITLE, NULL, NULL, 0, 0, NULL },
     { NM_ITEM,  NULL, "D",  0, 0, (APTR)MENU_DEFAULTS },
     { NM_ITEM,  NULL, "L",  0, 0, (APTR)MENU_LASTSAVED },
     { NM_ITEM,  NULL, "R",  0, 0, (APTR)MENU_RESTORE },
+    { NM_TITLE, NULL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, "H",  0, 0, (APTR)MENU_HELP },
     { NM_END,   NULL, NULL, 0, 0, NULL }
 };
 
@@ -1307,9 +1312,11 @@ static void LocalizeMenu(void)
 {
     static const LONG labels[] =
     {
-        MSG_MENU_PROJECT, MSG_MENU_OPEN, MSG_MENU_SAVEAS, 0, MSG_MENU_QUIT,
+        MSG_MENU_PROJECT, MSG_MENU_OPEN, MSG_MENU_SAVEAS, 0,
+        MSG_MENU_ABOUT, 0, MSG_MENU_QUIT,
         MSG_MENU_EDIT, MSG_MENU_DEFAULTS, MSG_MENU_LASTSAVED,
-        MSG_MENU_RESTORE
+        MSG_MENU_RESTORE,
+        MSG_MENU_SETTINGS, MSG_MENU_HELP
     };
     ULONG i;
 
@@ -1606,6 +1613,37 @@ static BOOL AskFile(LONG title, BOOL save, char *buf, LONG len)
     return ok;
 }
 
+/* Program, version, author, licences */
+static void ShowAbout(void)
+{
+    struct EasyStruct es;
+    ULONG arg = (ULONG)(version + 6);       /* after "$VER: " */
+
+    es.es_StructSize = sizeof(es);
+    es.es_Flags = 0;
+    es.es_Title = (UBYTE *)GetString(MSG_WINDOW_TITLE);
+    es.es_TextFormat = (UBYTE *)GetString(MSG_ABOUT_TEXT);
+    es.es_GadgetFormat = (UBYTE *)GetString(MSG_OK);
+    EasyRequestArgs(win, &es, NULL, &arg);
+}
+
+/* The documentation in the window's language */
+static void ShowHelp(void)
+{
+    const char *path = gh_HelpFile(StringsLanguage());
+    struct EasyStruct es;
+    ULONG arg = (ULONG)path;
+
+    if (gh_ShowFile(path))
+        return;
+    es.es_StructSize = sizeof(es);
+    es.es_Flags = 0;
+    es.es_Title = (UBYTE *)GetString(MSG_WINDOW_TITLE);
+    es.es_TextFormat = (UBYTE *)GetString(MSG_HELP_NOFILE);
+    es.es_GadgetFormat = (UBYTE *)GetString(MSG_OK);
+    EasyRequestArgs(win, &es, NULL, &arg);
+}
+
 /* A menu item; TRUE when the window is to close. */
 static BOOL MenuAction(ULONG id)
 {
@@ -1640,6 +1678,14 @@ static BOOL MenuAction(ULONG id)
         case MENU_RESTORE:
             CopyMem(&pc.orig, &pc.cur, sizeof(pc.cur));
             ShowPrefs();
+            break;
+
+        case MENU_ABOUT:
+            ShowAbout();
+            break;
+
+        case MENU_HELP:
+            ShowHelp();
             break;
     }
     return FALSE;

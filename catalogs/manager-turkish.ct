@@ -294,3 +294,17 @@ MSG_P_CHARSET
 başka karakter seti
 MSG_CHANGE_CHARSET
 Başka karakter setlerini seçilen sete çevir
+MSG_MENU_ABOUT
+Hakkında...
+MSG_MENU_ABOUTMUI
+MUI hakkında...
+MSG_MENU_SETTINGS
+Ayarlar
+MSG_MENU_MUISETTINGS
+MUI...
+MSG_MENU_HELP
+Yardım...
+MSG_ABOUT_TEXT
+%s\n\nAmigaOS 3.2 için yumuşatılmış TrueType yazı\n\nTelif hakkı (C) 2026 Serkan Dursun\nMIT Lisansı\nhttps://github.com/Sdursun/AAText\n\nFreeType (C) The FreeType Project (FTL)\nGerçek ölçü kodu AROS\'tan alınmıştır (APL)
+MSG_HELP_NOFILE
+Belgeler kurulu değil:\n%s\n\nInstall-AAText ile kurun ("Belgeler").

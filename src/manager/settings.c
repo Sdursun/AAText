@@ -18,10 +18,9 @@
 
 void mgr_DefaultSettings(struct MgrSettings *s)
 {
-    LONG i;
-
-    for (i = 0; i < MGR_NUM_DIRS; i++)
-        strcpy(s->dir[i], MGR_DIR_DEFAULT);
+    strcpy(s->dir[MGR_DIR_TTF], MGR_DIR_DEFAULT);
+    strcpy(s->dir[MGR_DIR_OTF], MGR_DIR_OTF_DEFAULT);
+    strcpy(s->dir[MGR_DIR_TTC], MGR_DIR_TTC_DEFAULT);
     s->charset = AA_CHARSET_LATIN1;
     strcpy(s->catalog, MGR_CATALOG_URL);
 }

@@ -198,7 +198,8 @@ FTManager gibi diskfont.library için kurar ve önceden kurulmuş fontları
 onarır. LIBS:'te aatext.library gerekir.
 
 Kurulum, font dosyasını Ayarlar sekmesindeki dizine (değiştirilmediyse
-FONTS:_ttf/) kopyalar ve FONTS:'a <aile><stil>.font ile .otag yazar (ör. verdanabold.font). .otag dosyayı
+dosya türüne göre FONTS:_ttf/, FONTS:_otf/ ya da FONTS:_ttc/; olmayan
+dizin oluşturulur) kopyalar ve FONTS:'a <aile><stil>.font ile .otag yazar (ör. verdanabold.font). .otag dosyayı
 FONTS:_ttf/... olarak gösterir (disk adı yok, açılış diskinin adı
 değişse de bozulmaz) ve seçilen karakter setinin kod sayfasını taşır;
 böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
@@ -283,7 +284,8 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  gibi kurar (karakter seti, motor, boyutlar, "yerine
                  yaz"). Çalışan bir TCP/IP yığını ve AmiSSL 5 gerekir.
   Ayarlar        font dosyalarının kopyalanacağı yerler: .ttf, .otf ve
-                 .ttc/.otc için birer dizin (varsayılan FONTS:_ttf/;
+                 .ttc/.otc için birer dizin (varsayılan FONTS:_ttf/,
+                 FONTS:_otf/ ve FONTS:_ttc/;
                  "Seç..." dizin seçiciyi açar) ve varsayılan karakter
                  seti. FONTS: içindeki bir dizin FONTS:... olarak
                  (ör. FONTS:truetype/), diğerleri disk adıyla yazılır.
@@ -473,6 +475,16 @@ böyle sistemler bugün nadirdir. 68030 ve üstünde, PiStorm'da (Emu68)
 fark küçüktür ya da hiç hissedilmez. topaz gibi bitmap fontları AAText
 çizmez, onların hızı değişmez.
 
+
+Kendi dilinize çeviri
+---------------------
+
+AATextPrefs ve AATextManager'ı başka bir dile çevirmek için gerekli
+dosyalar arşivde Catalogs/Translations içindedir: her program için bir
+.cd (İngilizce metinler) ve boş bir .ct (çeviri şablonu). .ct'yi
+doldurup FlexCat ya da CatComp ile .catalog'a çevirin ve
+LOCALE:Catalogs/<dil>/ içine kopyalayın. Ayrıntılar aynı dizindeki
+README.txt'te (İngilizce).
 
 Hata bildirimi
 --------------

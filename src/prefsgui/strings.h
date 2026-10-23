@@ -104,7 +104,14 @@
     S(MSG_MAP_FONTTITLE,   135, "Bitmap font to draw with TrueType") \
     S(MSG_MAP_FILETITLE,   136, "TrueType font file for it") \
     S(MSG_MAP_FULL,        137, "The list is full (%ld mappings).") \
-    S(MSG_MAP_AUTO,        139, "automatic")
+    S(MSG_MAP_AUTO,        139, "automatic") \
+    S(MSG_MENU_ABOUT,      140, "About...") \
+    S(MSG_MENU_ABOUTMUI,   141, "About MUI...") \
+    S(MSG_MENU_SETTINGS,   142, "Settings") \
+    S(MSG_MENU_MUISETTINGS, 143, "MUI...") \
+    S(MSG_MENU_HELP,       144, "Help...") \
+    S(MSG_ABOUT_TEXT,      145, "%s\n\nAntialiased TrueType text for AmigaOS 3.2\n\nCopyright (C) 2026 Serkan Dursun\nMIT License\nhttps://github.com/Sdursun/AAText\n\nFreeType (C) The FreeType Project (FTL)\nReal metrics code derived from AROS (APL)") \
+    S(MSG_HELP_NOFILE,     146, "The documentation is not installed:\n%s\n\nInstall it with Install-AAText (\"Documents\").")
 
 
 #define S(id, n, s) id = n,
@@ -114,6 +121,8 @@ enum { AA_STRINGS AA_NUM_STRINGS };
 /* Open the catalog; language NULL = the user's preferred languages. */
 void InitStrings(const char *language);
 void FreeStrings(void);
+/* The catalog's language ("türkçe"), NULL for the built-in English */
+const char *StringsLanguage(void);
 const char *GetString(LONG id);
 
 #endif

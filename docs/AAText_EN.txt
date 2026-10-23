@@ -192,7 +192,8 @@ for diskfont.library, as FTManager does, and repairs fonts installed
 before. It needs aatext.library in LIBS:.
 
 Installing copies the font file to the directory set on the Settings
-tab (FONTS:_ttf/ unless changed) and writes <family><style>.font and
+tab (unless changed FONTS:_ttf/, FONTS:_otf/ or FONTS:_ttc/, by the
+kind of file; missing directories are made) and writes <family><style>.font and
 .otag to FONTS: (e.g. verdanabold.font). The .otag names the file as
 FONTS:_ttf/... (no volume name, so renaming the boot disk does not
 break it) and holds the code page of the chosen
@@ -278,7 +279,8 @@ ENV:ftcodepage.
                  tab (character set, engine, sizes, "replace"). Needs
                  a running TCP/IP stack and AmiSSL 5.
   Settings tab   where font files are copied, one directory each for
-                 .ttf, .otf and .ttc/.otc (default FONTS:_ttf/;
+                 .ttf, .otf and .ttc/.otc (default FONTS:_ttf/,
+                 FONTS:_otf/ and FONTS:_ttc/;
                  "Choose..." opens a drawer requester), and the
                  default character set. A directory inside FONTS: is
                  written as FONTS:... (e.g. FONTS:truetype/), others
@@ -460,6 +462,15 @@ a 68030 or faster, and on PiStorm (Emu68), the difference is small to
 invisible. Bitmap fonts such as topaz are not drawn by AAText and keep
 their speed.
 
+
+Translating
+-----------
+
+The files for translating AATextPrefs and AATextManager are in
+Catalogs/Translations in the archive: a .cd (the English texts) and an
+empty .ct (the translation template) for each program. Fill in the
+.ct, build the .catalog with FlexCat or CatComp and copy it to
+LOCALE:Catalogs/<language>/. README.txt in that drawer has the details.
 
 Bug reports
 -----------

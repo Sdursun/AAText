@@ -204,6 +204,12 @@ dist:
 	chmod 644 $(DISTDIR)/AAText/AATextManager.info
 	cp $(MGR_CATALOG) "$(DISTDIR)/AAText/Catalogs/türkçe/"
 	chmod 644 "$(DISTDIR)/AAText/Catalogs/türkçe/aatextmanager.catalog"
+	# for translators: catalog descriptions and empty translations
+	mkdir -p $(DISTDIR)/AAText/Catalogs/Translations
+	perl tools/mkcd.pl src/prefsgui/strings.h aatextprefs 1.0 $(DISTDIR)/AAText/Catalogs/Translations
+	perl tools/mkcd.pl src/manager/strings.h aatextmanager 1.0 $(DISTDIR)/AAText/Catalogs/Translations
+	cp catalogs/Translations-README.txt $(DISTDIR)/AAText/Catalogs/Translations/README.txt
+	chmod 644 $(DISTDIR)/AAText/Catalogs/Translations/*
 	# the MUI programs: the installer copies them under the same names
 	mkdir -p $(DISTDIR)/AAText/MUI
 	cp build/68020/AATextPrefs_MUI $(DISTDIR)/AAText/MUI/AATextPrefs
@@ -234,7 +240,7 @@ GUI_TARGET := $(BUILDDIR)/AATextPrefs
 GUI_SRCS   := src/prefsgui/main.c src/prefsgui/core.c src/prefsgui/strings.c \
               src/prefs.c \
               src/prefswrite.c src/aaclient.c src/charsets.c \
-              src/manager/preview.c
+              src/manager/preview.c src/guihelp.c
 GUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/gui/%.o,$(GUI_SRCS)) \
               $(BUILDDIR)/gui/cgx.o
 
@@ -265,7 +271,7 @@ $(BUILDDIR)/gui/cgx.o: src/cgx.s
 GUIMUI_TARGET := $(BUILDDIR)/AATextPrefs_MUI
 GUIMUI_SRCS   := src/prefsgui_mui/main.c src/prefsgui/core.c \
                  src/prefsgui/strings.c src/prefs.c src/prefswrite.c \
-                 src/aaclient.c src/charsets.c src/mui/muistubs.c
+                 src/aaclient.c src/charsets.c src/mui/muistubs.c src/guihelp.c
 GUIMUI_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/guimui/%.o,$(GUIMUI_SRCS)) \
                  $(BUILDDIR)/gui/manager/preview.o $(BUILDDIR)/gui/cgx.o
 
@@ -308,7 +314,7 @@ $(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
 MGR_TARGET := $(BUILDDIR)/AATextManager
 MGR_SRCS   := src/manager/main.c src/manager/gui.c src/manager/core.c src/manager/settings.c src/manager/preview.c src/manager/update.c src/manager/strings.c src/prefs.c src/debug.c src/fontinstall.c src/fontinfo.c \
               src/otagfile.c src/otag.c src/charsets.c src/fontscan.c src/fontfile.c \
-              src/aaclient.c
+              src/aaclient.c src/guihelp.c
 MGR_OBJS   := $(patsubst src/%.c,$(BUILDDIR)/mgr/%.o,$(MGR_SRCS)) $(BUILDDIR)/mgr/cgx.o
 
 .PHONY: manager

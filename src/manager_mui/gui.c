@@ -37,6 +37,7 @@
 #include "../manager/update.h"
 #include "../manager/settings.h"
 #include "../manager/core.h"
+#include "../guihelp.h"
 #include "../fontscan.h"
 #include "../aamsg.h"
 #include "../aaclient.h"
@@ -61,7 +62,11 @@ enum
     GID_COUNT
 };
 
-enum { MENU_BASE = 100, MENU_UPDATE, MENU_QUIT };
+enum
+{
+    MENU_BASE = 100, MENU_UPDATE, MENU_QUIT, MENU_ABOUT, MENU_ABOUTMUI,
+    MENU_MUISETTINGS, MENU_HELP
+};
 
 static const LONG charset_msg[AA_NUM_CHARSETS] =
 {
@@ -1347,17 +1352,45 @@ static Object *SettingsPage(void)
 static struct NewMenu menu[] =
 {
     { NM_TITLE, NULL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, (STRPTR)"?", 0, 0, (APTR)MENU_ABOUT },
+    { NM_ITEM,  NULL, NULL, 0, 0, (APTR)MENU_ABOUTMUI },
     { NM_ITEM,  NULL, NULL, 0, 0, (APTR)MENU_UPDATE },
     { NM_ITEM,  NM_BARLABEL, NULL, 0, 0, NULL },
     { NM_ITEM,  NULL, (STRPTR)"Q", 0, 0, (APTR)MENU_QUIT },
+    { NM_TITLE, NULL, NULL, 0, 0, NULL },
+    { NM_ITEM,  NULL, NULL, 0, 0, (APTR)MENU_MUISETTINGS },
+    { NM_ITEM,  NULL, (STRPTR)"H", 0, 0, (APTR)MENU_HELP },
     { NM_END,   NULL, NULL, 0, 0, NULL }
 };
 
 static void LocalizeMenu(void)
 {
     menu[0].nm_Label = (STRPTR)GetString(MSG_MENU_PROJECT);
-    menu[1].nm_Label = (STRPTR)GetString(MSG_MENU_UPDATE);
-    menu[3].nm_Label = (STRPTR)GetString(MSG_MENU_QUIT);
+    menu[1].nm_Label = (STRPTR)GetString(MSG_MENU_ABOUT);
+    menu[2].nm_Label = (STRPTR)GetString(MSG_MENU_ABOUTMUI);
+    menu[3].nm_Label = (STRPTR)GetString(MSG_MENU_UPDATE);
+    menu[5].nm_Label = (STRPTR)GetString(MSG_MENU_QUIT);
+    menu[6].nm_Label = (STRPTR)GetString(MSG_MENU_SETTINGS);
+    menu[7].nm_Label = (STRPTR)GetString(MSG_MENU_MUISETTINGS);
+    menu[8].nm_Label = (STRPTR)GetString(MSG_MENU_HELP);
+}
+
+/* Program, version, author, licences */
+static void ShowAbout(void)
+{
+    ULONG arg = (ULONG)("AATextManager " AAMGR_VERSION " (MUI)");
+
+    Ask(MSG_TITLE, MSG_ABOUT_TEXT, MSG_UPD_OK, &arg);
+}
+
+/* The documentation in the window's language */
+static void ShowHelp(void)
+{
+    const char *path = gh_HelpFile(StringsLanguage());
+    ULONG arg = (ULONG)path;
+
+    if (!gh_ShowFile(path))
+        Ask(MSG_TITLE, MSG_HELP_NOFILE, MSG_UPD_OK, &arg);
 }
 
 /*
@@ -1605,6 +1638,14 @@ int mgr_RunGUI(const char *language)
             done = TRUE;
         else if (id == MENU_UPDATE)
             CheckUpdate();
+        else if (id == MENU_ABOUT)
+            ShowAbout();
+        else if (id == MENU_ABOUTMUI)
+            DoMethod(app, MUIM_Application_AboutMUI, (ULONG)win);
+        else if (id == MENU_MUISETTINGS)
+            DoMethod(app, MUIM_Application_OpenConfigWindow, 0);
+        else if (id == MENU_HELP)
+            ShowHelp();
         else if (id)
             Action(id);
         if (!done && sigs)
