@@ -1,4 +1,4 @@
-AAText 0.41 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.42 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -317,7 +317,7 @@ Shell'den:
   AATextManager REPAIR CHARSET=latin5 ENGINE=aatext APPLY
 
 CHARSET: latin1, latin2, latin3, latin4, latin5, latin9,
-latin10, cp1250, cyrillic, koi8r ya da none; verilmezse Ayarlar
+latin10, cp1250, cyrillic, koi8r, amiga-e2 ya da none; verilmezse Ayarlar
 sekmesindeki varsayılan kullanılır. Font dosyaları Ayarlar sekmesindeki
 dizinlere gider; TO=<dizin> verilirse bunun yerine <dizin>'e kurulur
 (font dosyaları <dizin>_ttf/ altına). FILES ve REPAIR verilmezse pencere
@@ -423,7 +423,8 @@ boyutu seçer. "charset", elle eşlemeler ve .otag dosyasında kod sayfası
 olmayan otomatik bulunan fontlar için karakter setini seçer (İpuçları
 bölümüne bakın): latin1 (ISO-8859-1, varsayılan), latin2, latin3,
 latin4, latin5 (ISO-8859-9, Türkçe), latin9 (ISO-8859-15), latin10
-(ISO-8859-16), cp1250 (Windows-1250), cyrillic (ISO-8859-5) ya da koi8r.
+(ISO-8859-16), cp1250 (Windows-1250), cyrillic (ISO-8859-5), koi8r ya da amiga-e2
+(Çekçe, Slovakça).
 
 Dosyadaki bir hata, AAText Shell'den başlatıldığında satır numarasıyla
 bildirilir.
@@ -508,6 +509,15 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.42  Yeni karakter seti amiga-e2 (Amiga-E2, Çekçe ve Slovakça).
+      Düzeltmeler: AATextPrefs (MUI) AmigaOS 3.1'in diskfont.library
+      39'uyla çalışır; altı çizili yazı (MUI etiketlerindeki kısayol
+      harfleri) yumuşatılır; bir programın kendi üstüne yeniden çizdiği
+      yazı (MagicMenu'de seçimden sonra menü öğeleri) artık kalınlaşmaz;
+      otomatik boyutta büyük harflerin aksanları (ör. İ, Å) kesilmez;
+      Türkçe kataloglar Catalogs/turkish içinde, arşiv başka bir
+      programla açılsa da kurulum çalışır.
 
 0.41  AATextPrefs ve AATextManager'ın MUI arayüzü de var (MUI 3.8 veya
       üstü); kurulum hangisinin kurulacağını sorar (ReAction ya da

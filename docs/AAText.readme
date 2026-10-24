@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text, AmigaOS 3.x
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <blasterreal@gmail.com>
 Type:         util/wb
-Version:      0.41
+Version:      0.42
 Architecture: m68k-amigaos >= 3.1.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
@@ -32,7 +32,8 @@ Features
   running AAText takes every change at once, so you see it while you
   try it; Save/Use/Cancel and the usual Prefs menus
 - Character sets for fonts without a code page: Latin-1 to Latin-5,
-  Latin-9, Latin-10, Windows-1250, ISO-8859-5 (Cyrillic) and KOI8-R;
+  Latin-9, Latin-10, Windows-1250, ISO-8859-5 (Cyrillic), KOI8-R and
+  Amiga-E2 (Czech, Slovak);
   AATextPrefs keeps ENV:ftcodepage (freetype2.library) in step
 - Font diagnostics in AATextManager: finds .otag files that point to a
   missing or moved font file (e.g. after the boot volume was renamed)
@@ -64,6 +65,12 @@ tested yet; the ReAction GUIs need 3.2, use the MUI ones there.
 Please report your results: https://github.com/Sdursun/AAText/issues
 
 Changes since 0.34
+- 0.42: Amiga-E2 character set (Czech, Slovak). Fixes: AATextPrefs MUI
+  runs with diskfont.library 39 (OS 3.1); underlined key letters in
+  MUI labels are antialiased; text that a program draws again on
+  itself (MagicMenu highlights) no longer gets bolder; accents of
+  capitals are no longer cut off; the installer works when
+  the archive was unpacked by another program (catalog drawer name).
 - 0.41: MUI user interface for AATextPrefs and AATextManager (MUI 3.8
   or newer); the installer asks for ReAction or MUI. About and Help
   menus (Help shows the document in the window's language). .otf

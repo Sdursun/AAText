@@ -1,4 +1,4 @@
-AAText 0.41 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.42 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -311,7 +311,7 @@ From the Shell:
   AATextManager REPAIR CHARSET=latin5 ENGINE=aatext APPLY
 
 CHARSET is one of latin1, latin2, latin3, latin4, latin5,
-latin9, latin10, cp1250, cyrillic, koi8r or none; without it the default
+latin9, latin10, cp1250, cyrillic, koi8r, amiga-e2 or none; without it the default
 from the Settings tab is used. Font files go to the directories of the
 Settings tab; TO=<dir> installs into <dir> (font files in <dir>_ttf/)
 instead. Without FILES and REPAIR the window opens.
@@ -409,7 +409,8 @@ font. "charset" selects the character set for explicit mappings and for
 detected fonts whose .otag file has no code page (see Tips): latin1
 (ISO-8859-1, default), latin2, latin3, latin4, latin5 (ISO-8859-9,
 Turkish), latin9 (ISO-8859-15), latin10 (ISO-8859-16), cp1250
-(Windows-1250), cyrillic (ISO-8859-5) or koi8r.
+(Windows-1250), cyrillic (ISO-8859-5), koi8r or amiga-e2 (Czech,
+Slovak).
 
 A mistake in the file is reported with its line number when AAText is
 started from the Shell.
@@ -492,6 +493,16 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.42  New character set amiga-e2 (Amiga-E2, Czech and Slovak).
+      Fixes: AATextPrefs (MUI) runs with diskfont.library 39 of
+      AmigaOS 3.1; underlined text (the key letters of MUI labels) is
+      antialiased; text a program draws again over itself, such as
+      MagicMenu's menu items after a highlight, no longer gets bolder;
+      with an automatic size the accents of capitals (e.g. Å) are
+      no longer cut off; the Turkish catalogs are in Catalogs/turkish,
+      so the installer also works when another program unpacked the
+      archive.
 
 0.41  AATextPrefs and AATextManager also come with a MUI user interface
       (MUI 3.8 or newer); the installer asks which one to install
