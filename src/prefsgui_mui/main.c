@@ -110,7 +110,7 @@ static BOOL OpenLibs(void)
         { (struct Library **)&IntuitionBase, "intuition.library", 40 },
         { (struct Library **)&GfxBase,       "graphics.library", 40 },
         { &UtilityBase,   "utility.library", 40 },
-        { &DiskfontBase,  "diskfont.library", 40 },
+        { &DiskfontBase,  "diskfont.library", 39 },     /* OS 3.1 has 39 */
         { &AslBase,       "asl.library", 40 },
         { &MUIMasterBase, MUIMASTER_NAME, 19 },     /* MUI 3.8 */
     };
