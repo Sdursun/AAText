@@ -187,9 +187,10 @@ dist:
 	mkdir -p $(DISTDIR)/AAText
 	cp build/68020/AAText $(DISTDIR)/AAText/AAText
 	cp build/68020/AATextPrefs $(ICON) $(DISTDIR)/AAText/
-	# catalog directory "türkçe": UTF-8 here, lha stores it as Latin-1,
-	# where ü and ç have the same codes as in ISO-8859-9 on the Amiga
-	d="$(DISTDIR)/AAText/Catalogs/türkçe"; \
+	# catalogs in an ASCII-named drawer: an archive name with ü and ç
+	# came out as "t³rk_e" with another LhA (OS 3.1); the installer
+	# copies them to LOCALE:Catalogs/türkçe
+	d="$(DISTDIR)/AAText/Catalogs/turkish"; \
 		mkdir -p "$$d" && cp $(CATALOG) "$$d/" && chmod 644 "$$d/aatextprefs.catalog"
 	chmod 644 $(DISTDIR)/AAText/AATextPrefs.info
 	cp build/68060/AAText $(DISTDIR)/AAText/AAText.060
@@ -202,8 +203,8 @@ dist:
 	# LICENSE.txt, FTL.txt)
 	cp build/68020/AATextManager $(MGR_ICON) $(DISTDIR)/AAText/
 	chmod 644 $(DISTDIR)/AAText/AATextManager.info
-	cp $(MGR_CATALOG) "$(DISTDIR)/AAText/Catalogs/türkçe/"
-	chmod 644 "$(DISTDIR)/AAText/Catalogs/türkçe/aatextmanager.catalog"
+	cp $(MGR_CATALOG) "$(DISTDIR)/AAText/Catalogs/turkish/"
+	chmod 644 "$(DISTDIR)/AAText/Catalogs/turkish/aatextmanager.catalog"
 	# for translators: catalog descriptions and empty translations
 	mkdir -p $(DISTDIR)/AAText/Catalogs/Translations
 	perl tools/mkcd.pl src/prefsgui/strings.h aatextprefs 1.0 $(DISTDIR)/AAText/Catalogs/Translations

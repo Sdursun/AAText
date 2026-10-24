@@ -101,7 +101,7 @@ Elle kurulum:
    dosyalarını SYS:Prefs içine kopyalayın. Türkçe arayüz için katalogu
    da kopyalayın:
 
-       Copy Catalogs/türkçe/aatextprefs.catalog LOCALE:Catalogs/türkçe/
+       Copy Catalogs/turkish/aatextprefs.catalog LOCALE:Catalogs/türkçe/
 
    AATextPrefs olmadan varsayılan değerler ya da elle yazdığınız bir
    ayar dosyası kullanılır ("Ayarlar" bölümüne bakın).
@@ -111,7 +111,7 @@ Elle kurulum:
    kütüphanesini LIBS:'e, Türkçe için katalogunu da kopyalayın:
 
        Copy Libs/aatext.library LIBS:
-       Copy Catalogs/türkçe/aatextmanager.catalog LOCALE:Catalogs/türkçe/
+       Copy Catalogs/turkish/aatextmanager.catalog LOCALE:Catalogs/türkçe/
 
    AAText'in kendisi aatext.library'ye ihtiyaç duymaz.
 

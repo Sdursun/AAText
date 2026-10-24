@@ -97,7 +97,7 @@ By hand:
    AATextPrefs.info to SYS:Prefs. For the Turkish user interface also
    copy the catalog:
 
-       Copy Catalogs/türkçe/aatextprefs.catalog LOCALE:Catalogs/türkçe/
+       Copy Catalogs/turkish/aatextprefs.catalog LOCALE:Catalogs/türkçe/
 
    Without AATextPrefs the defaults are used, or a settings file you
    write by hand (see "Settings").
@@ -107,7 +107,7 @@ By hand:
    there) and its library to LIBS:, and for Turkish its catalog:
 
        Copy Libs/aatext.library LIBS:
-       Copy Catalogs/türkçe/aatextmanager.catalog LOCALE:Catalogs/türkçe/
+       Copy Catalogs/turkish/aatextmanager.catalog LOCALE:Catalogs/türkçe/
 
    AAText itself does not need aatext.library.
 

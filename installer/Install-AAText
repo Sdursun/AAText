@@ -178,9 +178,9 @@
 (
   (if (not (exists #catdir)) (makedir #catdir))
   (if (IN #parts 0)
-    (copyfiles (source "Catalogs/türkçe/aatextprefs.catalog") (dest #catdir)))
+    (copyfiles (source "Catalogs/turkish/aatextprefs.catalog") (dest #catdir)))
   (if (IN #parts 1)
-    (copyfiles (source "Catalogs/türkçe/aatextmanager.catalog") (dest #catdir)))
+    (copyfiles (source "Catalogs/turkish/aatextmanager.catalog") (dest #catdir)))
 ))
 (complete 70)
 
