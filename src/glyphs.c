@@ -1762,6 +1762,58 @@ out:
     FreeVec(t);
 }
 
+/*
+ * Highest ink row above the baseline (in pixels, at the face's current
+ * size) of the capitals of the font's character set: A-Z and the codes
+ * 0xC0-0xDE, where the accented capitals are in the Latin sets.
+ */
+static LONG CapitalsTop(struct AAFont *font, FT_Face face)
+{
+    LONG c, top = 0;
+
+    for (c = 'A'; c <= 0xDE; c++)
+    {
+        FT_UInt gi;
+
+        if (c > 'Z' && c < 0xC0)
+            continue;
+        gi = FT_Get_Char_Index(face, ToUnicode(font->face, c));
+        if (gi && !FT_Load_Glyph(face, gi, aa_LoadFlags))
+        {
+            LONG t = (face->glyph->metrics.horiBearingY + 63) >> 6;
+
+            if (t > top)
+                top = t;
+        }
+    }
+    return top;
+}
+
+/*
+ * The largest size up to px at which the capitals' ink stays within
+ * room rows above (and on) the baseline. The face is at size px.
+ */
+static LONG FitAccents(struct AAFont *font, FT_Face face, LONG room, LONG px)
+{
+    LONG top = CapitalsTop(font, face), fit;
+
+    if (top <= room || room <= 0)
+        return px;
+    fit = px * room / top;      /* heights scale with the size */
+    while (fit > 4)
+    {
+        if (FT_Set_Pixel_Sizes(face, 0, fit))
+            break;
+        if (CapitalsTop(font, face) <= room)
+            break;
+        fit--;
+    }
+    if (fit < 4)
+        fit = 4;
+    FT_Set_Pixel_Sizes(face, 0, px);    /* the caller sets the result */
+    return fit;
+}
+
 static LONG PrepareOnStack(APTR arg)
 {
     struct PrepareReq *r = arg;
@@ -1853,6 +1905,23 @@ static LONG PrepareOnStack(APTR arg)
         if (off < -limit)
             off = -limit;
         font->yoffset = off;
+
+        /* an automatic size must leave the accents of capitals in the
+           cell, or they are cut off (Č, Ě, İ, Å). Not with real metrics:
+           the widths above were measured at px (and the size matches
+           the capital height there already). */
+        if (!font->pixelsize && !aa_UseReal(font, r->tf))
+        {
+            LONG fit = FitAccents(font, face, tf->tf_Baseline + off + 1, px);
+
+            if (fit < px && !FT_Set_Pixel_Sizes(face, 0, fit))
+            {
+                D(("AAText: font %s/%ld: %ldpx -> %ldpx, accents fit\n",
+                   (ULONG)font->name, (LONG)font->ysize, px, fit));
+                px = fit;
+                font->pxused = px;
+            }
+        }
 
 #ifdef DEBUG
         {
