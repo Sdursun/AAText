@@ -161,6 +161,7 @@ void aa_RenderReconfigure(const struct AAPrefs *prefs)
 }
 
 static void FreePal(void);
+static struct SignalSemaphore aa_RedrawLock;
 
 BOOL aa_RenderInit(const struct AAPrefs *prefs)
 {
@@ -168,6 +169,7 @@ BOOL aa_RenderInit(const struct AAPrefs *prefs)
 
     aa_RenderReconfigure(prefs);
     InitLevels();
+    InitSemaphore(&aa_RedrawLock);
 
 #ifdef DEBUG
     if (!OpenDevice((CONST_STRPTR)TIMERNAME, UNIT_ECLOCK,
@@ -1352,6 +1354,115 @@ static struct ViewPort *CanBlend(struct RastPort *rp, LONG x, LONG y,
  * where possible, otherwise as a 1 bit template through BltTemplate(),
  * which handles all draw modes and planar screens like Text() does.
  */
+/*
+ * Text drawn again where it already is. Some programs (MagicMenu in its
+ * standard look, after a highlight) draw a string in JAM1 over the same
+ * string without clearing it first. With bitmap text that changes
+ * nothing; antialiased edges would be blended twice and the text gets
+ * bolder each time. So the last JAM1 strings are kept with a hash of the
+ * pixels they left: when the same string comes again at the same place,
+ * in the same colour and style, and the screen still shows exactly that
+ * result, drawing it again would give the same pixels, so nothing is
+ * drawn. Anything else drawn there changes the pixels and the string is
+ * drawn as usual.
+ */
+#define AA_REDRAW_SLOTS   64
+#define AA_REDRAW_MAXSTR  64
+#define AA_REDRAW_MAXBUF  (16 * 1024)      /* bytes of the text box */
+
+struct AARedraw
+{
+    struct BitMap *bm;
+    struct TextFont *tf;
+    WORD x, y, w, h, sx, sy, count;
+    UBYTE style, used;
+    ULONG fg;                       /* 0x00RRGGBB */
+    ULONG result;                   /* hash of the visible result */
+    char str[AA_REDRAW_MAXSTR];
+};
+
+static struct AARedraw aa_Redraw[AA_REDRAW_SLOTS];
+static LONG aa_RedrawNext;
+
+/* rotate-xor over the visible part of a w x h RGB buffer: no
+   multiplications, they are slow on a 68020 */
+static ULONG HashPixels(const UBYTE *buf, LONG w, LONG h, LONG sx, LONG sy)
+{
+    ULONG hash = 0x9E3779B9UL;
+    LONG y, i, n = (w - sx) * 3;
+
+    for (y = sy; y < h; y++)
+    {
+        const UBYTE *p = buf + (y * w + sx) * 3;
+
+        for (i = 0; i < n; i++)
+            hash = ((hash << 5) | (hash >> 27)) ^ p[i];
+        hash += y;
+    }
+    return hash;
+}
+
+/*
+ * With aa_RedrawLock held, buf holding what is on the screen now. TRUE:
+ * the screen shows the result of this very string already, do not draw.
+ * Otherwise *slot is the slot to keep it in after drawing (the one with
+ * the same key, else the oldest), or -1 if it is not kept.
+ */
+static BOOL RedrawSame(const UBYTE *buf, struct RastPort *rp,
+                       CONST_STRPTR s, LONG count, LONG x, LONG y, LONG w,
+                       LONG h, LONG sx, LONG sy, ULONG fg, LONG *slot)
+{
+    LONG i;
+
+    *slot = -1;
+    /* short strings only: hashing long Shell lines would cost time */
+    if (count > AA_REDRAW_MAXSTR || w * h * 3 > AA_REDRAW_MAXBUF)
+        return FALSE;
+    for (i = 0; i < AA_REDRAW_SLOTS; i++)
+    {
+        const struct AARedraw *r = &aa_Redraw[i];
+
+        if (r->used && r->bm == rp->BitMap && r->tf == rp->Font &&
+            r->x == x && r->y == y && r->w == w && r->h == h &&
+            r->sx == sx && r->sy == sy && r->count == count &&
+            r->style == rp->AlgoStyle && r->fg == fg &&
+            !memcmp(r->str, s, count))
+        {
+            *slot = i;
+            return HashPixels(buf, w, h, sx, sy) == r->result;
+        }
+    }
+    *slot = aa_RedrawNext;
+    aa_RedrawNext = (aa_RedrawNext + 1) % AA_REDRAW_SLOTS;
+    return FALSE;
+}
+
+/* After blending, lock still held: buf is what the screen will show. */
+static void RedrawKeep(LONG slot, const UBYTE *buf, struct RastPort *rp,
+                       CONST_STRPTR s, LONG count, LONG x, LONG y, LONG w,
+                       LONG h, LONG sx, LONG sy, ULONG fg)
+{
+    struct AARedraw *r;
+
+    if (slot < 0)
+        return;
+    r = &aa_Redraw[slot];
+    r->bm = rp->BitMap;
+    r->tf = rp->Font;
+    r->x = x;
+    r->y = y;
+    r->w = w;
+    r->h = h;
+    r->sx = sx;
+    r->sy = sy;
+    r->count = count;
+    r->style = rp->AlgoStyle;
+    r->fg = fg;
+    CopyMem((APTR)s, r->str, count);
+    r->result = HashPixels(buf, w, h, sx, sy);
+    r->used = TRUE;
+}
+
 static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
                        struct AAFont *font)
 {
@@ -1394,26 +1505,48 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
 
         if (buf)
         {
+            LONG slot = -1;
+            BOOL same = FALSE;
+            ULONG key;
+
             PenToRGB(vp, GetAPen(rp), fg);
+            key = (fg[0] << 16) | (fg[1] << 8) | fg[2];
             if (rp->DrawMode & JAM2)
             {
                 PenToRGB(vp, GetBPen(rp), bg);
                 FillBuffer(buf, w * h, bg);
             }
             else
+            {
                 cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp,
                                    x + sx, y + sy, w - sx, h - sy,
                                    RECTFMT_RGB);
+                /* drawn here already? see RedrawSame() */
+                ObtainSemaphore(&aa_RedrawLock);
+                same = RedrawSame(buf, rp, string, count, x, y, w, h, sx, sy,
+                                  key, &slot);
+            }
 
-            aa_LockGlyphs();
-            if (aa_PrepareFont(font, tf))
-                DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox, fg,
-                         BlendFor(fg));
-            aa_UnlockGlyphs();
+            if (!same)
+            {
+                aa_LockGlyphs();
+                if (aa_PrepareFont(font, tf))
+                    DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox,
+                             fg, BlendFor(fg));
+                aa_UnlockGlyphs();
+            }
+            if (!(rp->DrawMode & JAM2))
+            {
+                if (!same)
+                    RedrawKeep(slot, buf, rp, string, count, x, y, w, h, sx,
+                               sy, key);
+                ReleaseSemaphore(&aa_RedrawLock);
+            }
 
-            cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp,
-                                x + sx, y + sy, w - sx, h - sy,
-                                RECTFMT_RGB);
+            if (!same)
+                cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp,
+                                    x + sx, y + sy, w - sx, h - sy,
+                                    RECTFMT_RGB);
             FreeBuffer(buf);
             rp->cp_x += te.te_Width;
             COUNT(R_REAL_AA);
@@ -1489,7 +1622,9 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     UBYTE *buf;
     BOOL palette;
     LONG sx = 0, sy = 0;           /* cropped columns and rows */
-    LONG x, y, w, h;
+    LONG x, y, w, h, slot = -1;
+    BOOL same = FALSE;
+    ULONG key;
 #ifdef DEBUG
     ULONG ts0 = 0, ts1 = 0, ts2 = 0, ts3 = 0, ts4 = 0;
 #endif
@@ -1608,6 +1743,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     }
 
     PenToRGB(vp, GetAPen(rp), fg);
+    key = (fg[0] << 16) | (fg[1] << 8) | fg[2];
 
     /* JAM2: background is the BgPen colour, no need to read it. */
     TSTAMP(ts1);
@@ -1617,11 +1753,19 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         FillBuffer(buf, w * h, bg);
     }
     else
+    {
         cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp, x + sx,
                            y + sy, w - sx, h - sy, RECTFMT_RGB);
+        /* drawn here already? see RedrawSame() */
+        ObtainSemaphore(&aa_RedrawLock);
+        same = RedrawSame(buf, rp, string, count, x, y, w, h, sx, sy, key,
+                          &slot);
+    }
     TSTAMP(ts2);
 
-    if (font)
+    if (same)
+        ;
+    else if (font)
     {
         aa_LockGlyphs();
         /* again: new settings may have reset the font since */
@@ -1631,10 +1775,17 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     }
     else
         DrawGradient(buf, w, h, fg);
+    if (!(rp->DrawMode & JAM2))
+    {
+        if (!same)
+            RedrawKeep(slot, buf, rp, string, count, x, y, w, h, sx, sy, key);
+        ReleaseSemaphore(&aa_RedrawLock);
+    }
 
     TSTAMP(ts3);
-    cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp, x + sx, y + sy,
-                        w - sx, h - sy, RECTFMT_RGB);
+    if (!same)
+        cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp, x + sx,
+                            y + sy, w - sx, h - sy, RECTFMT_RGB);
     FreeBuffer(buf);
     TSTAMP(ts4);
 #ifdef DEBUG
