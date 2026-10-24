@@ -24,7 +24,8 @@ enum
     AA_CHARSET_LATIN10,
     AA_CHARSET_CP1250,
     AA_CHARSET_CYRILLIC,        /* ISO-8859-5 */
-    AA_CHARSET_KOI8R
+    AA_CHARSET_KOI8R,
+    AA_CHARSET_AMIGAE2          /* Amiga-E2, Czech and Slovak */
 };
 
 enum

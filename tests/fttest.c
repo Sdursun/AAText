@@ -234,6 +234,10 @@ int main(int argc, char **argv)
             { AA_CHARSET_CYRILLIC, 0xB0, 0x0410 },  /* Cyrillic A */
             { AA_CHARSET_KOI8R,    0xC1, 0x0430 },  /* Cyrillic a */
             { AA_CHARSET_KOI8R,    0x41, 0x0041 },  /* ASCII */
+            { AA_CHARSET_AMIGAE2,  0xC7, 0x010C },  /* C caron */
+            { AA_CHARSET_AMIGAE2,  0xEE, 0x0161 },  /* s caron */
+            { AA_CHARSET_AMIGAE2,  0xFB, 0x016F },  /* u ring */
+            { AA_CHARSET_AMIGAE2,  0xBF, 0x02C7 },  /* caron */
         };
         int bad = prefs.charset != AA_CHARSET_KOI8R;
 

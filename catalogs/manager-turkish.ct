@@ -308,3 +308,5 @@ MSG_ABOUT_TEXT
 %s\n\nAmigaOS 3.2 için yumuşatılmış TrueType yazı\n(AmigaOS 3.1, 3.5 ve 3.9: denenmedi)\n\nTelif hakkı (C) 2026 Serkan Dursun\nMIT Lisansı\nhttps://github.com/Sdursun/AAText\n\nFreeType (C) The FreeType Project (FTL)\nGerçek ölçü kodu AROS'tan alınmıştır (APL)
 MSG_HELP_NOFILE
 Belgeler kurulu değil:\n%s\n\nInstall-AAText ile kurun ("Belgeler").
+MSG_CHARSET_AMIGAE2
+Amiga-E2 (Çekçe, Slovakça)

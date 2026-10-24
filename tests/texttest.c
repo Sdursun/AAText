@@ -9,7 +9,8 @@
  * to the last line with SetSoftStyle(); j draws all lines in JAM2 with
  * pen 1 on pen 2 (the background cell is filled). The window closes after the
  * given number of seconds (default 10), with its close gadget or Ctrl-C. "text"
- * replaces the first line ("-": the default text). "pubscreen" opens the
+ * replaces the first line ("-": the default text; "-e2": all three lines
+ * in Amiga-E2, Czech and Slovak, for "charset amiga-e2"). "pubscreen" opens the
  * window on that public screen instead of the Workbench, e.g. AATEST
  * from tests/pubscreen.c for palette (AGA) screens. After each line,
  * cp_x is checked against TextLength() and marked with a short line
@@ -36,6 +37,17 @@ static const char *const lines[] =
     "The quick brown fox jumps over the lazy dog",
     "Pijamal\xFD hasta ya\xF0\xFDz \xFE" "of\xF6re \xE7" "abucak g\xFCvendi.",
     "\xC7\xD0\xDD\xD6\xDE\xDC \xE7\xF0\xFD\xF6\xFE\xFC 0123456789 (illustrate) WAVE mmm",
+};
+
+/* Amiga-E2 (Czech and Slovak), for "charset amiga-e2": text "-e2" */
+static const char *const lines_e2[] =
+{
+    "P\xEA\xEDli\xEE \xF9lu\xEFou\xE7k\xFD k\xFB\xF1 \xFAp\xEBl \xF0\xE1"
+        "belsk\xE9 \xF3" "dy",
+    "K\xE8" "de\xE3 \xEE\xEF" "astn\xFD" "ch \xF0" "at\xE3ov u\xE7\xED pri "
+        "\xFAst\xED V\xE1hu m\xE2kveho ko\xF1" "a",
+    "\xC7\xCA\xCE\xD9\xCF\xD0\xD1\xC3\xC2\xDB\xCB \xE7\xEA\xEE\xF9\xEF\xF0"
+        "\xF1\xE3\xE2\xFB\xEB \xF4\xE4\xE8 \xAAquote\xBA \xDE \xFE",
 };
 
 int main(int argc, char **argv)
@@ -104,7 +116,9 @@ int main(int argc, char **argv)
     y = win->BorderTop + 4 + tf->tf_Baseline;
     for (i = 0; i < 3; i++)
     {
-        const char *s = (i == 0 && argc > 5 && strcmp(argv[5], "-")) ?
+        BOOL e2 = argc > 5 && !strcmp(argv[5], "-e2");
+        const char *s = e2 ? lines_e2[i] :
+                        (i == 0 && argc > 5 && strcmp(argv[5], "-")) ?
                         argv[5] : lines[i];
         LONG x0 = win->BorderLeft + 8, tl;
 
