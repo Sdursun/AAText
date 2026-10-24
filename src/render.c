@@ -796,6 +796,9 @@ static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
     }
 }
 
+static void LineRGB(UBYTE *buf, LONG w, LONG y, LONG x0, LONG x1,
+                    const UBYTE *fg);
+
 /*
  * Draw the string into the buffer, character by character, keeping the
  * cells of the bitmap font. Called with the glyph lock held; calls no
@@ -831,6 +834,12 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
         }
         pen += cell + rp->TxSpacing;
     }
+
+    /* one row below the baseline, as graphics.library draws it */
+    if (rp->AlgoStyle & FSF_UNDERLINED)
+        LineRGB(buf, w, tf->tf_Baseline + 1 < h ? tf->tf_Baseline + 1
+                                                 : tf->tf_Baseline,
+                0, w, fg);
 }
 
 /*
@@ -1497,7 +1506,9 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
 
     if (rp->DrawMode & (COMPLEMENT | INVERSVID))
         FAIL(R_DRAWMODE);
-    if (rp->AlgoStyle & (FSF_BOLD | FSF_ITALIC | FSF_UNDERLINED))
+    /* underline (MUI's key letters) keeps the cells; bold and italic can
+       change widths and extents, the original draws them */
+    if (rp->AlgoStyle & (FSF_BOLD | FSF_ITALIC))
         FAIL(R_STYLE);
     if (!bm)
         FAIL(R_NOBITMAP);
