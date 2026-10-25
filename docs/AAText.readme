@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text, AmigaOS 3.x
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <blasterreal@gmail.com>
 Type:         util/wb
-Version:      0.42
+Version:      0.43
 Architecture: m68k-amigaos >= 3.1.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
@@ -65,6 +65,8 @@ tested yet; the ReAction GUIs need 3.2, use the MUI ones there.
 Please report your results: https://github.com/Sdursun/AAText/issues
 
 Changes since 0.34
+- 0.43: the Amiga-E2 entry of the character set lists had no name in
+  the English user interface.
 - 0.42: Amiga-E2 character set (Czech, Slovak). Fixes: AATextPrefs MUI
   runs with diskfont.library 39 (OS 3.1); underlined key letters in
   MUI labels are antialiased; text that a program draws again on

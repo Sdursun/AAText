@@ -45,7 +45,7 @@
 #include "../prefsgui/strings.h"
 
 static const char version[] __attribute__((used)) =
-    "$VER: AATextPrefs 0.42 (25.10.2026) MUI";
+    "$VER: AATextPrefs 0.43 (25.10.2026) MUI";
 static const char stackcookie[] __attribute__((used)) = "$STACK:16384";
 
 #define ENV_PREFS     "ENV:AAText.prefs"

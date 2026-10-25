@@ -1,4 +1,4 @@
-AAText 0.42 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.43 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -493,6 +493,9 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.43  The Amiga-E2 entry of the character set lists in AATextPrefs
+      and AATextManager had no name in the English user interface.
 
 0.42  New character set amiga-e2 (Amiga-E2, Czech and Slovak).
       Fixes: AATextPrefs (MUI) runs with diskfont.library 39 of
