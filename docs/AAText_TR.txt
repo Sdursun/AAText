@@ -1,4 +1,4 @@
-AAText 0.43 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.44 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -509,6 +509,14 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.44  aatext.library 1.1: Çağıranın yığınında 32 KB'tan az yer
+      kalmışsa FreeType kendi 48 KB'lık yığınında çalışır.
+      AATextManager ile kurulan fontlar 16 KB yığınlı programları
+      (ör. Directory Opus 5'in font penceresi) çökertiyor ya da
+      donduruyordu. AATextPrefs ve AATextManager (ReAction) simple
+      refresh kullanır: ReAction ayarlarında smart refresh seçiliyken
+      sayfaları pencere boyutlandırılana kadar yanlış çiziliyordu.
 
 0.43  AATextPrefs ve AATextManager'ın karakter seti listelerindeki
       Amiga-E2 satırı İngilizce arayüzde adsız görünüyordu.

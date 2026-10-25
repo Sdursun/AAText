@@ -45,7 +45,7 @@ static int ToLower(int c)
 }
 
 static const char version[] __attribute__((used)) =
-    "$VER: AATextManager " AAMGR_VERSION " (25.10.2026)";
+    "$VER: AATextManager " AAMGR_VERSION " (26.10.2026)";
 /* stack the Shell gives the program (V47); main() also makes sure */
 static const char stackcookie[] __attribute__((used)) = "$STACK:65536";
 

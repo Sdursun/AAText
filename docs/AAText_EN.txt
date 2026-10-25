@@ -1,4 +1,4 @@
-AAText 0.43 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.44 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -493,6 +493,14 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.44  aatext.library 1.1: FreeType runs on its own 48 KB stack when
+      the caller has less than 32 KB left. Fonts installed with
+      AATextManager crashed or froze programs with a 16 KB stack,
+      e.g. the font requester of Directory Opus 5. AATextPrefs and
+      AATextManager (ReAction) use simple refresh: with smart
+      refresh in the ReAction prefs their pages were drawn wrong
+      until the window was resized.
 
 0.43  The Amiga-E2 entry of the character set lists in AATextPrefs
       and AATextManager had no name in the English user interface.
