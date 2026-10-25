@@ -116,7 +116,7 @@ freetype2.library 1.3'e göre farklar:
 - `OT_Spec9_Hinter`: 0 font, 1 autohinter, 2 yok, **3 light** (sadece aatext).
 - Symbol kodlamalı fontlar (Symbol.ttf): karakter `U+F0xx`'te aranır.
 - PCF/BDF/FNT bitmap fontlar açılabilir.
-- Motor çağrılarında FreeType, çağıranın yığını 12 KB'tan azsa kendi 24 KB'lık
+- Motor çağrılarında FreeType, çağıranın yığını 32 KB'tan azsa kendi 48 KB'lık
   yığınında çalışır.
 
 AAText'in font algılaması (`otag.c`) `OT_Spec1_FontFile`'ı motordan bağımsız
