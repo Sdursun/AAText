@@ -1661,8 +1661,12 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
         WA_CloseGadget, TRUE,
         WA_SizeGadget, TRUE,
         WA_Activate, TRUE,
+        /* simple refresh whatever ReAction prefs say: with smart refresh
+           the pages were drawn wrong until the window was resized */
+        WA_SimpleRefresh, TRUE,
+        WA_SmartRefresh, FALSE,
         WA_IDCMP, IDCMP_GADGETUP | IDCMP_CLOSEWINDOW | IDCMP_VANILLAKEY |
-                  IDCMP_MENUPICK,
+                  IDCMP_MENUPICK | IDCMP_REFRESHWINDOW,
         WINDOW_NewMenu, (ULONG)menu,
         WINDOW_Position, WPOS_CENTERSCREEN,
         WINDOW_ParentGroup, VLayoutObject,
