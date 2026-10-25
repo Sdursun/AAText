@@ -2,7 +2,7 @@
 #define LIBRARIES_AATEXT_H
 
 /*
- * aatext.library 1.0 - definitions for programs and font installers.
+ * aatext.library 1.1 - definitions for programs and font installers.
  *
  * aatext.library is AAText's library: FreeType 2.14.3 as a shared library
  * (see <proto/aatext.h>) and a bullet.library-compatible outline engine for

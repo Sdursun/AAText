@@ -1,4 +1,4 @@
-Developer headers of aatext.library 1.0 (AAText's FreeType library),
+Developer headers of aatext.library 1.1 (AAText's FreeType library),
 copied from the aatext.library project (include/, generated from
 src/aatext.funcs). Used only by the USE_AATEXTLIB=1 build of AAText.
 The FreeType headers themselves come from third_party/freetype-2.14.3.
