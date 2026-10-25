@@ -111,13 +111,18 @@
     S(MSG_MENU_MUISETTINGS, 143, "MUI...") \
     S(MSG_MENU_HELP,       144, "Help...") \
     S(MSG_ABOUT_TEXT,      145, "%s\n\nAntialiased TrueType text for AmigaOS 3.2\n(AmigaOS 3.1, 3.5 and 3.9: not tested)\n\nCopyright (C) 2026 Serkan Dursun\nMIT License\nhttps://github.com/Sdursun/AAText\n\nFreeType (C) The FreeType Project (FTL)\nReal metrics code derived from AROS (APL)") \
-    S(MSG_CHARSET_AMIGAE2, 147, "Amiga-E2 (Czech, Slovak)") \
-    S(MSG_HELP_NOFILE,     146, "The documentation is not installed:\n%s\n\nInstall it with Install-AAText (\"Documents\").")
+    S(MSG_HELP_NOFILE,     146, "The documentation is not installed:\n%s\n\nInstall it with Install-AAText (\"Documents\").") \
+    S(MSG_CHARSET_AMIGAE2, 147, "Amiga-E2 (Czech, Slovak)")
 
 
 #define S(id, n, s) id = n,
-enum { AA_STRINGS AA_NUM_STRINGS };
+enum { AA_STRINGS };
 #undef S
+/* one more than the highest ID (lines need not be in ID order) */
+#define S(id, n, s) char id##_n[n + 1];
+union AAStringsMax { AA_STRINGS };
+#undef S
+#define AA_NUM_STRINGS ((LONG)sizeof(union AAStringsMax))
 
 /* Open the catalog; language NULL = the user's preferred languages. */
 void InitStrings(const char *language);
