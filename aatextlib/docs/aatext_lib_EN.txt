@@ -1,0 +1,173 @@
+aatext.library 1.1
+==================
+
+The library of AAText: FreeType 2.14.3 as an AmigaOS 3 shared library,
+and an outline font engine for diskfont.library.
+
+aatext.library does not replace or change freetype2.library. Both can be
+installed; fonts made for freetype2.library keep using it.
+
+
+Installation
+------------
+
+  Copy Libs/aatext.library LIBS:
+
+For a 68060 use Libs/aatext.library.060 instead (copy it as
+LIBS:aatext.library). Libs/aatext.library.debug prints messages to the
+serial port, for bug reports.
+
+
+Font engine
+-----------
+
+diskfont.library uses aatext.library for fonts whose .otag file says
+OT_Engine "aatext". The tags are those of freetype2.library (FTManager),
+so a .otag file made for freetype2.library works with aatext.library when
+its engine is changed from "freetype2" to "aatext".
+
+What the engine gives diskfont:
+
+- 1-bit glyph maps (OT_GlyphMap) hinted for monochrome output. With the
+  font's own TrueType instructions small sizes look as their designers
+  meant them in black and white.
+- 8-bit antialiased glyph maps (OT_GlyphMap8Bit).
+- Width lists (OT_WidthList, OT_WidthList32) measured with the same
+  hinting as the 1-bit glyphs.
+- Kerning (OT_TextKernPair, OT_DesignKernPair) from the 'kern' table.
+- Algorithmic bold (OT_EmboldenX/Y), slant (OT_ShearSin/Cos), rotation
+  (OT_RotateSin/Cos), width (OT_SetFactor).
+- 32-bit glyph codes (OT_GlyphCode_32, OT_GlyphCode2_32): codes 256 and
+  up are Unicode.
+- Font sizes computed as by freetype2.library 1.3, so a font is as tall
+  with either engine.
+
+
+Code page
+---------
+
+Amiga character codes are mapped to Unicode with, in this order:
+
+1. the code page in the .otag file (OT_Spec2_CodePage), if there is one;
+2. ENV:ftcodepage: 256 big-endian 16-bit Unicode values (512 bytes),
+   the same file freetype2.library uses;
+3. ISO-8859-1.
+
+For Turkish (ISO-8859-9), AAText includes ftcodepage.latin5:
+
+  Copy ftcodepage.latin5 ENVARC:ftcodepage
+  Copy ftcodepage.latin5 ENV:ftcodepage
+
+
+.otag tags understood by the engine
+-----------------------------------
+
+  OT_Spec1_FontFile    font file
+  OT_Spec2_CodePage    code page (256 UWORDs)
+  OT_Spec3_AFMFile     AFM/PFM metrics for Type 1 fonts
+  OT_Spec4_Metric      what gives the em height:
+                       0 bounding box (default), 1 raw em, 2 hhea
+                       ascender, 3 OS/2 typo ascender, 4 OS/2 win ascent,
+                       5 custom (OT_Spec5_BBox), 6 bitmap size
+  OT_Spec5_BBox        custom metric: yMax << 16 | yMin
+  OT_Spec6_FaceNum     face in a .ttc/.otc collection
+  OT_Spec9_Hinter      0 the font's own hinting (default),
+                       1 FreeType autohinter, 2 none,
+                       3 light autohinting (aatext.library only)
+
+See Developer/include/libraries/aatext.h for the values.
+
+
+FreeType settings
+-----------------
+
+FreeType reads the environment variable FREETYPE_PROPERTIES when a
+program starts using it (FT_Init_FreeType), e.g.:
+
+  SetEnv FREETYPE_PROPERTIES "truetype:interpreter-version=35"
+  SetEnv FREETYPE_PROPERTIES "cff:no-stem-darkening=0 autofitter:no-stem-darkening=0"
+
+See https://freetype.org/freetype2/docs/reference/ft2-properties.html
+
+
+Stack
+-----
+
+FreeType's autohinter and its CFF and Type 1 code need more stack than
+many programs have. The library checks the caller's stack in every
+engine call and runs FreeType on its own 48 KB stack when less than
+32 KB are left. Programs that call the FreeType API directly should give
+themselves at least 32 KB of stack.
+
+
+For programmers
+---------------
+
+Developer/include has proto, inline, clib, fd and libraries headers and
+the FreeType 2.14.3 headers. With gcc:
+
+  #include <proto/aatext.h>
+
+  struct Library *AATextBase;
+
+  AATextBase = OpenLibrary("aatext.library", 1);
+  if (AATextBase)
+  {
+      FT_Library lib;
+      FT_Face face;
+
+      if (!FT_Init_FreeType(&lib))
+      {
+          if (!FT_New_Face(lib, "FONTS:_ttf/verdana.ttf", 0, &face))
+          {
+              FT_Set_Pixel_Sizes(face, 0, 16);
+              FT_Load_Char(face, 'A', FT_LOAD_RENDER);
+              /* face->glyph->bitmap holds the glyph */
+              FT_Done_Face(face);
+          }
+          FT_Done_FreeType(lib);
+      }
+      CloseLibrary(AATextBase);
+  }
+
+- The FreeType functions take their arguments on the stack in C order;
+  the library base in A6 is not used. <inline/aatext.h> calls them
+  through the library vector. The engine functions (OpenEngine,
+  CloseEngine, SetInfoA, ObtainInfoA, ReleaseInfoA) take theirs in A0/A1
+  as in bullet.library.
+- The function order is that of freetype2.library 1.3 (FreeType API from
+  LVO -90 on), with 71 newer functions after it. Twelve reserved slots
+  return FT_Err_Unimplemented_Feature.
+- FreeType's rule applies: an FT_Library and everything made from it
+  belongs to one task at a time. Give every task its own FT_Library.
+- Memory for each FT_Library comes from its own exec pool; FT_Done_FreeType
+  frees all of it.
+- Developer/aatext.funcs lists the functions in library order;
+  Developer/ft2info.c, ft2bullet.c and ft2dfont.c are examples.
+
+
+Test programs
+-------------
+
+  Tests/ft2info FONT FONTS:_ttf/verdana.ttf SIZE 20 TEXT "Hello"
+      library and FreeType version, font names, text as ASCII art
+
+  Tests/ft2bullet FONTS:verdanaregular.otag SIZE 13 ART WIDTHS
+      the engine as diskfont uses it: glyph maps, widths, kerning
+      (AA for 8-bit glyph maps, FONT <file> instead of a .otag file;
+      the .otag may name any engine, the test uses aatext.library)
+
+  Tests/ft2dfont FONT myfont.font SIZES 11 13 16 24
+      opens the font through diskfont.library and draws it in a window,
+      once with Text() and once from the font's own glyph bitmaps
+
+
+License
+-------
+
+FreeType: FreeType License (FTL.txt). Portions of this software are
+copyright (C) 2026 The FreeType Project (www.freetype.org). All rights
+reserved.
+
+The library around it: MIT License (LICENSE.txt),
+Copyright (c) 2026 Serkan Dursun.

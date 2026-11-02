@@ -1,9 +1,9 @@
 # aatext.library 1.1 – AAText'in kütüphanesi
 
 AAText için ayrı bir paylaşımlı kütüphane geliştirildi: **aatext.library 1.1**
-(FreeType 2.14.3). Kaynağı `C:\Users\Serkan\Desktop\freetype2` klasöründe
-(`src/`, derleme `build/`, Aminet paketi `dist/`; klasör adı tarihsel olarak
-`freetype2` kaldı). Bu dosya, kütüphanenin AAText geliştirmesinde nasıl
+(FreeType 2.14.3). Kaynağı bu deponun `aatextlib/` klasöründe
+(`src/`, derleme `build/`, Aminet paketi `dist/`; AAText'in `make dist`'i
+kütüphaneyi oradan derleyip pakete alır). Bu dosya, kütüphanenin AAText geliştirmesinde nasıl
 kullanılacağını ve AAText'i ilgilendiren özelliklerini listeler.
 
 Kütüphanenin iki işi var:

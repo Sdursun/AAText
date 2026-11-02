@@ -1,0 +1,69 @@
+Short:        AAText's library: FreeType 2.14.3 + font engine
+Author:       Serkan Dursun
+Uploader:     Serkan Dursun <EMAIL>
+Type:         util/libs
+Version:      1.1
+Architecture: m68k-amigaos >= 3.0.0
+Distribution: Aminet
+Requires:     68020+, AmigaOS 3.0+
+
+aatext.library is the library of AAText (util/wb/AAText): FreeType 2.14.3
+(2026) as an AmigaOS 3 shared library, and an outline font engine for
+diskfont.library. It does not replace or change freetype2.library;
+both can be installed side by side.
+
+- FreeType API: the full FreeType 2.14.3 API for programs (165 functions),
+  with the same function order as freetype2.library 1.3, so a program
+  written for freetype2.library can use aatext.library by opening it
+  under the new name.
+- diskfont engine: fonts whose .otag file names OT_Engine "aatext". The
+  .otag tags are those of freetype2.library (FTManager); a .otag made for
+  freetype2.library works when its engine is changed to "aatext".
+
+What the engine does better than freetype2.library 1.3
+- FreeType 2.14.3: TrueType, OpenType/CFF (.otf), CFF2 and variable
+  fonts, WOFF, Type 1 (.pfb/.pfa), CID, Type 42, PFR, Windows FNT, PCF
+  and BDF bitmap fonts (also gzip or LZW compressed).
+- 1-bit glyphs hinted for monochrome output (the font's own TrueType
+  instructions), not antialiasing hints thresholded to black and white.
+  Letters like W, a, e no longer break apart at small sizes.
+- 8-bit antialiased glyph maps (OT_GlyphMap8Bit of the AmigaOS 3.2 NDK).
+- Symbol fonts (Symbol and other MS symbol encoded fonts) find their
+  glyphs.
+- OT_EmboldenX/Y (algorithmic bold), OT_SetFactor (width), 32-bit glyph
+  codes (OT_GlyphCode_32, OT_WidthList32), OT_NumGlyphs.
+- OT_Spec9_Hinter: default, autohinter, none, and new "light".
+- Glyph maps and width lists agree (1.3 measured widths and drew glyphs
+  with different hinting).
+- FreeType runs on its own 48 KB stack when the caller has less than
+  32 KB left: no crashes in programs with small stacks.
+- FREETYPE_PROPERTIES environment variable for FreeType driver settings,
+  e.g. SetEnv FREETYPE_PROPERTIES "cff:no-stem-darkening=0".
+
+Installation
+  Copy Libs/aatext.library LIBS:
+(Libs/aatext.library.060 is the 68060 build, copy it as
+LIBS:aatext.library; the .debug build prints to the serial port.)
+
+Code page: characters are mapped to Unicode with the code page in the
+.otag file, or ENV:ftcodepage (256 big-endian words, as for
+freetype2.library), or ISO-8859-1.
+
+For programmers
+Developer/include has the headers (proto, inline, clib, fd, libraries)
+and the FreeType 2.14.3 headers. With gcc:
+
+  #include <proto/aatext.h>
+  struct Library *AATextBase;
+  ...
+  AATextBase = OpenLibrary("aatext.library", 1);
+  FT_Init_FreeType(&library);   /* and so on: the normal FreeType API */
+
+FreeType functions take their arguments on the stack (C order), not in
+registers; the inline header does this for you. Each task should use its
+own FT_Library. Tests/ft2info, ft2bullet and ft2dfont are examples and
+test programs (source in Developer/).
+
+License: FreeType License (FTL.txt) for FreeType, MIT for the library
+around it (LICENSE.txt). Portions of this software are copyright (C) 2026
+The FreeType Project (www.freetype.org). All rights reserved.

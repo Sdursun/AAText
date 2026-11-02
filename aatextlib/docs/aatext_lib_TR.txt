@@ -1,0 +1,175 @@
+aatext.library 1.1
+==================
+
+AAText'in kütüphanesi: FreeType 2.14.3, AmigaOS 3 için paylaşımlı
+kütüphane olarak; ayrıca diskfont.library için bir outline font motoru.
+
+aatext.library, freetype2.library'nin yerine geçmez ve onu değiştirmez.
+İkisi birlikte kurulabilir; freetype2.library için yapılmış fontlar onu
+kullanmaya devam eder.
+
+
+Kurulum
+-------
+
+  Copy Libs/aatext.library LIBS:
+
+68060 için Libs/aatext.library.060 dosyasını kullanın (LIBS: içine
+aatext.library adıyla kopyalayın). Libs/aatext.library.debug seri porta
+mesaj yazar; hata bildirimleri içindir.
+
+
+Font motoru
+-----------
+
+diskfont.library, .otag dosyasında OT_Engine "aatext" yazan fontlar için
+aatext.library'yi kullanır. Etiketler freetype2.library'ninkilerle
+(FTManager) aynıdır; freetype2.library için yapılmış bir .otag dosyası,
+motoru "freetype2"den "aatext"e çevrilince aatext.library ile çalışır.
+
+Motorun diskfont'a verdikleri:
+
+- Siyah-beyaz çıktı için hint'lenmiş 1 bit glif haritaları (OT_GlyphMap).
+  Fontun kendi TrueType komutlarıyla küçük boyutlar, tasarımcının siyah
+  beyaz için düşündüğü gibi görünür.
+- 8 bit yumuşatılmış (antialiased) glif haritaları (OT_GlyphMap8Bit).
+- 1 bit gliflerle aynı hinting ile ölçülmüş genişlik listeleri
+  (OT_WidthList, OT_WidthList32).
+- 'kern' tablosundan kerning (OT_TextKernPair, OT_DesignKernPair).
+- Algoritmik kalın (OT_EmboldenX/Y), eğik (OT_ShearSin/Cos), döndürme
+  (OT_RotateSin/Cos), genişlik (OT_SetFactor).
+- 32 bit glif kodları (OT_GlyphCode_32, OT_GlyphCode2_32): 256 ve üstü
+  kodlar Unicode'dur.
+- Font boyları freetype2.library 1.3'teki gibi hesaplanır; bir font iki
+  motorla da aynı yükseklikte olur.
+
+
+Kod sayfası
+-----------
+
+Amiga karakter kodları şu sırayla Unicode'a çevrilir:
+
+1. .otag dosyasındaki kod sayfası (OT_Spec2_CodePage), varsa;
+2. ENV:ftcodepage: 256 adet big-endian 16 bit Unicode değeri (512 bayt),
+   freetype2.library'nin de kullandığı dosya;
+3. ISO-8859-1.
+
+Türkçe (ISO-8859-9) için AAText ile ftcodepage.latin5 gelir:
+
+  Copy ftcodepage.latin5 ENVARC:ftcodepage
+  Copy ftcodepage.latin5 ENV:ftcodepage
+
+
+Motorun anladığı .otag etiketleri
+---------------------------------
+
+  OT_Spec1_FontFile    font dosyası
+  OT_Spec2_CodePage    kod sayfası (256 UWORD)
+  OT_Spec3_AFMFile     Type 1 fontlar için AFM/PFM ölçü dosyası
+  OT_Spec4_Metric      em yüksekliğini veren ölçü:
+                       0 sınır kutusu (varsayılan), 1 ham em, 2 hhea
+                       ascender, 3 OS/2 typo ascender, 4 OS/2 win ascent,
+                       5 özel (OT_Spec5_BBox), 6 bitmap boyu
+  OT_Spec5_BBox        özel ölçü: yMax << 16 | yMin
+  OT_Spec6_FaceNum     .ttc/.otc koleksiyonunda yüz numarası
+  OT_Spec9_Hinter      0 fontun kendi hinting'i (varsayılan),
+                       1 FreeType autohinter, 2 yok,
+                       3 hafif autohinting (sadece aatext.library)
+
+Değerler için Developer/include/libraries/aatext.h dosyasına bakın.
+
+
+FreeType ayarları
+-----------------
+
+FreeType, bir program onu kullanmaya başladığında (FT_Init_FreeType)
+FREETYPE_PROPERTIES ortam değişkenini okur, örneğin:
+
+  SetEnv FREETYPE_PROPERTIES "truetype:interpreter-version=35"
+  SetEnv FREETYPE_PROPERTIES "cff:no-stem-darkening=0 autofitter:no-stem-darkening=0"
+
+Ayrıntılar: https://freetype.org/freetype2/docs/reference/ft2-properties.html
+
+
+Yığın (stack)
+-------------
+
+FreeType'ın autohinter'ı ve CFF/Type 1 kodu, birçok programın yığınından
+fazlasını ister. Kütüphane her motor çağrısında çağıranın yığınına bakar;
+32 KB'tan az kalmışsa FreeType'ı kendi 48 KB'lık yığınında çalıştırır.
+FreeType API'sini doğrudan çağıran programlar kendilerine en az 32 KB
+yığın vermelidir.
+
+
+Programcılar için
+-----------------
+
+Developer/include içinde proto, inline, clib, fd ve libraries başlıkları
+ile FreeType 2.14.3 başlıkları vardır. gcc ile:
+
+  #include <proto/aatext.h>
+
+  struct Library *AATextBase;
+
+  AATextBase = OpenLibrary("aatext.library", 1);
+  if (AATextBase)
+  {
+      FT_Library lib;
+      FT_Face face;
+
+      if (!FT_Init_FreeType(&lib))
+      {
+          if (!FT_New_Face(lib, "FONTS:_ttf/verdana.ttf", 0, &face))
+          {
+              FT_Set_Pixel_Sizes(face, 0, 16);
+              FT_Load_Char(face, 'A', FT_LOAD_RENDER);
+              /* glif face->glyph->bitmap içinde */
+              FT_Done_Face(face);
+          }
+          FT_Done_FreeType(lib);
+      }
+      CloseLibrary(AATextBase);
+  }
+
+- FreeType fonksiyonları argümanlarını yığında, C sırasıyla alır; A6'daki
+  kütüphane tabanı kullanılmaz. <inline/aatext.h> onları kütüphane
+  vektörü üzerinden çağırır. Motor fonksiyonları (OpenEngine,
+  CloseEngine, SetInfoA, ObtainInfoA, ReleaseInfoA) argümanlarını
+  bullet.library'deki gibi A0/A1'de alır.
+- Fonksiyon sırası freetype2.library 1.3'ünkiyle aynıdır (FreeType API'si
+  LVO -90'dan başlar); ardından 71 yeni fonksiyon gelir. Ayrılmış on iki
+  yer FT_Err_Unimplemented_Feature döndürür.
+- FreeType'ın kuralı geçerlidir: bir FT_Library ve ondan yapılan her şey
+  aynı anda tek bir göreve (task) aittir. Her göreve kendi FT_Library'sini
+  verin.
+- Her FT_Library'nin belleği kendi exec havuzundan gelir; FT_Done_FreeType
+  hepsini geri verir.
+- Developer/aatext.funcs fonksiyonları kütüphane sırasıyla listeler;
+  Developer/ft2info.c, ft2bullet.c ve ft2dfont.c örnektir.
+
+
+Test programları
+----------------
+
+  Tests/ft2info FONT FONTS:_ttf/verdana.ttf SIZE 20 TEXT "Merhaba"
+      kütüphane ve FreeType sürümü, font adları, metin ASCII çizim olarak
+
+  Tests/ft2bullet FONTS:verdanaregular.otag SIZE 13 ART WIDTHS
+      motor, diskfont'un kullandığı gibi: glif haritaları, genişlikler,
+      kerning (AA: 8 bit haritalar; .otag yerine FONT <dosya>; .otag hangi
+      motoru yazarsa yazsın test aatext.library'yi kullanır)
+
+  Tests/ft2dfont FONT benimfont.font SIZES 11 13 16 24
+      fontu diskfont.library ile açıp bir pencereye çizer: bir kez Text()
+      ile, bir kez fontun kendi glif bitmap'lerinden
+
+
+Lisans
+------
+
+FreeType: FreeType License (FTL.txt). Portions of this software are
+copyright (C) 2026 The FreeType Project (www.freetype.org). All rights
+reserved.
+
+Çevresindeki kütüphane: MIT Lisansı (LICENSE.txt),
+Copyright (c) 2026 Serkan Dursun.

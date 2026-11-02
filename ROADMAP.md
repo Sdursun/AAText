@@ -178,7 +178,7 @@ AAText FPU'yu sadece açılışta kullanıyor.
   dışı.
 
 ### 10. AAText'i aatext.library'ye geçirmek — orta
-- aatext.library 1.0 (FreeType 2.14.3, kaynak `C:\Users\Serkan\Desktop\freetype2`)
+- aatext.library 1.0 (FreeType 2.14.3, kaynak `aatextlib/`)
   AAText'in kütüphanesi; ayrıntılar `AATEXT_LIBRARY.md`.
 - Gömülü FreeType yerine kütüphaneyi kullanmak: AAText ~350 KB → ~50–60 KB,
   daha çok font biçimi. AAText'in kullandığı her FreeType fonksiyonu

@@ -10,3 +10,9 @@ __pycache__/
 
 # Claude memory (personal notes, copied from ~/.claude)
 .claude/
+
+# aatext.library: built archive, old library for comparison, TTEngine source
+# used as reference only
+aatextlib/dist/
+aatextlib/reference/
+aatextlib/ttengine-7.2/

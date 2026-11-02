@@ -175,7 +175,8 @@ $(BUILDDIR)/lcdtest-ct: tests/lcdtest.c $(CT_LIB) $(BUILDDIR)/cgx.o
 # (docs are UTF-8 in the repository; the Turkish one is converted to
 # ISO-8859-9, the usual Turkish character set on the Amiga)
 DISTDIR := build/dist
-AATEXTLIB_PKG ?= third_party/aatext_lib
+# aatext.library comes from its package, built in aatextlib/
+AATEXTLIB_PKG ?= aatextlib/dist/aatext_lib
 
 .PHONY: dist
 dist:
@@ -183,6 +184,7 @@ dist:
 	$(MAKE) CPU=68060 DEBUG=0
 	$(MAKE) CPU=68020 DEBUG=1
 	$(MAKE) CPU=68020 DEBUG=0 gui manager gui_mui manager_mui catalogs icons
+	$(MAKE) -C aatextlib dist
 	rm -rf $(DISTDIR)
 	mkdir -p $(DISTDIR)/AAText
 	cp build/68020/AAText $(DISTDIR)/AAText/AAText
@@ -198,9 +200,8 @@ dist:
 	cp docs/AAText_EN.txt docs/AAText.prefs.example $(DISTDIR)/AAText/
 	cp LICENSE $(DISTDIR)/AAText/LICENSE.txt
 	cp LICENSE.APL $(DISTDIR)/AAText/LICENSE.APL.txt
-	# font installer and its library (copied to third_party/aatext_lib
-	# from the aatext.library package: Libs/aatext.library,
-	# LICENSE.txt, FTL.txt)
+	# font installer and its library (from the aatext.library package:
+	# Libs/aatext.library, LICENSE.txt, FTL.txt)
 	cp build/68020/AATextManager $(MGR_ICON) $(DISTDIR)/AAText/
 	chmod 644 $(DISTDIR)/AAText/AATextManager.info
 	cp $(MGR_CATALOG) "$(DISTDIR)/AAText/Catalogs/turkish/"
@@ -217,7 +218,7 @@ dist:
 	cp build/68020/AATextManager_MUI $(DISTDIR)/AAText/MUI/AATextManager
 	chmod 755 $(DISTDIR)/AAText/MUI/AATextPrefs $(DISTDIR)/AAText/MUI/AATextManager
 	mkdir -p $(DISTDIR)/AAText/Libs
-	cp $(AATEXTLIB_PKG)/aatext.library $(DISTDIR)/AAText/Libs/
+	cp $(AATEXTLIB_PKG)/Libs/aatext.library $(DISTDIR)/AAText/Libs/
 	cp $(AATEXTLIB_PKG)/LICENSE.txt $(DISTDIR)/AAText/LICENSE.aatext.txt
 	cp $(AATEXTLIB_PKG)/FTL.txt $(DISTDIR)/AAText/FTL.txt
 	chmod 644 $(DISTDIR)/AAText/LICENSE.aatext.txt $(DISTDIR)/AAText/FTL.txt
