@@ -473,8 +473,12 @@ static struct ViewPort *FindViewPort(struct RastPort *rp)
             vp = &s->ViewPort;
     }
 
-    /* an off-screen buffer of a program with windows: their screen */
-    if (!vp && !layer)
+    /*
+     * An off-screen buffer of a program with windows: their screen. Also
+     * with layers of their own (no window, bitmap of no screen):
+     * TextEditor.mcc draws YAM's message text that way.
+     */
+    if (!vp)
         vp = TaskViewPort(FindTask(NULL), depth);
 
     /*
