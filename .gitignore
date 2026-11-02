@@ -7,3 +7,6 @@ third_party/
 # Local project notes, not published
 CLAUDE.md
 __pycache__/
+
+# Claude memory (personal notes, copied from ~/.claude)
+.claude/
