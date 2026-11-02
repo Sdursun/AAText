@@ -220,6 +220,20 @@ static BOOL aa_HaveEnvCodePage;
 static struct Task *aa_HelperTask;
 static ULONG aa_HelperSig;
 
+/*
+ * Text() callers waiting for the helper to load a font (WaitHelper()).
+ * The list is only touched inside Forbid(); the nodes live on the
+ * waiters' stacks.
+ */
+struct AAWaiter
+{
+    struct AAWaiter *next;
+    struct Task     *task;
+    volatile BOOL    done;
+};
+static struct AAWaiter *aa_Waiters;
+#define AA_WAIT_ROUNDS 3
+
 static struct AAGlyph *aa_Hash[AA_HASH_SIZE];
 static struct MinList aa_LRU;           /* most recently used first */
 static ULONG aa_CacheBytes;
@@ -967,8 +981,74 @@ void aa_GlyphsCleanup(void)
 
 void aa_SetHelper(struct Task *task, ULONG sigmask)
 {
+    Forbid();
     aa_HelperSig = sigmask;
     aa_HelperTask = task;
+    Permit();
+    /* without a helper nobody would wake them */
+    if (!task)
+        aa_WakeWaiters();
+}
+
+void aa_WakeWaiters(void)
+{
+    struct AAWaiter *w;
+
+    Forbid();
+    while ((w = aa_Waiters))
+    {
+        struct Task *task = w->task;
+
+        /* the node is on the waiter's stack: done with it before done */
+        aa_Waiters = w->next;
+        w->done = TRUE;
+        Signal(task, SIGF_SINGLE);
+    }
+    Permit();
+}
+
+/*
+ * Wait until the helper has gone through the fonts it was asked to
+ * load. FALSE: this task must not wait, the caller falls back to the
+ * bitmap font as before. input.device does not wait: the mouse pointer
+ * would stop while a font loads (menus, user's decision 2026-11-02).
+ *
+ * The helper does no graphics, layer or Intuition calls while loading
+ * and shows no requesters (pr_WindowPtr -1), so a caller holding layer
+ * locks cannot block it. SIGF_SINGLE is what exec's semaphores wait on;
+ * nobody else waits on it here, it is cleared before use.
+ */
+static BOOL WaitHelper(void)
+{
+    static struct Task *inputtask;
+    struct Task *me = FindTask(NULL);
+    struct AAWaiter w;
+
+    if (!inputtask)
+        inputtask = FindTask((CONST_STRPTR)"input.device");
+    if (me == inputtask)
+        return FALSE;
+
+    w.task = me;
+    w.done = FALSE;
+    Forbid();
+    if (!aa_HelperTask || me == aa_HelperTask)
+    {
+        Permit();
+        return FALSE;
+    }
+    w.next = aa_Waiters;
+    /* unlinked by aa_WakeWaiters() before done is set and we return */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-pointer"
+    aa_Waiters = &w;
+#pragma GCC diagnostic pop
+    SetSignal(0, SIGF_SINGLE);
+    Signal(aa_HelperTask, aa_HelperSig);
+    while (!w.done)
+        Wait(SIGF_SINGLE);
+    Permit();
+    return TRUE;
 }
 
 static LONG FindFontName(const char *base)
@@ -1202,16 +1282,30 @@ struct AAFont *aa_FindFont(struct TextFont *tf)
     struct AAFont *font;
     ULONG gen;
     BOOL final;
+    LONG round;
 
     if (!fontname)
         return NULL;
-    if (LookupCached(tf, fontname, &font))
-        return font;
-    gen = aa_FontGen;               /* before looking: a change voids it */
-    font = FindFontUncached(tf, fontname, &final);
-    if (final)
-        LookupStore(tf, fontname, gen, font);
-    return font;
+    /*
+     * A font seen for the first time (or unloaded since): wait for the
+     * helper to load it, else this text would stay in the bitmap font
+     * until something redraws it (Font prefs preview, new screen
+     * titles). A few rounds: a wait may end just before our request.
+     */
+    for (round = 0; ; round++)
+    {
+        if (LookupCached(tf, fontname, &font))
+            return font;
+        gen = aa_FontGen;           /* before looking: a change voids it */
+        font = FindFontUncached(tf, fontname, &final);
+        if (final)
+        {
+            LookupStore(tf, fontname, gen, font);
+            return font;
+        }
+        if (round >= AA_WAIT_ROUNDS || !WaitHelper())
+            return font;
+    }
 }
 
 /*

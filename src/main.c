@@ -18,6 +18,7 @@
 #include <exec/ports.h>
 #include <exec/memory.h>
 #include <dos/dos.h>
+#include <dos/dosextens.h>
 #include <graphics/gfxbase.h>
 #include <intuition/intuitionbase.h>
 #include <proto/exec.h>
@@ -425,6 +426,7 @@ int main(int argc, char **argv)
     LONG numfonts;
     BOOL anyreal;
     BYTE helpersig;
+    APTR oldwinptr;
     LONG i;
 
     from_shell = (argc != 0);
@@ -581,6 +583,17 @@ int main(int argc, char **argv)
 
     SetupFonts();
 
+    /*
+     * From now on Text() callers may wait for us while holding layer
+     * locks: a "Please insert volume" requester would need them.
+     */
+    {
+        struct Process *me = (struct Process *)FindTask(NULL);
+
+        oldwinptr = me->pr_WindowPtr;
+        me->pr_WindowPtr = (APTR)-1;
+    }
+
     /* the measuring functions are needed if any font may use real metrics */
     anyreal = prefs.autoreal;
     for (i = 0; i < prefs.nummaps; i++)
@@ -629,7 +642,10 @@ int main(int argc, char **argv)
 
         /* fonts seen by Text() for the first time: load them now */
         if (sigs & (1UL << helpersig))
+        {
             aa_ResolvePending(FALSE);
+            aa_WakeWaiters();
+        }
 
         /* commands from the prefs program, "AAText RELOAD" etc. */
         if (sigs & portsig)
@@ -640,10 +656,17 @@ int main(int argc, char **argv)
             retryfonts = FALSE;
             aa_RetryMissingFonts();
             aa_ResolvePending(FALSE);
+            aa_WakeWaiters();
         }
 
         if (!(sigs & SIGBREAKF_CTRL_C))
             continue;
+        /*
+         * aa_Remove() waits until no task is inside our code; a task
+         * waiting for us there would never leave. No more waits; in
+         * pass-through mode nothing needs the helper either.
+         */
+        aa_SetHelper(NULL, 0);
         if (aa_Remove())
             break;
         Msg("AAText: another program has patched Text() after AAText.\n"
@@ -653,6 +676,7 @@ int main(int argc, char **argv)
 
     aa_SetHelper(NULL, 0);
     FreeSignal(helpersig);
+    ((struct Process *)FindTask(NULL))->pr_WindowPtr = oldwinptr;
     RemPort(port);
     {
         struct AAMessage *m;

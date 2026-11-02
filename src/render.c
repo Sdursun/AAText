@@ -35,6 +35,7 @@
 #include "metrics.h"
 #include "debug.h"
 
+#include <stddef.h>
 #include <string.h>
 
 /* Upper limit for one temporary pixel buffer (bytes). */
@@ -452,6 +453,24 @@ static struct ViewPort *FindViewPort(struct RastPort *rp)
         }
         if ((scr->Flags & SCREENTYPE) == WBENCHSCREEN)
             wbvp = &scr->ViewPort;
+    }
+
+    /*
+     * The title bar of a screen being opened: OpenScreen() draws it
+     * before the screen is in Intuition's list, and it was left in the
+     * bitmap font until the next redraw. The bar layer belongs to the
+     * LayerInfo inside struct Screen; it is that screen if the screen
+     * there points back to this layer and bitmap.
+     */
+    if (!vp && layer && layer->LayerInfo)
+    {
+        struct Screen *s = (struct Screen *)((UBYTE *)layer->LayerInfo -
+                                             offsetof(struct Screen,
+                                                      LayerInfo));
+
+        if (TypeOfMem(s) && s->BarLayer == layer &&
+            s->RastPort.BitMap == rp->BitMap)
+            vp = &s->ViewPort;
     }
 
     /* an off-screen buffer of a program with windows: their screen */
@@ -1067,10 +1086,11 @@ BOOL aa_RealMetrics(struct RastPort *rp, struct Task *me,
 
     if (aa_Mode != AA_MODE_TEXT || !tf)
         return FALSE;
+    /* before aa_FindFont(): blacklisted tasks need not wait for fonts */
+    if (aa_NumBlack && IsBlacklisted(me))
+        return FALSE;
     font = aa_FindFont(tf);
     if (!font || !aa_UseReal(font, tf))
-        return FALSE;
-    if (aa_NumBlack && IsBlacklisted(me))
         return FALSE;
     if (!font->prepared)
     {

@@ -163,7 +163,8 @@ void aa_GlyphsStatus(LONG *numfonts, LONG *numfaces, ULONG *facebytes,
 /*
  * Mapping for a TextFont, or NULL. Lock-free in the common case. With
  * automatic detection, an unknown font name is queued for the helper
- * process (see aa_SetHelper) and NULL is returned until it is loaded;
+ * process (see aa_SetHelper) and the caller waits until it is loaded
+ * (input.device gets NULL meanwhile);
  * a detected font gets an entry for each size on first use.
  */
 struct AAFont *aa_FindFont(struct TextFont *tf);
@@ -171,10 +172,13 @@ struct AAFont *aa_FindFont(struct TextFont *tf);
 /*
  * Automatic detection runs file I/O in AAText's own process: Text() may
  * be called by tasks that cannot use DOS (input.device). aa_FindFont()
- * signals the helper; the helper calls aa_ResolvePending().
+ * signals the helper and waits (except on input.device); the helper
+ * calls aa_ResolvePending(), then aa_WakeWaiters(). aa_SetHelper(NULL)
+ * wakes all waiters and stops further waits.
  */
 void aa_SetHelper(struct Task *task, ULONG sigmask);
 LONG aa_ResolvePending(BOOL report);
+void aa_WakeWaiters(void);
 
 /*
  * TrueType files are kept in memory while a font that uses them is open.

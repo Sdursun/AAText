@@ -10,6 +10,8 @@
  * NewShell "CON:0/20/600/200/Test/SCREEN AATEST". "grey" sets pens 4-7 to grey
  * shades between the background and black, as Workbench palettes such
  * as MagicWB have them.
+ * A depth above 8 opens the screen in the Workbench's (RTG) mode, for
+ * testing the title bar of a new true colour screen.
  * The screen closes after the given time or with Ctrl-C, once all its
  * visitor windows are gone.
  */
@@ -35,12 +37,18 @@ int main(int argc, char **argv)
     LONG secs = argc > 5 ? atol(argv[5]) : 60;
     LONG depth = argc > 6 ? atol(argv[6]) : 3;
     UWORD pens[] = { (UWORD)~0 };
+    ULONG modeid = PAL_MONITOR_ID | HIRES_KEY;
     struct Screen *scr;
     LONG t;
 
+    if (depth > 8 && (scr = LockPubScreen(NULL)))
+    {
+        modeid = GetVPModeID(&scr->ViewPort);
+        UnlockPubScreen(NULL, scr);
+    }
     scr = OpenScreenTags(NULL,
                          SA_Width, w, SA_Height, h, SA_Depth, depth,
-                         SA_DisplayID, PAL_MONITOR_ID | HIRES_KEY,
+                         SA_DisplayID, modeid,
                          SA_Font, (ULONG)&ta,
                          SA_Pens, (ULONG)pens,
                          SA_Title, (ULONG)"AATEST",
