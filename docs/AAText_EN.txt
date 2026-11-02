@@ -1,4 +1,4 @@
-AAText 0.44 - antialiased TrueType text for AmigaOS 3.2
+AAText 0.45 - antialiased TrueType text for AmigaOS 3.2
 ======================================================
 
 AAText makes Workbench and applications draw TrueType fonts antialiased
@@ -493,6 +493,15 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.45  Text is antialiased on the first draw. A font used for the first
+      time (or freed from memory since) was loaded in the background
+      while the text was drawn in the bitmap font, and nothing drew it
+      again: the Font prefs preview needed a second click. Now the
+      program waits until the font is loaded (menus excepted). The
+      title bar of a new screen and the message text of YAM
+      (TextEditor.mcc, drawn in an off-screen buffer) were not
+      antialiased at all.
 
 0.44  aatext.library 1.1: FreeType runs on its own 48 KB stack when
       the caller has less than 32 KB left. Fonts installed with

@@ -1,4 +1,4 @@
-AAText 0.44 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
+AAText 0.45 - AmigaOS 3.2 için yumuşatılmış TrueType yazı
 ========================================================
 
 AAText, Workbench'in ve programların TrueType fontlarını RTG ekranlarda
@@ -509,6 +509,14 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.45  Yazı ilk çizimde yumuşatılır. İlk kez kullanılan (ya da
+      sonradan bellekten çıkarılmış) bir font arka planda yüklenirken
+      yazı bitmap fontla çiziliyor ve bir daha çizilmiyordu: Font
+      prefs önizlemesi ikinci tıklamayı bekliyordu. Artık program
+      font yüklenene kadar bekler (menüler hariç). Yeni açılan
+      ekranların başlık çubuğu ve YAM'in mesaj metni (TextEditor.mcc,
+      ekran dışı bir belleğe çizilir) hiç yumuşatılmıyordu.
 
 0.44  aatext.library 1.1: Çağıranın yığınında 32 KB'tan az yer
       kalmışsa FreeType kendi 48 KB'lık yığınında çalışır.
