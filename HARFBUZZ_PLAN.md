@@ -198,9 +198,21 @@ Durum: **kararlar alındı (8.11.2026); A6, A0, A1, A2, A4 yapıldı; A3'ün Win
   (yumuşak tire hariç); Amiga'daki C kodu referansla aynı çift sayısını
   veriyor (Source Sans 3 18 px: 617, Titillium Web 14 px: 441).
 
-**A7. ClearType (subpixel) iyileştirmesi**
-- Kurulumda ClearType sorusu; subpixel yolunun v40 hinting, LCD filtresi ve
-  gamma ile gözden geçirilmesi; 1:1 ve ölçeklenmiş ekranda A1200 testi.
+**A7. ClearType (subpixel) iyileştirmesi — WinUAE kısmı YAPILDI (8.11.2026)**
+- A7a: subpixel açıkken glifler `FT_LOAD_TARGET_LCD` ile yükleniyor (v40
+  ClearType kipi; autohinter yatayda tam piksele yaslamıyor,
+  `aflatin.c`); "full" (v35) subpixel ile v40 gibi. Kendi hinting'i
+  olmayan fontlarda (Poppins) fark görülüyor; Verdana'da (v40 bytecode)
+  görüntü aynı.
+- A7b: `lcdfilter light|default|none` (varsayılan light = bugünkü
+  görünüm), AATextPrefs ReAction ve MUI'de seçici, Türkçe katalog,
+  `AAMSG_VERSION` 7. Varsayılan filtre için karar kullanıcıda
+  (karşılaştırma görüntüleri alındı).
+- A7c: Install-AAText yalnızca ilk kurulumda (ENVARC:AAText.prefs yoksa)
+  ClearType'ı sorar ve açılırsa tek satırlık ayar dosyası yazar; WinUAE'de
+  RAM:'e yönlendirilmiş parçayla denendi.
+- Bekleyen: A1200'de 1:1 ve ölçeklenmiş ekranda göz testi; varsayılan
+  filtre kararı; ileride gerçek ölçü modunda üçte bir piksel konumlama.
 
 ## 6. Görevler arası güvenlik
 

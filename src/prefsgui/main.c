@@ -100,7 +100,7 @@ enum
     GID_PREVIEW, GID_FONTINFO, GID_STATUS, GID_SAVE, GID_USE, GID_CANCEL,
     GID_BLACKLIST, GID_PROGNAME, GID_ADD, GID_REMOVE, GID_RUNNING,
     GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_CACHEUSED, GID_FONTMEM, GID_FONTMEMUSED, GID_CHARSET,
-    GID_PICKFILE, GID_KERNING, GID_ANTIALIAS, GID_SUBPIXEL,
+    GID_PICKFILE, GID_KERNING, GID_ANTIALIAS, GID_SUBPIXEL, GID_LCDFILTER,
     GID_MANAGER,
     GID_MAPLIST, GID_MAPADD, GID_MAPCHANGE, GID_MAPREMOVE, GID_MAPPX,
     GID_MAPPREVIEW,
@@ -118,7 +118,7 @@ static Object *winobj, *pages;
 static struct Window *win;
 static struct List maplb;
 static struct List tablist, hintlist, blacklb, runlist, charsetlist,
-                   subpixlist;
+                   subpixlist, lcdflist;
 
 static char statustext[320];
 static char gammatext[8];
@@ -193,7 +193,7 @@ static void CloseLibs(void)
 static LONG PageOf(LONG gid)
 {
     if ((gid >= GID_GAMMA && gid <= GID_FONTINFO) || gid == GID_KERNING ||
-        gid == GID_ANTIALIAS || gid == GID_SUBPIXEL)
+        gid == GID_ANTIALIAS || gid == GID_SUBPIXEL || gid == GID_LCDFILTER)
         return 0;
     if ((gid >= GID_BLACKLIST && gid <= GID_RUNNING) || gid == GID_PICKFILE)
         return 1;
@@ -397,6 +397,8 @@ static void ReadGadgets(void)
         pc.cur.antialias = v != 0;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_SUBPIXEL], &v))
         pc.cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
+    if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_LCDFILTER], &v))
+        pc.cur.lcdfilter = v <= AA_LCDFILTER_NONE ? v : AA_LCDFILTER_LIGHT;
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
         pc.cur.cachekb = v;
     /* 0: no limit; otherwise at least 1 MB, as the prefs file allows */
@@ -955,6 +957,8 @@ static void FreeLists(void)
         FreeClickTabNode(n);
     while ((n = RemHead(&subpixlist)))
         FreeChooserNode(n);
+    while ((n = RemHead(&lcdflist)))
+        FreeChooserNode(n);
     while ((n = RemHead(&hintlist)))
         FreeChooserNode(n);
     while ((n = RemHead(&runlist)))
@@ -1232,6 +1236,16 @@ static Object *AppearancePage(void)
         CHILD_WeightedHeight, 0,
         Label(GetString(MSG_SUBPIXEL)),
 
+        LAYOUT_AddChild, gads[GID_LCDFILTER] = (struct Gadget *)ChooserObject,
+            GA_ID, GID_LCDFILTER,
+            GA_RelVerify, TRUE,
+            CHOOSER_PopUp, TRUE,
+            CHOOSER_Labels, (ULONG)&lcdflist,
+            CHOOSER_Selected, pc.cur.lcdfilter,
+        End,
+        CHILD_WeightedHeight, 0,
+        Label(GetString(MSG_LCDFILTER)),
+
         LAYOUT_AddChild, gads[GID_HINTING] = (struct Gadget *)ChooserObject,
             GA_ID, GID_HINTING,
             GA_RelVerify, TRUE,
@@ -1337,6 +1351,9 @@ static BOOL OpenWin(struct Screen *scr)
     AddChoice(&subpixlist, MSG_SP_OFF);
     AddChoice(&subpixlist, MSG_SP_RGB);
     AddChoice(&subpixlist, MSG_SP_BGR);
+    AddChoice(&lcdflist, MSG_LF_LIGHT);
+    AddChoice(&lcdflist, MSG_LF_DEFAULT);
+    AddChoice(&lcdflist, MSG_LF_NONE);
     AddChoice(&hintlist, MSG_HINT_NORMAL);
     AddChoice(&hintlist, MSG_HINT_LIGHT);
     AddChoice(&hintlist, MSG_HINT_NONE);
@@ -1443,6 +1460,7 @@ static BOOL Action(ULONG id)
         case GID_AGA:
         case GID_ANTIALIAS:
         case GID_SUBPIXEL:
+        case GID_LCDFILTER:
         case GID_CACHE:
         case GID_FONTMEM:
         case GID_CHARSET:
@@ -1558,6 +1576,7 @@ static void ShowPrefs(void)
     SetGad(GID_AGA, GA_Selected, pc.cur.aga);
     SetGad(GID_ANTIALIAS, GA_Selected, pc.cur.antialias);
     SetGad(GID_SUBPIXEL, CHOOSER_Selected, pc.cur.subpixel);
+    SetGad(GID_LCDFILTER, CHOOSER_Selected, pc.cur.lcdfilter);
     SetGad(GID_CACHE, INTEGER_Number, pc.cur.cachekb);
     SetGad(GID_FONTMEM, INTEGER_Number, pc.cur.fontmemkb);
     SetGad(GID_CHARSET, CHOOSER_Selected, pc.cur.charset);
@@ -1706,6 +1725,7 @@ int main(int argc, char **argv)
     NewList(&tablist);      /* FreeLists() must work on every path */
     NewList(&hintlist);
     NewList(&subpixlist);
+    NewList(&lcdflist);
     NewList(&blacklb);
     NewList(&runlist);
     NewList(&charsetlist);

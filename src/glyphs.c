@@ -201,6 +201,7 @@ static UBYTE aa_Hinting;
 static BOOL aa_AntiAlias = TRUE;
 /* subpixel: LCD glyphs (3 values a pixel), only with antialiasing */
 static UBYTE aa_Subpixel = AA_SUBPIXEL_OFF;
+static UBYTE aa_LcdFilter = AA_LCDFILTER_LIGHT;
 static FT_Int32 aa_MonoFlags = FT_LOAD_TARGET_MONO | FT_LOAD_FORCE_AUTOHINT |
                                FT_LOAD_NO_BITMAP;
 
@@ -394,15 +395,28 @@ static APTR ReadFile(const char *path, ULONG maxsize, ULONG *sizep)
  * Apply aa_Hinting: load flags for every glyph load, and the TrueType
  * interpreter version (a library-wide property, so it is set back to
  * v40 for the other modes). On the render stack, glyph lock held.
+ *
+ * Subpixel glyphs are loaded for the LCD target: the v40 interpreter
+ * then runs in its ClearType mode instead of the grayscale one, and the
+ * autohinter (fonts without hints of their own) leaves the horizontal
+ * direction alone instead of moving stems to whole pixels, which would
+ * throw away the third-of-a-pixel positions. "full" (v35) hints the
+ * horizontal direction too, which gives coloured fringes: with subpixel
+ * it is the same as "normal".
  */
 static LONG SetHintingOnStack(APTR arg)
 {
-    FT_UInt version = aa_Hinting == AA_HINT_FULL ? TT_INTERPRETER_VERSION_35
-                                                 : TT_INTERPRETER_VERSION_40;
+    BOOL lcd = aa_AntiAlias && aa_Subpixel != AA_SUBPIXEL_OFF;
+    FT_UInt version = aa_Hinting == AA_HINT_FULL && !lcd ?
+                      TT_INTERPRETER_VERSION_35 : TT_INTERPRETER_VERSION_40;
 
     FT_Property_Set(aa_FTLib, "truetype", "interpreter-version", &version);
-    /* subpixel: FreeType's light LCD filter (less blur than the default) */
-    FT_Library_SetLcdFilter(aa_FTLib, FT_LCD_FILTER_LIGHT);
+    /* subpixel: FreeType's LCD filter ("lcdfilter"; light: less blur,
+       default: fewer coloured fringes) */
+    FT_Library_SetLcdFilter(aa_FTLib,
+        aa_LcdFilter == AA_LCDFILTER_DEFAULT ? FT_LCD_FILTER_DEFAULT :
+        aa_LcdFilter == AA_LCDFILTER_NONE ? FT_LCD_FILTER_NONE :
+        FT_LCD_FILTER_LIGHT);
 
     switch (aa_Hinting)
     {
@@ -411,13 +425,15 @@ static LONG SetHintingOnStack(APTR arg)
             break;
 
         case AA_HINT_LIGHT:
-            /* autofit module: vertical-only hinting, any font */
+            /* autofit module: vertical-only hinting, any font (for the
+               autohinter the LCD target is the same) */
             aa_LoadFlags = FT_LOAD_TARGET_LIGHT | FT_LOAD_FORCE_AUTOHINT |
                            FT_LOAD_NO_BITMAP;
             break;
 
         default:    /* normal (v40) and full (v35): the font's own hints */
-            aa_LoadFlags = FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP;
+            aa_LoadFlags = (lcd ? FT_LOAD_TARGET_LCD : FT_LOAD_DEFAULT) |
+                           FT_LOAD_NO_BITMAP;
             break;
     }
     return 0;
@@ -771,6 +787,7 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     aa_Hinting = prefs->hinting;
     aa_AntiAlias = prefs->antialias;
     aa_Subpixel = prefs->subpixel;
+    aa_LcdFilter = prefs->lcdfilter;
 
     aa_HaveEnvCodePage = ReadEnvCodePage(aa_EnvCodePage);
     D(("AAText: ENV:ftcodepage %s\n",
@@ -887,6 +904,7 @@ void aa_GlyphsReconfigure(const struct AAPrefs *prefs)
     aa_Hinting = prefs->hinting;
     aa_AntiAlias = prefs->antialias;
     aa_Subpixel = prefs->subpixel;
+    aa_LcdFilter = prefs->lcdfilter;
     if (aa_FTLib)
     {
         RunOnRenderStack(SetHintingOnStack, NULL);

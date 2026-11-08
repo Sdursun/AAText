@@ -48,6 +48,9 @@ struct AAMapping
 
 /* subpixel (LCD) antialiasing on RTG screens: order of the subpixels */
 enum { AA_SUBPIXEL_OFF = 0, AA_SUBPIXEL_RGB, AA_SUBPIXEL_BGR };
+/* FreeType's LCD filter for subpixel glyphs: light (3 taps, sharper),
+   default (5 taps, fewer coloured fringes), none */
+enum { AA_LCDFILTER_LIGHT = 0, AA_LCDFILTER_DEFAULT, AA_LCDFILTER_NONE };
 
 struct AAPrefs
 {
@@ -67,6 +70,7 @@ struct AAPrefs
     BOOL  antialias;                /* off: TrueType glyphs drawn sharp
                                        (one colour), default on */
     UBYTE subpixel;                 /* AA_SUBPIXEL_..., default off */
+    UBYTE lcdfilter;                /* AA_LCDFILTER_..., default light */
     ULONG cachekb;                  /* glyph cache size in KB */
     ULONG fontmemkb;                /* loaded font files in KB, 0: any */
     char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];

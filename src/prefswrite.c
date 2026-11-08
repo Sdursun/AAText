@@ -18,7 +18,7 @@
 
 static const char *const managed[] =
 {
-    "gamma", "hinting", "real", "kerning", "cache", "fontmem", "offscreen", "aga", "antialias", "subpixel", "auto",
+    "gamma", "hinting", "real", "kerning", "cache", "fontmem", "offscreen", "aga", "antialias", "subpixel", "lcdfilter", "auto",
     "charset", "blacklist", NULL
 };
 
@@ -186,8 +186,13 @@ BOOL aa_WritePrefs(const struct AAPrefs *prefs, const char *path,
     {
         static const char *const sp[] = { "off", "rgb", "bgr" };
 
+        static const char *const lf[] = { "light", "default", "none" };
+
         sprintf(line, "subpixel %s\n", sp[prefs->subpixel <= 2 ?
                                             prefs->subpixel : 0]);
+        ok &= Put(out, line);
+        sprintf(line, "lcdfilter %s\n", lf[prefs->lcdfilter <= 2 ?
+                                             prefs->lcdfilter : 0]);
         ok &= Put(out, line);
     }
     sprintf(line, "auto %s\n", prefs->autodetect ? "on" : "off");

@@ -61,7 +61,10 @@ Which file?
 Installation
 ------------
 
-The easy way: double-click Install-AAText (the OS 3.2 Installer). It
+The easy way: double-click Install-AAText (the OS 3.2 Installer). On a
+first installation (no ENVARC:AAText.prefs yet) it asks whether to
+switch on ClearType (subpixel antialiasing, see "subpixel" under
+"Settings") and, if so, writes a settings file with just that line. It
 asks which build to install (68060 is preselected on a 68060; choose
 68020/030/040 on PiStorm/Emu68 and WinUAE, see "Which file?"), and
 which parts: AATextPrefs, AATextManager with freetype2.library, the
@@ -165,8 +168,8 @@ while you try it out.
   Use     keeps them until the next reboot (ENV: only)
   Cancel  returns AAText to the settings it had before
 
-  Appearance  antialiasing on/off, subpixel, gamma, hinting, real character
-              widths, kerning, preview
+  Appearance  antialiasing on/off, subpixel, LCD filter, gamma,
+              hinting, real character widths, kerning, preview
   Programs    the programs AAText leaves alone (blacklist): type a
               name, choose the program file with "Choose...", or pick
               one from "Add a running program...". The program need
@@ -363,7 +366,8 @@ It is a plain text file with one setting per line; lines starting with
                     light  - vertical alignment only: soft but clean
                     normal - the font's own hints (default)
                     full   - classic full hinting: crispest, most
-                             "pixel-like"
+                             "pixel-like"; with subpixel on the same
+                             as normal (it would colour the edges)
 
   blacklist Name    Programs AAText must not touch, e.g.
                     "blacklist FinalWriter TypeSmith". Use the program
@@ -393,7 +397,21 @@ It is a plain text file with one setting per line; lines starting with
                     fringes. Only for a flat panel that shows the
                     screen pixel for pixel; on a scaled picture (e.g.
                     720p on a 1080p panel) or a CRT leave it off. RTG
-                    screens only; palette screens stay grey.
+                    screens only; palette screens stay grey. With
+                    subpixel on, letters are hinted for subpixels:
+                    fonts without hints of their own keep their exact
+                    horizontal shapes instead of stems moved to whole
+                    pixels (in real metrics mode their widths can
+                    change by a pixel when subpixel is switched).
+
+  lcdfilter light   How much the subpixel colours are smoothed (light,
+                    default or none; default light):
+                    light   - sharper, slightly more coloured edges
+                    default - FreeType's choice: a little softer,
+                              fewer coloured fringes
+                    none    - sharpest, strongly coloured edges (for
+                              comparing only)
+                    Only used with subpixel on.
 
   offscreen on      Some programs draw text into a hidden bitmap first
                     (MUI gadgets, docks, gauges). AAText uses the screen

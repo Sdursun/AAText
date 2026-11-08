@@ -9,7 +9,9 @@
 ; catalogs, the documents in LOCALE:Help/türkçe and LOCALE:Help/english,
 ; and "Run >NIL: C:AAText" in S:Startup-Sequence right after IPrefs
 ; (C:AAText STARTUP=ADD; S:User-Startup if that is not possible).
-; Settings (ENVARC:AAText.prefs) are never touched.
+; Settings (ENVARC:AAText.prefs) are never changed; only on a first
+; installation, when there is none, a short one with the ClearType
+; (subpixel) choice is written if the user switches it on.
 
 (set @app-name "AAText")
 (set #tr (= @language "türkçe"))
@@ -203,6 +205,34 @@
   (copyfiles (source "AAText_EN.txt") (dest #helpen))
 ))
 (complete 80)
+
+; ClearType (subpixel) on a first installation only: when there is no
+; settings file yet and the user wants it, a short ENVARC:AAText.prefs
+; is written (everything else stays at the defaults). An existing
+; settings file is never touched; AATextPrefs changes it.
+(if (not (exists "ENVARC:AAText.prefs"))
+(
+  (set #sp
+    (askchoice
+      (prompt (if #tr "ClearType (alt piksel yumuşatma) açılsın mı?\n\nHarf kenarları, ekranın kırmızı, yeşil ve mavi alt piksellerini kullanarak daha keskin olur; kenarlarda hafif renkler görülür."
+                      "Switch on ClearType (subpixel antialiasing)?\n\nLetter edges get sharper by using the red, green and blue subpixels of the screen, with slightly coloured fringes."))
+      (help (if #tr "Yalnızca ekranı piksel piksel (1:1) gösteren düz bir panelde açın: ör. 1920x1080 panelde 1920x1080 ekran modu. Ölçeklenen görüntüde (ör. 1080p panelde 720p) ve CRT'de kapalı bırakın; orada harfler renkli ve bulanık görünür. Panellerin çoğu RGB'dir; renkler yanlış taraftaysa BGR seçin. Yalnızca RTG ekranlarda; daha sonra AATextPrefs > Görünüm'den değiştirilebilir."
+                    "Only for a flat panel that shows the screen pixel for pixel (1:1): e.g. a 1920x1080 screen mode on a 1920x1080 panel. On a scaled picture (e.g. 720p on a 1080p panel) and on a CRT leave it off; letters look coloured and blurred there. Most panels are RGB; choose BGR if the colours are on the wrong side. RTG screens only; AATextPrefs > Appearance changes it later."))
+      (choices (if #tr "Kapalı (gri yumuşatma)" "Off (grey antialiasing)")
+               (if #tr "Açık, RGB panel" "On, RGB panel")
+               (if #tr "Açık, BGR panel" "On, BGR panel"))
+      (default 0)))
+  (if (> #sp 0)
+  (
+    (textfile
+      (prompt (if #tr "ClearType ayarı ENVARC:AAText.prefs dosyasına yazılıyor." "Writing the ClearType setting to ENVARC:AAText.prefs."))
+      (help @textfile-help)
+      (dest "ENVARC:AAText.prefs")
+      (append (cat "# AAText settings, written by Install-AAText; AATextPrefs changes them\nsubpixel "
+                   (select #sp "off" "rgb" "bgr") "\n")))
+    (copyfiles (source "ENVARC:AAText.prefs") (dest "ENV:"))
+  ))
+))
 
 ; S:Startup-Sequence, right after IPrefs (C:AAText edits it with a backup;
 ; a line that starts AAText already is left alone)

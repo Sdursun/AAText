@@ -69,6 +69,10 @@
 # "rgb" or "bgr" after the panel's stripe order. RTG screens only.
 #subpixel rgb
 
+# LCD filter for subpixel antialiasing (default light): light (sharper),
+# default (FreeType's: a little softer, fewer coloured fringes) or none.
+#lcdfilter light
+
 # Explicit mappings (rarely needed): draw a font with a TrueType file,
 # e.g. a bitmap font, or a font whose .otag is not found.
 #

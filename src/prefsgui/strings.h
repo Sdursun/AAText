@@ -112,7 +112,11 @@
     S(MSG_MENU_HELP,       144, "Help...") \
     S(MSG_ABOUT_TEXT,      145, "%s\n\nAntialiased TrueType text for AmigaOS 3.2\n(AmigaOS 3.1, 3.5 and 3.9: not tested)\n\nCopyright (C) 2026 Serkan Dursun\nMIT License\nhttps://github.com/Sdursun/AAText\n\nFreeType (C) The FreeType Project (FTL)\nReal metrics code derived from AROS (APL)") \
     S(MSG_HELP_NOFILE,     146, "The documentation is not installed:\n%s\n\nInstall it with Install-AAText (\"Documents\").") \
-    S(MSG_CHARSET_AMIGAE2, 147, "Amiga-E2 (Czech, Slovak)")
+    S(MSG_CHARSET_AMIGAE2, 147, "Amiga-E2 (Czech, Slovak)") \
+    S(MSG_LCDFILTER,       148, "LCD filter") \
+    S(MSG_LF_LIGHT,        149, "Light - sharper") \
+    S(MSG_LF_DEFAULT,      150, "Default - fewer coloured fringes") \
+    S(MSG_LF_NONE,         151, "None - sharpest, most colour")
 
 
 #define S(id, n, s) id = n,

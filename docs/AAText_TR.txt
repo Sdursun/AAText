@@ -64,7 +64,10 @@ Hangi dosya?
 Kurulum
 -------
 
-Kolay yol: Install-AAText'e çift tıklayın (OS 3.2 Installer). Hangi
+Kolay yol: Install-AAText'e çift tıklayın (OS 3.2 Installer). İlk
+kurulumda (henüz ENVARC:AAText.prefs yokken) ClearType'ın (alt piksel
+yumuşatma, "Ayarlar" bölümünde "subpixel") açılıp açılmayacağını sorar;
+açılırsa yalnızca bu satırı içeren bir ayar dosyası yazar. Hangi
 sürümün kurulacağını sorar (68060'ta 68060 seçili gelir; PiStorm/Emu68
 ve WinUAE'de 68020/030/040'ı seçin, "Hangi dosya?" bölümüne bakın) ve
 hangi parçaların kurulacağını: AATextPrefs, freetype2.library ile
@@ -174,8 +177,8 @@ satırında görürsünüz.
   Kullan    ayarları bir sonraki açılışa kadar kullanır (sadece ENV:)
   İptal     AAText'i önceki ayarlarına döndürür
 
-  Görünüm     yumuşatma açık/kapalı, alt piksel, gamma, hinting, gerçek harf
-              genişlikleri, kerning, önizleme
+  Görünüm     yumuşatma açık/kapalı, alt piksel, LCD filtresi, gamma,
+              hinting, gerçek harf genişlikleri, kerning, önizleme
   Programlar  AAText'in dokunmayacağı programlar (kara liste): adı
               yazın, program dosyasını "Seç..." ile seçin ya da
               "Çalışan bir program ekle..." listesinden alın. Programın
@@ -375,7 +378,8 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                     light  - sadece dikey hizalama: yumuşak ama net
                     normal - fontun kendi hinting bilgisi (varsayılan)
                     full   - klasik tam hinting: en keskin, en
-                             "piksel gibi"
+                             "piksel gibi"; alt piksel açıkken normal
+                             ile aynı (kenarları renklendirirdi)
 
   blacklist Ad      AAText'in dokunmayacağı programlar, ör.
                     "blacklist FinalWriter TypeSmith". Workbench'te
@@ -409,7 +413,21 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                     gösteren düz panellerde; ölçeklenmiş görüntüde
                     (ör. 1080p panelde 720p) ya da CRT'de kapalı
                     bırakın. Sadece RTG ekranlar; paletli ekranlar
-                    gri kalır.
+                    gri kalır. Alt piksel açıkken harfler alt
+                    piksellere göre hint'lenir: kendi hinting bilgisi
+                    olmayan fontların yatay biçimleri, gövde çizgileri
+                    tam piksele kaydırılmadan korunur (gerçek ölçü
+                    modunda alt piksel açılıp kapanınca genişlikleri
+                    bir piksel değişebilir).
+
+  lcdfilter light   Alt piksel renklerinin ne kadar yumuşatılacağı
+                    (light, default veya none; varsayılan light):
+                    light   - daha keskin, kenarlarda biraz daha renk
+                    default - FreeType'ın seçimi: biraz daha yumuşak,
+                              daha az renk saçağı
+                    none    - en keskin, kenarlar belirgin renkli
+                              (yalnızca karşılaştırma için)
+                    Yalnızca alt piksel açıkken kullanılır.
 
   offscreen on      Bazı programlar yazıyı önce gizli bir bitmap'e çizer
                     (MUI gadget'ları, dock'lar, göstergeler). AAText

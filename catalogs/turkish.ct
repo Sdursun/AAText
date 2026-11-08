@@ -203,3 +203,11 @@ MSG_HELP_NOFILE
 Belgeler kurulu değil:\n%s\n\nInstall-AAText ile kurun ("Belgeler").
 MSG_CHARSET_AMIGAE2
 Amiga-E2 (Çekçe, Slovakça)
+MSG_LCDFILTER
+LCD filtresi
+MSG_LF_LIGHT
+Hafif - daha keskin
+MSG_LF_DEFAULT
+Varsayılan - daha az renk saçağı
+MSG_LF_NONE
+Yok - en keskin, en çok renk
