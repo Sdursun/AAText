@@ -156,6 +156,12 @@ Durum: **kararlar alındı (8.11.2026); A6, A0, A1, A2, A4 yapıldı; A3'ün Win
 - `tests/hbbench.c`: 16 px, WinUAE 68060 JIT: Source Sans 3 Latin
   2385 satır/s (78 karakter), Türkçe 3614, Arapça 6191; DejaVu Sans
   Latin 7564, Türkçe 10605, Arapça 7634.
+- 68060 derlemesi (`harfbuzz.library.060`, WinUAE 68060, 8.11.2026):
+  `hbinfo` çıktısı PC'deki HarfBuzz ile aynı (DejaVu Sans); `hbfuzz`
+  532/532 çökme yok, iki turda bellek sabit; hız 68020 derlemesiyle aynı
+  (JIT altında fark %3'ün altında). `freetype2.library.060`: `ft2info`
+  çalışıyor, `ft2bullet` çıktısı (Source Sans 3 gri, Calibri 1 bit,
+  genişlikler, GPOS kerning) 68020 derlemesiyle bayt bayt aynı.
 - Bekleyen: A1200 (Emu68), WinUAE'deki OS 3.1 yapılandırması.
 - `hbbench` (aabench gibi): saniyede şekillendirilen satır ve karakter;
   WinUAE ve A1200 (Emu68).
