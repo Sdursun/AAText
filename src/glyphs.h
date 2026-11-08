@@ -76,20 +76,26 @@ struct AAFont
     WORD  *inkl;
     WORD  *inkr;
     /*
-     * Pair kerning in real metrics mode, from the font's 'kern' table;
-     * NULL without kerning. Same rules as adv: filled by aa_PrepareFont(),
-     * read without a lock.
+     * Pair kerning in real metrics mode, from the 'kern' feature of the
+     * font's GPOS table, else from its 'kern' table; NULL without
+     * kerning. Same rules as adv: filled by aa_PrepareFont(), read
+     * without a lock.
      */
     struct AAKern *kern;
 };
 
-#define AA_MAX_KERN 4096        /* kerning pairs per font and size */
+#define AA_MAX_KERN 32768       /* kerning pairs per font and size */
 
-/* Kerning pairs between character codes, in pixels (non-zero only). */
+/*
+ * Kerning pairs between character codes, in pixels (non-zero only).
+ * Allocated for cap pairs; a later fill reuses the block in place (it
+ * may be read meanwhile) and keeps at most cap pairs.
+ */
 struct AAKern
 {
     UWORD first[257];           /* pairs of left code c: first[c]..first[c+1] */
-    struct { UBYTE right; BYTE px; } pair[AA_MAX_KERN];  /* sorted by right */
+    UWORD cap;
+    struct { UBYTE right; BYTE px; } pair[1];   /* [cap], sorted by right */
 };
 
 /* Kerning between character codes a and b, in pixels. */

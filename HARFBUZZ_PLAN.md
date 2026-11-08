@@ -1,7 +1,6 @@
 # harfbuzz.library — yol haritası
 
-Durum: **taslak; temel kararlar alındı (8.11.2026), hiçbir aşamaya
-başlanmadı.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
+Durum: **kararlar alındı (8.11.2026); A6 yapıldı, A0 sırada.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
 
 ---
 
@@ -25,12 +24,17 @@ başlanmadı.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
 | 3 | **`HB_MINI`:** yalnızca OpenType şekillendirmesi; AAT ve eski font biçimleri çıkar. |
 | 4 | **Hedef sistem: AmigaOS 3.0+** (68020+). Yalnızca V39 exec/dos fonksiyonları; OS 3.2'ye özgü bir şey kullanılmaz. |
 
-## 3. Henüz karar verilmeyenler
+## 3. Sonraki kararlar (8.11.2026, kullanıcı: "önerinle başla, sen karar ver")
 
 1. **Çağırma biçimi:** aatext.library'deki FreeType fonksiyonları gibi
-   argümanlar yığından, C sırasıyla; fonksiyon tablosu ve başlıklar
-   `genfuncs.py` ile. (Önerilen; onaylanmadı.)
-2. **Sıra:** AAText'teki GPOS kerning (A6) harfbuzz.library'den önce mi?
+   argümanlar yığından, C sırasıyla; tablo ve başlıklar `genfuncs.py` ile.
+2. **Sıra:** önce A6 (AAText'te GPOS kerning), sonra A0–A1.
+3. **Yön:** HarfBuzz'ın getirdiği her şey ileride sistem yazısının
+   görünümünü iyileştirmek için kullanılacak; ClearType (subpixel) bunun
+   parçası. Ayrı iş (A7): kurulum programı ClearType'ı açıklamasıyla
+   sorsun (ölçeklenmiş ekranlarda renkli kenar yüzünden varsayılan kapalı
+   kalıyor), subpixel çizim FreeType 2.15'in v40 ClearType
+   iyileştirmeleriyle birlikte gözden geçirilsin.
 
 ## 4. Kaynak sürümü
 
@@ -93,10 +97,21 @@ başlanmadı.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
 - HarfBuzz son iki ayda üç sürüm çıkardı; bozuk fontlarla ilgili
   düzeltmeleri olan sürümler izlenir.
 
-**A6. AAText için GPOS kerning (ayrı, HarfBuzz'a bağlı değil)**
-- AAText'in kendi küçük GPOS okuyucusu: kod sayfasının 256 harfi için
-  "pair adjustment" çiftleri, mevcut kerning tablosuna.
-- Önce: indirilen Google fontlarının kaçında yalnızca GPOS kerning var?
+**A6. AAText için GPOS kerning (ayrı, HarfBuzz'a bağlı değil) — YAPILDI**
+- Ölçüm (8.11.2026): 17 popüler Google fontunun 13'ünde kerning yalnızca
+  GPOS'ta (Lato, Montserrat, Noto Sans, Inter, Fira Sans, Source Sans 3,
+  ...); AAText bunlarda hiç kerning uygulamıyordu.
+- AAText'in kendi GPOS okuyucusu (`src/glyphs.c`, `KernGPOS`): `latn`/`DFLT`
+  `kern` lookup'ları, PairPos format 1 ve 2, Extension; GPOS varsa
+  `kern` tablosu kullanılmaz (HarfBuzz gibi). Kerning tablosu artık
+  değişken boyutlu (en çok 32768 çift).
+- Doğrulama: Python referansı uharfbuzz ile 9 fontta tüm çiftlerde aynı
+  (yumuşak tire hariç); Amiga'daki C kodu referansla aynı çift sayısını
+  veriyor (Source Sans 3 18 px: 617, Titillium Web 14 px: 441).
+
+**A7. ClearType (subpixel) iyileştirmesi**
+- Kurulumda ClearType sorusu; subpixel yolunun v40 hinting, LCD filtresi ve
+  gamma ile gözden geçirilmesi; 1:1 ve ölçeklenmiş ekranda A1200 testi.
 
 ## 6. Görevler arası güvenlik
 

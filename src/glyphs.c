@@ -1712,13 +1712,104 @@ static void CodesOfGlyph(const ULONG *map, LONG n, UWORD gi,
 }
 
 /*
- * One pass over the format 0 subtables of the 'kern' table: count
- * (fill == FALSE) or store (fill == TRUE) every pair between our
- * character codes whose kerning is not 0 pixels at this size.
+ * Kerning pairs being collected: rows of left codes in ascending order,
+ * each row sorted by right code, as struct AAKern lays them out.
+ * first[c] is 0xFFFF until row c (or a later one) starts.
  */
-static void KernPass(struct AAKern *k, const UBYTE *t, ULONG len,
-                     const ULONG *map, LONG nmap, FT_Fixed scale,
-                     UWORD *count, BOOL fill)
+struct KernRows
+{
+    UWORD first[257];
+    LONG  total, cap;
+    UBYTE *pair;                /* right, px; grows by doubling */
+};
+
+static void RowsStart(struct KernRows *r, UBYTE code)
+{
+    LONG c;
+
+    /* left codes without pairs up to this one start here too */
+    for (c = 0; c <= code; c++)
+        if (c == code || r->first[c] == 0xFFFF)
+            r->first[c] = r->total;
+}
+
+static BOOL RowsAdd(struct KernRows *r, UBYTE right, LONG px)
+{
+    if (r->total >= AA_MAX_KERN)
+        return FALSE;
+    if (r->total == r->cap)
+    {
+        LONG cap = r->cap ? r->cap * 2 : 1024;
+        UBYTE *p = AllocVec(cap * 2, MEMF_ANY);
+
+        if (!p)
+            return FALSE;
+        if (r->pair)
+        {
+            CopyMem(r->pair, p, r->total * 2);
+            FreeVec(r->pair);
+        }
+        r->pair = p;
+        r->cap = cap;
+    }
+    r->pair[r->total * 2] = right;
+    r->pair[r->total * 2 + 1] = (UBYTE)(BYTE)px;
+    r->total++;
+    return TRUE;
+}
+
+/*
+ * Copy the collected rows into font->kern: a new block of exactly the
+ * pairs found, or the existing block in place (measuring may read it
+ * meanwhile), keeping at most its capacity.
+ */
+static void RowsInstall(struct AAFont *font, struct KernRows *r)
+{
+    struct AAKern *k = font->kern;
+    LONG c, total = r->total;
+
+    for (c = 0; c < 256; c++)           /* rows after the last one */
+        if (r->first[c] == 0xFFFF)
+            r->first[c] = total;
+    r->first[256] = total;
+    if (!k)
+    {
+        if (!total)
+            return;
+        k = AllocVec(sizeof(*k) + (total - 1) * sizeof(k->pair[0]),
+                     MEMF_ANY);
+        if (!k)
+            return;
+        k->cap = total;
+    }
+    else if (total > k->cap)
+        total = k->cap;
+    for (c = 0; c <= 256; c++)
+        k->first[c] = r->first[c] < total ? r->first[c] : total;
+    for (c = 0; c < total; c++)
+    {
+        k->pair[c].right = r->pair[c * 2];
+        k->pair[c].px = (BYTE)r->pair[c * 2 + 1];
+    }
+    font->kern = k;
+}
+
+static LONG KernPx(LONG units, FT_Fixed scale)
+{
+    LONG px = (FT_MulFix(units, scale) + 32) >> 6;
+
+    return px < -128 ? -128 : px > 127 ? 127 : px;
+}
+
+/*
+ * One pass over the format 0 subtables of the 'kern' table: count
+ * (pairs == NULL) or store every pair between our character codes whose
+ * kerning is not 0 pixels at this size; count[] holds the fill
+ * positions, first[] the row ends.
+ */
+static void KernPass(const UWORD *first, UBYTE *pairs, const UBYTE *t,
+                     ULONG len, const ULONG *map, LONG nmap, FT_Fixed scale,
+                     UWORD *count)
 {
     ULONG off = 4;
     LONG nt = len >= 4 ? KU16(t + 2) : 0;
@@ -1743,16 +1834,11 @@ static void KernPass(struct AAKern *k, const UBYTE *t, ULONG len,
         for (i = 0; i < npairs; i++)
         {
             const UBYTE *p = st + 14 + i * 6;
-            LONG v = (WORD)KU16(p + 4);
-            LONG px = (FT_MulFix(v, scale) + 32) >> 6;
+            LONG px = KernPx((WORD)KU16(p + 4), scale);
             LONG l0, l1, r0, r1, l, r;
 
             if (px == 0)
                 continue;
-            if (px < -128)
-                px = -128;
-            if (px > 127)
-                px = 127;
             CodesOfGlyph(map, nmap, KU16(p), &l0, &l1);
             if (l0 == l1)
                 continue;
@@ -1763,12 +1849,12 @@ static void KernPass(struct AAKern *k, const UBYTE *t, ULONG len,
 
                 for (r = r0; r < r1; r++)
                 {
-                    if (!fill)
+                    if (!pairs)
                         count[lc]++;
-                    else if (count[lc] < k->first[lc + 1])
+                    else if (count[lc] < first[lc + 1])
                     {
-                        k->pair[count[lc]].right = map[r] & 0xFF;
-                        k->pair[count[lc]].px = px;
+                        pairs[count[lc] * 2] = map[r] & 0xFF;
+                        pairs[count[lc] * 2 + 1] = (UBYTE)(BYTE)px;
                         count[lc]++;
                     }
                 }
@@ -1777,21 +1863,15 @@ static void KernPass(struct AAKern *k, const UBYTE *t, ULONG len,
     }
 }
 
-/*
- * Pair kerning for real metrics mode from the 'kern' table (GPOS
- * kerning would need a shaping engine). gidx: glyph of each code.
- * Measuring may read font->kern meanwhile, so the table is filled in
- * place and every index stays within AA_MAX_KERN. Render stack.
- */
-static void BuildKerning(struct AAFont *font, FT_Face face,
-                         const UWORD *gidx)
+/* Pairs from the 'kern' table (version 0, format 0 subtables). */
+static void KernTable(struct AAFont *font, FT_Face face, const ULONG *map,
+                      LONG nmap)
 {
-    struct AAKern *k = font->kern;
+    struct KernRows r;
     UWORD count[256];
-    ULONG map[256];
     FT_ULong len = 0;
     UBYTE *t;
-    LONG n = 0, i, j, total;
+    LONG i, total;
 
     if (FT_Load_Sfnt_Table(face, TTAG_kern, 0, NULL, &len) || len < 4)
         return;
@@ -1800,8 +1880,467 @@ static void BuildKerning(struct AAFont *font, FT_Face face,
         return;
     if (FT_Load_Sfnt_Table(face, TTAG_kern, 0, t, &len) || KU16(t) != 0)
         goto out;               /* only the version 0 (Microsoft) table */
-    if (!k && !(k = AllocVec(sizeof(*k), MEMF_ANY | MEMF_CLEAR)))
+
+    /* count the pairs per left code, then lay out the rows */
+    memset(&r, 0, sizeof(r));
+    memset(count, 0, sizeof(count));
+    KernPass(NULL, NULL, t, len, map, nmap, face->size->metrics.x_scale,
+             count);
+    for (i = 0, total = 0; i < 256; i++)
+    {
+        LONG c = count[i];
+
+        if (total + c > AA_MAX_KERN)
+            c = AA_MAX_KERN - total;        /* the rest is dropped */
+        r.first[i] = total;
+        count[i] = total;                   /* fill position */
+        total += c;
+    }
+    r.first[256] = total;
+    if (total && !(r.pair = AllocVec(total * 2, MEMF_ANY)))
         goto out;
+    r.total = r.cap = total;
+    KernPass(r.first, r.pair, t, len, map, nmap,
+             face->size->metrics.x_scale, count);
+
+    /* sort each left code's pairs by right code for aa_KernPair() */
+    for (i = 0; i < 256; i++)
+    {
+        LONG a, b;
+
+        for (a = r.first[i] + 1; a < r.first[i + 1]; a++)
+        {
+            UBYTE rc = r.pair[a * 2], px = r.pair[a * 2 + 1];
+
+            for (b = a; b > r.first[i] && r.pair[(b - 1) * 2] > rc; b--)
+            {
+                r.pair[b * 2] = r.pair[(b - 1) * 2];
+                r.pair[b * 2 + 1] = r.pair[(b - 1) * 2 + 1];
+            }
+            r.pair[b * 2] = rc;
+            r.pair[b * 2 + 1] = px;
+        }
+    }
+    RowsInstall(font, &r);
+    if (r.pair)
+        FreeVec(r.pair);
+out:
+    FreeVec(t);
+}
+
+/* ---- GPOS pair kerning ----------------------------------------------- */
+
+/*
+ * The 'kern' feature of the GPOS table, as HarfBuzz applies it to two
+ * neighbouring letters of Latin text: the lookups of the 'kern'
+ * features of script 'latn' (else 'DFLT'; else of all 'kern' features),
+ * in lookup list order, their values added up. Within a lookup the
+ * first PairPos subtable that applies to a pair wins: format 1 when the
+ * pair is listed, format 2 when the left glyph is covered. Only the left
+ * glyph's XAdvance is used. Every offset is checked against the table.
+ * Checked against HarfBuzz (uharfbuzz 0.57) with 9 Google fonts: all
+ * pairs equal except with the soft hyphen (0xAD), which HarfBuzz treats
+ * as invisible but Amiga fonts draw.
+ */
+#define GP_MAX_LOOKUPS  64
+#define GP_MAX_SUBS     128
+
+struct GPSub
+{
+    ULONG  off;                 /* PairPos subtable in the GPOS table */
+    UWORD  lookup;              /* position in the lookup order */
+    UWORD *c2;                  /* format 2: class of each right code */
+};
+
+static inline BOOL GPIn(ULONG len, ULONG off, ULONG n)
+{
+    return off <= len && n <= len - off;
+}
+
+/* Coverage index of glyph g, -1 if not covered. */
+static LONG GPCoverage(const UBYTE *t, ULONG len, ULONG off, UWORD g)
+{
+    LONG n, a, b;
+
+    if (!GPIn(len, off, 4))
+        return -1;
+    n = KU16(t + off + 2);
+    a = 0;
+    b = n - 1;
+    if (KU16(t + off) == 1)
+    {
+        const UBYTE *gl = t + off + 4;
+
+        if (!GPIn(len, off + 4, n * 2))
+            return -1;
+        while (a <= b)
+        {
+            LONG m = (a + b) >> 1;
+            UWORD v = KU16(gl + m * 2);
+
+            if (v == g)
+                return m;
+            if (v < g)
+                a = m + 1;
+            else
+                b = m - 1;
+        }
+    }
+    else if (KU16(t + off) == 2)
+    {
+        const UBYTE *rg = t + off + 4;
+
+        if (!GPIn(len, off + 4, n * 6))
+            return -1;
+        while (a <= b)
+        {
+            LONG m = (a + b) >> 1;
+            const UBYTE *e = rg + m * 6;
+
+            if (g < KU16(e))
+                b = m - 1;
+            else if (g > KU16(e + 2))
+                a = m + 1;
+            else
+                return KU16(e + 4) + g - KU16(e);
+        }
+    }
+    return -1;
+}
+
+/* Class of glyph g in the ClassDef table at off (0 if not listed). */
+static UWORD GPClass(const UBYTE *t, ULONG len, ULONG off, UWORD g)
+{
+    LONG n, a, b;
+
+    if (!GPIn(len, off, 6))
+        return 0;
+    if (KU16(t + off) == 1)
+    {
+        UWORD start = KU16(t + off + 2);
+
+        n = KU16(t + off + 4);
+        if (g < start || g - start >= n ||
+            !GPIn(len, off + 6, (g - start + 1) * 2))
+            return 0;
+        return KU16(t + off + 6 + (g - start) * 2);
+    }
+    if (KU16(t + off) != 2)
+        return 0;
+    n = KU16(t + off + 2);
+    if (!GPIn(len, off + 4, n * 6))
+        return 0;
+    a = 0;
+    b = n - 1;
+    while (a <= b)
+    {
+        LONG m = (a + b) >> 1;
+        const UBYTE *e = t + off + 4 + m * 6;
+
+        if (g < KU16(e))
+            b = m - 1;
+        else if (g > KU16(e + 2))
+            a = m + 1;
+        else
+            return KU16(e + 4);
+    }
+    return 0;
+}
+
+static LONG GPValueSize(UWORD fmt)
+{
+    LONG n = 0;
+
+    for (fmt &= 0xFF; fmt; fmt &= fmt - 1)
+        n++;
+    return n * 2;
+}
+
+/* XAdvance of the value record at off, 0 if the format has none. */
+static LONG GPXAdvance(const UBYTE *t, ULONG len, ULONG off, UWORD fmt)
+{
+    if (!(fmt & 4))
+        return 0;
+    off += GPValueSize(fmt & 3);
+    return GPIn(len, off, 2) ? (WORD)KU16(t + off) : 0;
+}
+
+/* The lookups of the 'kern' feature, sorted; returns how many. */
+static LONG GPKernLookups(const UBYTE *t, ULONG len, UWORD *lk)
+{
+    ULONG sl, fl, so = 0, ls = 0;
+    LONG ns, nf, i, j, n = 0, nidx = -1;
+
+    if (!GPIn(len, 0, 10) || KU16(t) != 1)
+        return 0;
+    sl = KU16(t + 4);
+    fl = KU16(t + 6);
+    if (!GPIn(len, sl, 2) || !GPIn(len, fl, 2))
+        return 0;
+
+    /* script 'latn', else 'DFLT': its default language system */
+    ns = KU16(t + sl);
+    if (GPIn(len, sl + 2, ns * 6))
+    {
+        ULONG latn = 0, dflt = 0;
+
+        for (i = 0; i < ns; i++)
+        {
+            const UBYTE *e = t + sl + 2 + i * 6;
+
+            if (!memcmp(e, "latn", 4))
+                latn = sl + KU16(e + 4);
+            else if (!memcmp(e, "DFLT", 4))
+                dflt = sl + KU16(e + 4);
+        }
+        so = latn ? latn : dflt;
+    }
+    if (so && GPIn(len, so, 2) && KU16(t + so))
+    {
+        ls = so + KU16(t + so);
+        if (GPIn(len, ls, 6) && GPIn(len, ls + 6, KU16(t + ls + 4) * 2))
+            nidx = KU16(t + ls + 4);
+    }
+
+    nf = KU16(t + fl);
+    if (!GPIn(len, fl + 2, nf * 6))
+        return 0;
+    for (i = 0; i < nf; i++)
+    {
+        const UBYTE *e = t + fl + 2 + i * 6;
+        ULONG fo = fl + KU16(e + 4);
+        LONG k, nl;
+        BOOL used = nidx < 0;
+
+        if (memcmp(e, "kern", 4))
+            continue;
+        for (k = 0; k < nidx && !used; k++)
+            used = KU16(t + ls + 6 + k * 2) == i;
+        if (!used || !GPIn(len, fo, 4))
+            continue;
+        nl = KU16(t + fo + 2);
+        if (!GPIn(len, fo + 4, nl * 2))
+            continue;
+        for (k = 0; k < nl && n < GP_MAX_LOOKUPS; k++)
+        {
+            UWORD l = KU16(t + fo + 4 + k * 2);
+
+            for (j = 0; j < n && lk[j] < l; j++)
+                ;
+            if (j < n && lk[j] == l)
+                continue;               /* already there */
+            memmove(lk + j + 1, lk + j, (n - j) * sizeof(*lk));
+            lk[j] = l;
+            n++;
+        }
+    }
+    return n;
+}
+
+/*
+ * The PairPos subtables of the lookups (Extension lookups resolved), in
+ * order; format 2 subtables get the class of every right code.
+ */
+static LONG GPSubtables(const UBYTE *t, ULONG len, const UWORD *lk, LONG nl,
+                        const UWORD *glyph, LONG n, struct GPSub *sub)
+{
+    ULONG ll = KU16(t + 8);
+    LONG ns = 0, i, j, c;
+
+    if (!GPIn(len, ll, 2))
+        return 0;
+    for (i = 0; i < nl; i++)
+    {
+        ULONG lo;
+        UWORD type;
+        LONG nsub;
+
+        if (lk[i] >= KU16(t + ll) || !GPIn(len, ll + 2 + lk[i] * 2, 2))
+            continue;
+        lo = ll + KU16(t + ll + 2 + lk[i] * 2);
+        if (!GPIn(len, lo, 6))
+            continue;
+        type = KU16(t + lo);
+        nsub = KU16(t + lo + 4);
+        if (!GPIn(len, lo + 6, nsub * 2))
+            continue;
+        for (j = 0; j < nsub && ns < GP_MAX_SUBS; j++)
+        {
+            ULONG st = lo + KU16(t + lo + 6 + j * 2);
+            UWORD ty = type;
+
+            if (ty == 9)                /* Extension */
+            {
+                if (!GPIn(len, st, 8))
+                    continue;
+                ty = KU16(t + st + 2);
+                st += ((ULONG)KU16(t + st + 4) << 16) | KU16(t + st + 6);
+            }
+            if (ty != 2 || !GPIn(len, st, 16) ||
+                (KU16(t + st) != 1 && KU16(t + st) != 2))
+                continue;
+            sub[ns].off = st;
+            sub[ns].lookup = i;
+            sub[ns].c2 = NULL;
+            if (KU16(t + st) == 2)
+            {
+                ULONG cd2 = st + KU16(t + st + 10);
+
+                if (!(sub[ns].c2 = AllocVec(n * sizeof(UWORD), MEMF_ANY)))
+                    continue;
+                for (c = 0; c < n; c++)
+                    sub[ns].c2[c] = GPClass(t, len, cd2, glyph[c]);
+            }
+            ns++;
+        }
+    }
+    return ns;
+}
+
+/*
+ * Kerning from GPOS into r; FALSE if the font has no GPOS 'kern'
+ * feature (then the 'kern' table is used, as HarfBuzz does). code/glyph:
+ * our n character codes with a glyph, ascending; map: (glyph << 8 | code)
+ * sorted by glyph.
+ */
+static BOOL KernGPOS(FT_Face face, const UBYTE *code, const UWORD *glyph,
+                     LONG n, const ULONG *map, struct KernRows *r)
+{
+    FT_ULong len = 0;
+    UBYTE *t = NULL;
+    UWORD lk[GP_MAX_LOOKUPS];
+    struct GPSub *sub = NULL;
+    LONG *acc = NULL;
+    UBYTE *done = NULL;
+    WORD index[256];            /* code -> position in code[], -1 */
+    LONG nl, ns = 0, i, j, s;
+    BOOL ok = FALSE;
+
+    if (FT_Load_Sfnt_Table(face, TTAG_GPOS, 0, NULL, &len) || len < 10 ||
+        !(t = AllocVec(len, MEMF_ANY)) ||
+        FT_Load_Sfnt_Table(face, TTAG_GPOS, 0, t, &len) ||
+        !(nl = GPKernLookups(t, len, lk)))
+        goto out;
+    ok = TRUE;                  /* a GPOS 'kern' feature: no 'kern' table */
+    sub = AllocVec(GP_MAX_SUBS * sizeof(*sub), MEMF_ANY);
+    acc = AllocVec(n * sizeof(*acc), MEMF_ANY);
+    done = AllocVec(n, MEMF_ANY);
+    if (!sub || !acc || !done)
+        goto out;
+    ns = GPSubtables(t, len, lk, nl, glyph, n, sub);
+    for (i = 0; i < 256; i++)
+        index[i] = -1;
+    for (i = 0; i < n; i++)
+        index[code[i]] = i;
+
+    for (i = 0; i < n; i++)
+    {
+        LONG lookup = -1;
+
+        memset(acc, 0, n * sizeof(*acc));
+        for (s = 0; s < ns; s++)
+        {
+            ULONG st = sub[s].off;
+            UWORD vf1 = KU16(t + st + 4), vf2 = KU16(t + st + 6);
+            LONG vsz = GPValueSize(vf1) + GPValueSize(vf2);
+            LONG ci = GPCoverage(t, len, st + KU16(t + st + 2), glyph[i]);
+
+            if (sub[s].lookup != lookup)
+            {
+                lookup = sub[s].lookup;
+                memset(done, 0, n);     /* each lookup applies anew */
+            }
+            if (ci < 0)
+                continue;
+            if (!sub[s].c2)             /* format 1: listed pairs */
+            {
+                ULONG ps;
+                LONG np, rec = 2 + vsz, k;
+
+                if (ci >= KU16(t + st + 8) ||
+                    !GPIn(len, st + 10 + ci * 2, 2))
+                    continue;
+                ps = st + KU16(t + st + 10 + ci * 2);
+                if (!GPIn(len, ps, 2))
+                    continue;
+                np = KU16(t + ps);
+                if (!GPIn(len, ps + 2, np * rec))
+                    continue;
+                for (k = 0; k < np; k++)
+                {
+                    ULONG pr = ps + 2 + k * rec;
+                    LONG a, b, m;
+
+                    CodesOfGlyph(map, n, KU16(t + pr), &a, &b);
+                    for (m = a; m < b; m++)
+                    {
+                        j = index[map[m] & 0xFF];
+                        if (j < 0 || done[j])
+                            continue;
+                        done[j] = 1;
+                        acc[j] += GPXAdvance(t, len, pr + 2, vf1);
+                    }
+                }
+            }
+            else                        /* format 2: class pairs */
+            {
+                UWORD n1 = KU16(t + st + 12), n2 = KU16(t + st + 14);
+                UWORD k1 = GPClass(t, len, st + KU16(t + st + 8), glyph[i]);
+                ULONG row = st + 16 + (ULONG)k1 * n2 * vsz;
+
+                if (k1 >= n1)
+                    continue;
+                for (j = 0; j < n; j++)
+                {
+                    if (done[j] || sub[s].c2[j] >= n2)
+                        continue;
+                    done[j] = 1;
+                    acc[j] += GPXAdvance(t, len, row + sub[s].c2[j] * vsz,
+                                         vf1);
+                }
+            }
+        }
+
+        RowsStart(r, code[i]);
+        for (j = 0; j < n; j++)
+        {
+            LONG px = acc[j] ? KernPx(acc[j], face->size->metrics.x_scale)
+                             : 0;
+
+            if (px && !RowsAdd(r, code[j], px))
+                break;
+        }
+    }
+
+out:
+    if (sub)
+    {
+        for (s = 0; s < ns; s++)
+            if (sub[s].c2)
+                FreeVec(sub[s].c2);
+        FreeVec(sub);
+    }
+    if (acc)
+        FreeVec(acc);
+    if (done)
+        FreeVec(done);
+    if (t)
+        FreeVec(t);
+    return ok;
+}
+
+/*
+ * Pair kerning for real metrics mode: the GPOS 'kern' feature, else the
+ * 'kern' table. gidx: glyph of each code. Render stack.
+ */
+static void BuildKerning(struct AAFont *font, FT_Face face,
+                         const UWORD *gidx)
+{
+    struct KernRows r;
+    ULONG map[256];
+    UBYTE code[256];
+    UWORD glyph[256];
+    LONG n = 0, i, j;
 
     /* (glyph << 8 | code), sorted by glyph, for the glyph -> codes lookup */
     for (i = 0; i < 256; i++)
@@ -1810,6 +2349,8 @@ static void BuildKerning(struct AAFont *font, FT_Face face,
 
         if (!gidx[i])
             continue;
+        code[n] = i;
+        glyph[n] = gidx[i];
         e = ((ULONG)gidx[i] << 8) | i;
         for (j = n; j > 0 && map[j - 1] > e; j--)
             map[j] = map[j - 1];
@@ -1817,43 +2358,20 @@ static void BuildKerning(struct AAFont *font, FT_Face face,
         n++;
     }
 
-    /* count the pairs per left code, then lay out the table */
-    memset(count, 0, sizeof(count));
-    KernPass(k, t, len, map, n, face->size->metrics.x_scale, count, FALSE);
-    for (i = 0, total = 0; i < 256; i++)
+    memset(&r, 0, sizeof(r));
+    memset(r.first, 0xFF, sizeof(r.first));     /* no row yet */
+    if (KernGPOS(face, code, glyph, n, map, &r))
     {
-        LONG c = count[i];
-
-        if (total + c > AA_MAX_KERN)
-            c = AA_MAX_KERN - total;        /* the rest is dropped */
-        k->first[i] = total;
-        count[i] = total;                   /* fill position */
-        total += c;
+        RowsInstall(font, &r);
+        if (r.pair)
+            FreeVec(r.pair);
     }
-    k->first[256] = total;
-    KernPass(k, t, len, map, n, face->size->metrics.x_scale, count, TRUE);
+    else
+        KernTable(font, face, map, n);
 
-    /* sort each left code's pairs by right code for aa_KernPair() */
-    for (i = 0; i < 256; i++)
-    {
-        LONG a, b;
-
-        for (a = k->first[i] + 1; a < k->first[i + 1]; a++)
-        {
-            UBYTE r = k->pair[a].right;
-            BYTE px = k->pair[a].px;
-
-            for (b = a; b > k->first[i] && k->pair[b - 1].right > r; b--)
-                k->pair[b] = k->pair[b - 1];
-            k->pair[b].right = r;
-            k->pair[b].px = px;
-        }
-    }
-    font->kern = k;
     D(("AAText: %s %ld: %ld kerning pairs\n", (ULONG)font->name,
-       (LONG)font->ysize, total));
-out:
-    FreeVec(t);
+       (LONG)font->ysize,
+       font->kern ? (LONG)font->kern->first[256] : 0L));
 }
 
 /*
@@ -1981,7 +2499,8 @@ static LONG PrepareOnStack(APTR arg)
             font->inkl[c] = gm->horiBearingX >> 6;
             font->inkr[c] = (gm->horiBearingX + gm->width + 63) >> 6;
         }
-        if (aa_Kerning && FT_HAS_KERNING(face))
+        /* not FT_HAS_KERNING(): that only means a 'kern' table */
+        if (aa_Kerning && FT_IS_SFNT(face))
             BuildKerning(font, face, gidx);
     }
 
