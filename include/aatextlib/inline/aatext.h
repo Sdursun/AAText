@@ -3,7 +3,7 @@
 #define _INLINE_AATEXT_H
 
 /*
- * Calls into aatext.library for gcc. Include <proto/aatext.h>,
+ * Calls into freetype2.library for gcc. Include <proto/aatext.h>,
  * which includes the FreeType headers first: these macros must come
  * after the FreeType prototypes they replace.
  *

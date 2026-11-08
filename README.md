@@ -38,9 +38,12 @@ and MUI programs — everything that draws text through `graphics.library`.
   FTManager, but writes the code page of a character set into the `.otag` (so
   Turkish and other letters work without `ENV:ftcodepage`) and names the font
   file without a volume name. It also repairs installed fonts: moved file, no
-  code page, engine `freetype2` -> `aatext`. Selecting a font shows a preview
-  in several sizes before it is installed. Window and Shell, English and
-  Turkish; uses `aatext.library` (included).
+  code page, engine `aatext` (fonts installed before 2.0) -> `freetype2`.
+  Selecting a font shows a preview in several sizes before it is installed.
+  Window and Shell, English and Turkish; uses `freetype2.library` 2.0
+  (included: AAText's FreeType 2.15.0 library, called `aatext.library`
+  before; it replaces freetype2.library 1.x, which the installer keeps as
+  `LIBS:freetype2.library.bak`).
 
   ![AATextManager: fonts to install, one line per face of a .ttc, with a preview of the selected font](docs/screenshots/aatextmanager.png)
 
@@ -67,7 +70,8 @@ adds AAText to `S:User-Startup` and can remove it again. By hand: copy `AAText` 
 drivers are loaded and before `LoadWB` (not to `WBStartup`: AAText must run
 before Workbench opens its windows), then reboot; copy `AATextPrefs` (and its icon) to `SYS:Prefs`
 if you want the preferences program, and `AATextManager` (and its icon) to
-`SYS:System` and `Libs/aatext.library` to `LIBS:` for the font installer. The full user guide is in
+`SYS:System` and `Libs/freetype2.library` to `LIBS:` for the font installer
+(keep an old `LIBS:freetype2.library` 1.x as `freetype2.library.bak`). The full user guide is in
 [docs/AAText_EN.txt](docs/AAText_EN.txt) (Turkish:
 [docs/AAText_TR.txt](docs/AAText_TR.txt)); all settings are described in
 [docs/AAText.prefs.example](docs/AAText.prefs.example).
@@ -83,10 +87,10 @@ sh tools/fetch-amissl.sh        # AmiSSL 5 SDK headers (AATextManager update che
 .\build.ps1                     # build/68020/AAText
 .\build.ps1 DEBUG=1             # build/68020-debug/AAText (serial kprintf output)
 .\build.ps1 CPU=68060           # build/68060/AAText
-.\build.ps1 USE_AATEXTLIB=1     # build/68020-lib/AAText: FreeType from aatext.library
-                                # (experimental, ~43 KB; needs LIBS:aatext.library 1+)
+.\build.ps1 USE_AATEXTLIB=1     # build/68020-lib/AAText: FreeType from freetype2.library
+                                # (experimental, ~43 KB; needs LIBS:freetype2.library 2+)
 .\build.ps1 gui                 # build/68020/AATextPrefs
-.\build.ps1 manager             # build/68020/AATextManager (needs aatext.library to run)
+.\build.ps1 manager             # build/68020/AATextManager (needs freetype2.library 2+ to run)
 .\build.ps1 catalogs icons      # Turkish catalog and GlowIcon (build/catalogs, build/icons)
 .\build.ps1 dist                # build/dist/AAText.lha + AAText.readme
 ```
@@ -177,9 +181,12 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
   kurar, ama `.otag`'a bir karakter setinin kod sayfasını yazar (Türkçe ve
   diğer harfler `ENV:ftcodepage` olmadan çalışır) ve font dosyasını disk adı
   olmadan gösterir. Kurulu fontları da onarır: taşınmış dosya, kod sayfası
-  yok, motor `freetype2` -> `aatext`. Seçilen font, kurulmadan önce birkaç
-  boyutta önizlenir. Pencere ve Shell, Türkçe ve İngilizce; `aatext.library`
-  kullanır (pakette var).
+  yok, motor `aatext` (2.0'dan önce kurulan fontlar) -> `freetype2`. Seçilen
+  font, kurulmadan önce birkaç boyutta önizlenir. Pencere ve Shell, Türkçe ve
+  İngilizce; `freetype2.library` 2.0 kullanır (pakette var: AAText'in FreeType
+  2.15.0 kütüphanesi, önceki adı `aatext.library`; freetype2.library 1.x'in
+  yerine geçer, kurulum programı eskisini `LIBS:freetype2.library.bak` olarak
+  saklar).
 
   ![AATextManager: kurulacak fontlar, bir .ttc'nin her yüzü ayrı satır, seçilen fontun önizlemesiyle](docs/screenshots/aatextmanager.png)
 
@@ -193,7 +200,8 @@ Elle kurulum: `AAText` dosyasını `C:` içine kopyalayın,
 AAText, Workbench pencerelerini açmadan önce çalışıyor olmalı) ve sistemi
 yeniden başlatın; ayar programı için `AATextPrefs` dosyasını (ikonuyla)
 `SYS:Prefs` içine, font kurucu için `AATextManager` dosyasını (ikonuyla)
-`SYS:System` içine ve `Libs/aatext.library` dosyasını `LIBS:` içine kopyalayın. Ayrıntılı kullanım kılavuzu:
+`SYS:System` içine ve `Libs/freetype2.library` dosyasını `LIBS:` içine kopyalayın
+(eski bir `LIBS:freetype2.library` 1.x varsa önce `freetype2.library.bak` olarak saklayın). Ayrıntılı kullanım kılavuzu:
 [docs/AAText_TR.txt](docs/AAText_TR.txt).
 
 **Lisans:** [MIT](LICENSE). Ticari ya da ticari olmayan her amaçla

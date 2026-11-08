@@ -1,5 +1,5 @@
 /*
- * aatext.library - every FreeType header with functions in the
+ * freetype2.library - every FreeType header with functions in the
  * library's function table.
  */
 #ifndef AATEXTLIB_FTAPI_H

@@ -60,7 +60,7 @@ font dosyası taşınmış
 MSG_P_CODEPAGE
 kod sayfası yok
 MSG_P_ENGINE
-motor freetype2
+motor aatext
 MSG_NOTHING
 Onarılacak bir şey yok.
 MSG_TOREPAIR
@@ -72,7 +72,7 @@ Onar|Vazgeç
 MSG_REPAIRED
 %ld font onarıldı (toplam %ld).
 MSG_CHANGE_ENGINE
-freetype2 motorunu seçilen motora çevir
+aatext motorunu freetype2 yap
 MSG_INFO_INSTALL
 Font dosyaları Ayarlar sekmesindeki dizinlere kopyalanır, .font ve .otag FONTS:'a yazılır.
 MSG_INFO_REPAIR

@@ -1,4 +1,4 @@
-# aatext.library function list - the single source of the LVO order.
+# freetype2.library function list - the single source of the LVO order.
 #
 # tools/genfuncs.py turns this into the library's function table and the
 # client headers (fd, clib, inline, proto).
@@ -8,8 +8,8 @@
 # freetype2.library 1.3 (util/libs/freetype2_lib on Aminet), checked
 # against that binary: old programs find every function at the same
 # offset. (AROS changed its own order in 2021; that order is not used.)
-# aatext.library keeps this order, so a program written for
-# freetype2.library can use aatext.library by changing the library name.
+# AAText's freetype2.library (2.0; called aatext.library before) keeps
+# this order, so programs written for freetype2.library 1.3 run unchanged.
 #
 #   - the bullet.library API first, arguments in registers;
 #   - the FreeType API from LVO -90 on, arguments on the stack in the

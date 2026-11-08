@@ -1,5 +1,5 @@
 /*
- * ft2info - checks the FreeType API of aatext.library.
+ * ft2info - checks the FreeType API of freetype2.library 2.x.
  *
  *   ft2info [FONT <file>] [SIZE <pixels>] [TEXT <string>] [LIB <name>]
  *
@@ -99,7 +99,7 @@ int main(void)
 {
     LONG args[A_COUNT] = { 0 };
     struct RDArgs *rda;
-    const char *libname = "aatext.library";
+    const char *libname = "freetype2.library";
     FT_Library lib;
     FT_Int major, minor, patch;
     int rc = RETURN_OK;

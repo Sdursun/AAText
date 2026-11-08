@@ -1,4 +1,4 @@
-# Builds aatext.library inside the amiga-gcc Docker container.
+# Builds freetype2.library inside the amiga-gcc Docker container.
 # The whole AAText folder is mounted: FreeType comes from
 # ../third_party/freetype-2.14.3 (tools/fetch-freetype.sh or the AAText build).
 # Usage:  .\build.ps1              (68020 release)

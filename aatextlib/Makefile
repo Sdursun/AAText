@@ -1,7 +1,7 @@
-# aatext.library 1.2 - AAText's library: FreeType 2.15.0 for AmigaOS 3
+# freetype2.library 2.0 - AAText's library: FreeType 2.15.0 for AmigaOS 3
 #
-#   make              68020 build:  build/68020/aatext.library
-#   make CPU=68060    68060 build:  build/68060/aatext.library
+#   make              68020 build:  build/68020/freetype2.library
+#   make CPU=68060    68060 build:  build/68060/freetype2.library
 #   make DEBUG=1      debug build with serial kprintf output
 #   make test         test programs (build/<cpu>/tests/)
 #   make dist         Aminet archive in dist/
@@ -23,7 +23,7 @@ FT_VER  := 2.15.0
 FT_DIR  ?= ../third_party/freetype-$(FT_VER)
 
 BUILDDIR := build/$(CPU)$(if $(filter 1,$(DEBUG)),-debug,)
-TARGET   := $(BUILDDIR)/aatext.library
+TARGET   := $(BUILDDIR)/freetype2.library
 
 ARCHFLAGS := -m$(CPU) -noixemul
 FTDEFS    := -DFT2_BUILD_LIBRARY \
@@ -118,9 +118,9 @@ dist:
 	$(MAKE) CPU=68020 DEBUG=0 test
 	rm -rf dist
 	mkdir -p $(DISTDIR)/Libs $(DISTDIR)/Developer $(DISTDIR)/Tests
-	cp build/68020/aatext.library $(DISTDIR)/Libs/aatext.library
-	cp build/68060/aatext.library $(DISTDIR)/Libs/aatext.library.060
-	cp build/68020-debug/aatext.library $(DISTDIR)/Libs/aatext.library.debug
+	cp build/68020/freetype2.library $(DISTDIR)/Libs/freetype2.library
+	cp build/68060/freetype2.library $(DISTDIR)/Libs/freetype2.library.060
+	cp build/68020-debug/freetype2.library $(DISTDIR)/Libs/freetype2.library.debug
 	cp -r include $(DISTDIR)/Developer/include
 	cp -r $(FT_DIR)/include/ft2build.h $(FT_DIR)/include/freetype $(DISTDIR)/Developer/include/
 	rm -rf $(DISTDIR)/Developer/include/freetype/internal

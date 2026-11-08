@@ -31,7 +31,7 @@ struct AAInstall
     LONG  face;             /* face in a .ttc */
     const char *fonts;      /* "FONTS:" or a directory ending in ':'/'/' */
     const char *fontdir;    /* where the font file goes; NULL: <fonts>_ttf/ */
-    const char *engine;     /* "aatext" or "freetype2" */
+    const char *engine;     /* "freetype2": AAText's freetype2.library */
     LONG  charset;          /* AA_CHARSET_*, or -1 for no code page */
     UWORD sizes[AA_INSTALL_MAXSIZES];
     LONG  numsizes;

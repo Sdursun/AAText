@@ -1,5 +1,5 @@
 /*
- * aatext.library FreeType configuration: the stock ftoption.h with the
+ * freetype2.library FreeType configuration: the stock ftoption.h with the
  * options a shared AmigaOS 3 library cannot or need not have switched off.
  */
 #ifndef AATEXTLIB_FT2_OPTION_H

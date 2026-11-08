@@ -76,7 +76,6 @@ static const LONG charset_msg[AA_NUM_CHARSETS] =
     MSG_CHARSET_KOI8R, MSG_CHARSET_AMIGAE2
 };
 
-static const char *const engines[2] = { "aatext", "freetype2" };
 
 static Object *app, *win, *obj[GID_COUNT];
 static Object *status, *filelist, *repairlist, *dfontlist, *dllist,
@@ -258,9 +257,10 @@ static LONG Charset(void)
     return (LONG)Get(obj[GID_CHARSET], MUIA_Cycle_Active);
 }
 
+/* the engine of installed fonts: AAText's freetype2.library (2.0+) */
 static const char *Engine(void)
 {
-    return engines[Get(obj[GID_ENGINE], MUIA_Cycle_Active) ? 1 : 0];
+    return "freetype2";
 }
 
 static LONG CurrentPage(void)
@@ -1375,7 +1375,7 @@ static Object *DirRow(LONG kind, LONG pick)
     End;
 }
 
-static const char *charsets[AA_NUM_CHARSETS + 1], *enginenames[3],
+static const char *charsets[AA_NUM_CHARSETS + 1],
                   *tabs[6];
 
 static Object *SettingsPage(void)
@@ -1517,8 +1517,6 @@ static BOOL OpenWin(LONG charset)
     tabs[4] = GetString(MSG_TAB_SETTINGS);
     for (i = 0; i < AA_NUM_CHARSETS; i++)
         charsets[i] = GetString(charset_msg[i]);
-    enginenames[0] = GetString(MSG_ENGINE_AATEXT);
-    enginenames[1] = GetString(MSG_ENGINE_FT2);
     for (i = 0; i < 3; i++)
         spnames[i] = GetString(MSG_PV_SP_OFF + i);
 
@@ -1537,8 +1535,6 @@ static BOOL OpenWin(LONG charset)
                     Child, MkLabel(MSG_CHARSET, MUIO_Label_DoubleFrame),
                     Child, MkCycle(MSG_CHARSET, GID_CHARSET, charsets,
                                    charset),
-                    Child, MkLabel(MSG_ENGINE, MUIO_Label_DoubleFrame),
-                    Child, MkCycle(MSG_ENGINE, GID_ENGINE, enginenames, 0),
                 End,
                 Child, obj[GID_TABS] = RegisterGroup(tabs),
                     MUIA_CycleChain, TRUE,
@@ -1570,7 +1566,6 @@ static BOOL OpenWin(LONG charset)
              2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
     Notify(obj[GID_TABS], MUIA_Group_ActivePage, MUIV_EveryTime, GID_TABS);
     Notify(obj[GID_CHARSET], MUIA_Cycle_Active, MUIV_EveryTime, GID_CHARSET);
-    Notify(obj[GID_ENGINE], MUIA_Cycle_Active, MUIV_EveryTime, GID_ENGINE);
     Notify(obj[GID_CHANGEENGINE], MUIA_Selected, MUIV_EveryTime,
            GID_CHANGEENGINE);
     Notify(obj[GID_CHANGECHARSET], MUIA_Selected, MUIV_EveryTime,

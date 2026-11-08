@@ -295,7 +295,7 @@ static void ToRGB(ULONG fg, ULONG bg)
     }
 }
 
-/* the whole file in memory (aatext.library has streams, but the
+/* the whole file in memory (freetype2.library has streams, but the
    buffer keeps this the same as fontinfo.c) */
 static UBYTE *LoadFile(const char *path, LONG *len)
 {

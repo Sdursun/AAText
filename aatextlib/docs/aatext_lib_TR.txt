@@ -1,31 +1,50 @@
-aatext.library 1.2
-==================
+freetype2.library 2.0
+=====================
 
 AAText'in kütüphanesi: FreeType 2.15.0, AmigaOS 3 için paylaşımlı
 kütüphane olarak; ayrıca diskfont.library için bir outline font motoru.
 
-aatext.library, freetype2.library'nin yerine geçmez ve onu değiştirmez.
-İkisi birlikte kurulabilir; freetype2.library için yapılmış fontlar onu
-kullanmaya devam eder.
+freetype2.library 1.x'in (2002 tarihli FreeType 2.1, FTManager ile
+kurulan) yerine geçer. Fonksiyon sırası ve .otag etiketleri 1.x ile
+aynıdır; 1.x için yazılmış programlar ve FTManager ile kurulmuş fontlar
+değişmeden çalışır. Kütüphanenin 1.2'ye kadarki adı aatext.library idi;
+aşağıda "Eski ad" bölümüne bakın.
 
 
 Kurulum
 -------
 
-  Copy Libs/aatext.library LIBS:
+Önce eski kütüphaneyi saklayın, sonra yenisini kopyalayın:
 
-68060 için Libs/aatext.library.060 dosyasını kullanın (LIBS: içine
-aatext.library adıyla kopyalayın). Libs/aatext.library.debug seri porta
-mesaj yazar; hata bildirimleri içindir.
+  Copy LIBS:freetype2.library LIBS:freetype2.library.bak
+  Copy Libs/freetype2.library LIBS:
+
+68060 için Libs/freetype2.library.060 dosyasını kullanın (LIBS: içine
+freetype2.library adıyla kopyalayın). Libs/freetype2.library.debug seri
+porta mesaj yazar; hata bildirimleri içindir. AAText kurulum programı
+bunların hepsini yapar (eski freetype2.library'yi
+LIBS:freetype2.library.bak olarak saklar).
+
+1.x'e dönmek için: Copy LIBS:freetype2.library.bak LIBS:freetype2.library
+
+
+Eski ad
+-------
+
+1.0-1.2 sürümlerinin adı aatext.library, motor adı "aatext" idi.
+AATextManager ile 2.0'dan önce kurulmuş fontların .otag dosyasında
+OT_Engine "aatext" yazar; bu fontlar, AATextManager'ın Onarım sekmesi
+motoru "freetype2" yapana kadar (ya da: AATextManager REPAIR APPLY)
+LIBS:aatext.library'ye ihtiyaç duyar. Ondan sonra LIBS:aatext.library
+silinebilir.
 
 
 Font motoru
 -----------
 
-diskfont.library, .otag dosyasında OT_Engine "aatext" yazan fontlar için
-aatext.library'yi kullanır. Etiketler freetype2.library'ninkilerle
-(FTManager) aynıdır; freetype2.library için yapılmış bir .otag dosyası,
-motoru "freetype2"den "aatext"e çevrilince aatext.library ile çalışır.
+diskfont.library, .otag dosyasında OT_Engine "freetype2" yazan fontlar
+için freetype2.library'yi kullanır: AATextManager ile kurulanlar ve
+freetype2.library 1.x için FTManager ile kurulanlar.
 
 Motorun diskfont'a verdikleri:
 
@@ -40,8 +59,8 @@ Motorun diskfont'a verdikleri:
   (OT_RotateSin/Cos), genişlik (OT_SetFactor).
 - 32 bit glif kodları (OT_GlyphCode_32, OT_GlyphCode2_32): 256 ve üstü
   kodlar Unicode'dur.
-- Font boyları freetype2.library 1.3'teki gibi hesaplanır; bir font iki
-  motorla da aynı yükseklikte olur.
+- Font boyları freetype2.library 1.3'teki gibi hesaplanır; 1.x için
+  kurulmuş fontların yüksekliği değişmez.
 
 
 Kod sayfası
@@ -51,7 +70,7 @@ Amiga karakter kodları şu sırayla Unicode'a çevrilir:
 
 1. .otag dosyasındaki kod sayfası (OT_Spec2_CodePage), varsa;
 2. ENV:ftcodepage: 256 adet big-endian 16 bit Unicode değeri (512 bayt),
-   freetype2.library'nin de kullandığı dosya;
+   freetype2.library 1.x'in de kullandığı dosya;
 3. ISO-8859-1.
 
 Türkçe (ISO-8859-9) için AAText ile ftcodepage.latin5 gelir:
@@ -74,7 +93,7 @@ Motorun anladığı .otag etiketleri
   OT_Spec6_FaceNum     .ttc/.otc koleksiyonunda yüz numarası
   OT_Spec9_Hinter      0 fontun kendi hinting'i (varsayılan),
                        1 FreeType autohinter, 2 yok,
-                       3 hafif autohinting (sadece aatext.library)
+                       3 hafif autohinting (2.0 ve aatext.library)
 
 Değerler için Developer/include/libraries/aatext.h dosyasına bakın.
 
@@ -111,7 +130,7 @@ ile FreeType 2.15.0 başlıkları vardır. gcc ile:
 
   struct Library *AATextBase;
 
-  AATextBase = OpenLibrary("aatext.library", 1);
+  AATextBase = OpenLibrary("freetype2.library", 2);
   if (AATextBase)
   {
       FT_Library lib;
@@ -137,13 +156,17 @@ ile FreeType 2.15.0 başlıkları vardır. gcc ile:
   CloseEngine, SetInfoA, ObtainInfoA, ReleaseInfoA) argümanlarını
   bullet.library'deki gibi A0/A1'de alır.
 - Fonksiyon sırası freetype2.library 1.3'ünkiyle aynıdır (FreeType API'si
-  LVO -90'dan başlar); ardından 71 yeni fonksiyon gelir. Ayrılmış on iki
+  LVO -90'dan başlar); ardından 71 yeni fonksiyon gelir. 1.x için
+  yazılmış bir program değişmeden çalışır; yenileri kullanmak için
+  sürüm 2'yi kontrol edebilir. Ayrılmış on iki
   yer FT_Err_Unimplemented_Feature döndürür.
 - FreeType'ın kuralı geçerlidir: bir FT_Library ve ondan yapılan her şey
   aynı anda tek bir göreve (task) aittir. Her göreve kendi FT_Library'sini
   verin.
 - Her FT_Library'nin belleği kendi exec havuzundan gelir; FT_Done_FreeType
   hepsini geri verir.
+- Başlık dosyalarının adları 1.0-1.2'deki gibi kalır (proto/aatext.h,
+  AATextBase, AATEXTLIBNAME "freetype2.library" olan libraries/aatext.h).
 - Developer/aatext.funcs fonksiyonları kütüphane sırasıyla listeler;
   Developer/ft2info.c, ft2bullet.c ve ft2dfont.c örnektir.
 
@@ -157,7 +180,7 @@ Test programları
   Tests/ft2bullet FONTS:verdanaregular.otag SIZE 13 ART WIDTHS
       motor, diskfont'un kullandığı gibi: glif haritaları, genişlikler,
       kerning (AA: 8 bit haritalar; .otag yerine FONT <dosya>; .otag hangi
-      motoru yazarsa yazsın test aatext.library'yi kullanır)
+      motoru yazarsa yazsın test freetype2.library'yi kullanır)
 
   Tests/ft2dfont FONT benimfont.font SIZES 11 13 16 24
       fontu diskfont.library ile açıp bir pencereye çizer: bir kez Text()

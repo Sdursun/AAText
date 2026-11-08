@@ -67,7 +67,7 @@ Kurulum
 Kolay yol: Install-AAText'e çift tıklayın (OS 3.2 Installer). Hangi
 sürümün kurulacağını sorar (68060'ta 68060 seçili gelir; PiStorm/Emu68
 ve WinUAE'de 68020/030/040'ı seçin, "Hangi dosya?" bölümüne bakın) ve
-hangi parçaların kurulacağını: AATextPrefs, aatext.library ile
+hangi parçaların kurulacağını: AATextPrefs, freetype2.library ile
 AATextManager, Türkçe kataloglar, belgeler
 (LOCALE:Help/türkçe/AAText_TR.txt ve LOCALE:Help/english/AAText_EN.txt).
 MUI 3.8 veya üstü kuruluysa AATextPrefs ve AATextManager'ın hangi
@@ -80,8 +80,19 @@ S:Startup-Sequence.AAText-bak olarak saklanır; AAText'i zaten başlatan
 bir satır varsa dosyaya dokunulmaz); bu mümkün değilse satırı
 S:User-Startup'a ekler. Kurulu bir sürümü yerinde günceller, ayarlarınız
 korunur. "Kaldır" seçeneği kurulan dosyaları ve bu satırı yeniden siler;
-"aatext" motoruyla kurulan fontlar ona ihtiyaç duyduğu için
-LIBS:aatext.library'ye dokunmaz.
+LIBS:freetype2.library ve LIBS:aatext.library'ye dokunmaz.
+
+freetype2.library 2.0, AAText'in FreeType 2.15.0 kütüphanesidir;
+1.0-1.2 sürümlerinin adı aatext.library idi. freetype2.library 1.x'in
+(FTManager ile kurulan FreeType 2.1) yerine geçer; kurulum programı
+eskisini LIBS:freetype2.library.bak olarak saklar. FTManager ile kurulan
+fontlar ve 1.x için yazılmış programlar onunla değişmeden çalışır.
+AATextManager ile daha önce kurulmuş fontlar, AATextManager'ın Onar
+sekmesi "aatext" motorunu "freetype2" yapana kadar LIBS:aatext.library'ye
+ihtiyaç duyar ("Font kurucu" bölümüne bakın); ondan sonra
+LIBS:aatext.library silinebilir. 1.x'e dönmek için
+LIBS:freetype2.library.bak dosyasını LIBS:freetype2.library olarak
+kopyalayın.
 
 Aynısı Shell'den: "AAText STARTUP=ADD" ve "AAText STARTUP=REMOVE".
 
@@ -110,10 +121,12 @@ Elle kurulum:
    dosyalarını SYS:System içine (AATextPrefs onu oradan başlatır),
    kütüphanesini LIBS:'e, Türkçe için katalogunu da kopyalayın:
 
-       Copy Libs/aatext.library LIBS:
+       Copy LIBS:freetype2.library LIBS:freetype2.library.bak
+       Copy Libs/freetype2.library LIBS:
        Copy Catalogs/turkish/aatextmanager.catalog LOCALE:Catalogs/türkçe/
 
-   AAText'in kendisi aatext.library'ye ihtiyaç duymaz.
+   (İlk satır yalnızca daha eski bir freetype2.library kuruluysa.)
+   AAText'in kendisi freetype2.library'ye ihtiyaç duymaz.
 
    MUI arayüzünü isterseniz 2. ve 3. adımda MUI dizinindeki
    AATextPrefs ve AATextManager dosyalarını kopyalayın (MUI 3.8 veya
@@ -202,7 +215,7 @@ Font kurucu (AATextManager)
 
 AATextManager, TrueType ve OpenType fontları (.ttf, .otf, .ttc)
 FTManager gibi diskfont.library için kurar ve önceden kurulmuş fontları
-onarır. LIBS:'te aatext.library gerekir.
+onarır. LIBS:'te freetype2.library 2.0 ya da daha yenisi gerekir.
 
 Kurulum, font dosyasını Ayarlar sekmesindeki dizine (değiştirilmediyse
 dosya türüne göre FONTS:_ttf/, FONTS:_otf/ ya da FONTS:_ttc/; olmayan
@@ -214,9 +227,6 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
   Karakter seti  .otag'a yazılan kod sayfası; Ayarlar sekmesindeki
                  varsayılan set seçili gelir (kaydedilmemişse
                  ISO-8859-1)
-  Motor          aatext (aatext.library, varsayılan) ya da freetype2
-                 (freetype2.library); programların fontu açabilmesi
-                 için motorun kütüphanesi gerekir
   Kur sekmesi    "Font ekle..." (birden çok dosya; bir .ttc'nin her
                  yüzü ayrı satırdır), "Çıkar", font seçicilerde
                  görünecek boyutlar (8-16,18,20,24; diğer boyutlar da
@@ -229,8 +239,9 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  "Yumuşatma" kutusu onu yumuşatmalı ya da yumuşatmasız
                  gösterir (yalnızca önizlemede).
   Onar sekmesi   "Fontları denetle" FONTS:'taki onarılabilir fontları
-                 listeler: font dosyası taşınmış, kod sayfası yok, motor
-                 freetype2 (kutu işaretliyse seçilen motora çevrilir). Yükseklik sınır kutusuna göre (FTManager ya da
+                 listeler: font dosyası taşınmış, kod sayfası yok,
+                 freetype2.library 2.0'dan önce kurulan fontlarda motor
+                 aatext (kutu işaretliyse freetype2 yapılır). Yükseklik sınır kutusuna göre (FTManager ya da
                  AATextManager 0.15/0.16 ile kurulan fontlar fazla küçük
                  olup yukarıda durabilir): hhea'ya çevrilir.
                  "Onar..." bir kez sorar, sonra hepsini onarır; her
@@ -267,8 +278,9 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  kullandığı bir font dosyası kullanımda olabilir ve
                  silinemez.
                  OT_Engine, .otag'da yazan motordur, ör. ttf (ttf.library),
-                 freetype2 (FTManager), ttengine ya da aatext
-                 (aatext.library); yanında o kütüphanenin sürümü vardır
+                 freetype2 (AATextManager, FTManager), ttengine ya da
+                 aatext (aatext.library, freetype2.library'nin 2.0'dan
+                 önceki adı); yanında o kütüphanenin sürümü vardır
                  ("Version LIBS:ttf.library" gibi, dosyadaki $VER
                  satırından). Kütüphane kurulu değilse o fontu hiçbir
                  program açamaz; alttaki satır bunu söyler.
@@ -313,15 +325,16 @@ Shell'den:
 
   AATextManager Work:verdana.ttf CHARSET=latin5
   AATextManager Work:cambria.ttc FACE=1 SIZES=10-12,20
-  AATextManager REPAIR CHARSET=latin5 ENGINE=aatext     (sadece listeler)
-  AATextManager REPAIR CHARSET=latin5 ENGINE=aatext APPLY
+  AATextManager REPAIR CHARSET=latin5     (sadece listeler)
+  AATextManager REPAIR CHARSET=latin5 APPLY
 
 CHARSET: latin1, latin2, latin3, latin4, latin5, latin9,
 latin10, cp1250, cyrillic, koi8r, amiga-e2 ya da none; verilmezse Ayarlar
 sekmesindeki varsayılan kullanılır. Font dosyaları Ayarlar sekmesindeki
 dizinlere gider; TO=<dizin> verilirse bunun yerine <dizin>'e kurulur
-(font dosyaları <dizin>_ttf/ altına). FILES ve REPAIR verilmezse pencere
-açılır.
+(font dosyaları <dizin>_ttf/ altına). ENGINE, .otag'a yazılan
+OT_Engine'dir (varsayılan freetype2; REPAIR ile aatext motorlu fontlar
+buna çevrilir). FILES ve REPAIR verilmezse pencere açılır.
 
 
 Ayarlar
@@ -742,8 +755,8 @@ This software is based in part on the work of the FreeType Team.
 Portions of this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved.
 
-aatext.library (Libs/, AATextManager kullanır) paylaşılan kütüphane
-olarak FreeType 2.15.0'dır; lisansları LICENSE.aatext.txt ve FTL.txt'de.
+freetype2.library 2.0 (Libs/, AATextManager kullanır) paylaşılan
+kütüphane olarak FreeType 2.15.0'dır; lisansları LICENSE.aatext.txt ve FTL.txt'de.
 
 AROS: Gerçek ölçü modunun ölçüm kodu (TextExtent ve TextFit) AROS'tan
 türetilmiştir, Copyright (C) 1995-2026 The AROS Development Team. Bu

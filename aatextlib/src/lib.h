@@ -1,5 +1,5 @@
 /*
- * aatext.library - shared declarations.
+ * freetype2.library - shared declarations.
  */
 #ifndef AATEXTLIB_LIB_H
 #define AATEXTLIB_LIB_H
@@ -8,9 +8,9 @@
 #include <exec/libraries.h>
 #include <dos/dos.h>
 
-#define LIB_NAME     "aatext.library"
-#define LIB_VERSION  1
-#define LIB_REVISION 2
+#define LIB_NAME     "freetype2.library"
+#define LIB_VERSION  2
+#define LIB_REVISION 0
 #define LIB_DATE     "08.11.2026"
 #define LIB_FTVER    "FreeType 2.15.0"
 

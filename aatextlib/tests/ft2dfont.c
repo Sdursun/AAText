@@ -1,6 +1,6 @@
 /*
  * ft2dfont - opens an outline font through diskfont.library (so through
- * the font's engine, e.g. aatext.library) and draws sample text in a
+ * the font's engine, e.g. freetype2.library) and draws sample text in a
  * window on the Workbench screen.
  *
  *   ft2dfont [FONT <name.font>] [SIZES <n> <n> ...] [TEXT <string>]

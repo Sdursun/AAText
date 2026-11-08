@@ -1,6 +1,6 @@
-# aatext.library 1.2 – AAText'in kütüphanesi
+# freetype2.library 2.0 – AAText'in kütüphanesi
 
-AAText için ayrı bir paylaşımlı kütüphane geliştirildi: **aatext.library 1.2**
+AAText için ayrı bir paylaşımlı kütüphane geliştirildi: **freetype2.library 2.0**
 (FreeType 2.15.0). Kaynağı bu deponun `aatextlib/` klasöründe
 (`src/`, derleme `build/`, Aminet paketi `dist/`; AAText'in `make dist`'i
 kütüphaneyi oradan derleyip pakete alır). Bu dosya, kütüphanenin AAText geliştirmesinde nasıl
@@ -9,14 +9,21 @@ kullanılacağını ve AAText'i ilgilendiren özelliklerini listeler.
 Kütüphanenin iki işi var:
 
 1. **FreeType API** – AAText'in gömülü FreeType'ı yerine.
-2. **diskfont motoru** – `.otag` dosyasında `OT_Engine "aatext"` yazan fontlar
-   için (bullet.library API'si).
+2. **diskfont motoru** – `.otag` dosyasında `OT_Engine "freetype2"` yazan
+   fontlar için (bullet.library API'si).
 
-Sistemdeki **freetype2.library 1.3**'e (FTManager ile gelen, FreeType 2.1)
-**dokunmaz**: ikisi yan yana durur, FTManager fontları (`OT_Engine
-"freetype2"`) eskisiyle çalışmaya devam eder. (Kütüphane önce
-`freetype2.library 2.14` olarak yazıldı, 9.10.2026'da bu karar için
-`aatext.library` yapıldı.)
+Sistemdeki **freetype2.library 1.3**'ün (FTManager ile gelen, FreeType 2.1)
+**yerine geçer**: fonksiyon sırası ve `.otag` etiketleri aynı, FTManager
+fontları (`OT_Engine "freetype2"`) yeni motoru değişmeden kullanır; kurulum
+betiği eskisini `LIBS:freetype2.library.bak` olarak saklar.
+
+Ad geçmişi: kütüphane önce `freetype2.library 2.14` olarak yazıldı,
+9.10.2026'da test dönemi için `aatext.library` (1.0–1.2, motor `"aatext"`)
+yapıldı; 8.11.2026'da kullanıcının kararıyla yeniden `freetype2.library`
+oldu (2.0). 2.0'dan önce `"aatext"` motoruyla kurulan fontları
+AATextManager'ın Onarım'ı `"freetype2"` yapar; o zamana kadar
+`LIBS:aatext.library` kalır. Başlık adları (`proto/aatext.h`, `AATextBase`)
+değişmedi.
 
 ---
 
@@ -26,7 +33,7 @@ AAText bugün FreeType'ı statik gömüyor (`third_party/freetype-2.15.0`,
 `src/ft/`). `build/68020/AAText` 350 KB; bunun büyük kısmı FreeType.
 Kütüphaneyle:
 
-- AAText yaklaşık 50–60 KB'a iner; `aatext.library` AAText paketinde
+- AAText yaklaşık 50–60 KB'a iner; `freetype2.library` AAText paketinde
   `Libs/` altında gelir.
 - `aa_ftoption.h` / `aa_ftmodule.h` / `aa_ftsystem.c` gerekmez; kütüphane daha
   çok sürücü içerir (Type 1, CID, PCF, BDF, FNT, WOFF, variable font).
@@ -96,11 +103,10 @@ AATextBase = OpenLibrary("aatext.library", 1);
 
 ---
 
-## 4. diskfont motoru (`OT_Engine "aatext"`)
+## 4. diskfont motoru (`OT_Engine "freetype2"`)
 
-`.otag` etiketleri FTManager / freetype2.library ile aynı; bir `.otag`'ın
-motoru `"freetype2"`den `"aatext"`e çevrilince aatext.library ile çalışır
-(WinUAE'de denendi). Font boyları 1.3 ile aynı formülle hesaplanır.
+`.otag` etiketleri FTManager / freetype2.library 1.x ile aynı; FTManager'ın
+kurduğu fontlar 2.0 ile değişmeden çalışır (WinUAE'de denendi). Font boyları 1.3 ile aynı formülle hesaplanır.
 freetype2.library 1.3'e göre farklar:
 
 - **1 bit glifler siyah-beyaz için hint'leniyor** (`FT_LOAD_TARGET_MONO`):
@@ -159,7 +165,14 @@ Tam liste ve LVO'lar: `freetype2/src/aatext.funcs`, `freetype2/build/lvo.txt`.
 
 ---
 
-## Durum (9.10.2026)
+## Durum
+
+- 8.11.2026: `freetype2.library` 2.0 adıyla WinUAE'de `LIBS:`'e kuruldu
+  (1.3 `LIBS:freetype2.library.bak-1.3` olarak saklandı); AATextManager
+  `"freetype2"` motoruyla font kurdu, diskfont açtı; Onarım 32 `"aatext"`
+  fontunu listeledi.
+
+### 9.10.2026
 
 - WinUAE'de (OS 3.2.3, 68020 derlemesi) test edildi:
   - FreeType API: Verdana, Türkçe harfler, AA çizim.

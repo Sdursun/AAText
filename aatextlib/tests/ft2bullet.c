@@ -1,5 +1,5 @@
 /*
- * ft2bullet - drives the bullet.library API of aatext.library the way
+ * ft2bullet - drives the bullet.library API of freetype2.library 2.x the way
  * diskfont.library does, and prints what comes back.
  *
  *   ft2bullet <file.otag> | FONT <fontfile> [SIZE <points>] [TEXT <string>]
@@ -88,7 +88,7 @@ int main(void)
 {
     LONG args[A_COUNT] = { 0 };
     struct RDArgs *rda;
-    const char *libname = "aatext.library";
+    const char *libname = "freetype2.library";
     const UBYTE *text;
     struct TagItem *otag;
     struct GlyphEngine *ge;

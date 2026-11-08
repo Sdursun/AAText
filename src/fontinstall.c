@@ -23,7 +23,7 @@ void aa_InstallDefaults(struct AAInstall *in)
 
     memset(in, 0, sizeof(*in));
     in->fonts = "FONTS:";
-    in->engine = "aatext";
+    in->engine = "freetype2";
     in->charset = -1;
     for (i = 0; i < (LONG)(sizeof(def) / sizeof(def[0])); i++)
         in->sizes[i] = def[i];

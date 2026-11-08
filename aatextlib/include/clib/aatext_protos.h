@@ -3,7 +3,7 @@
 #define CLIB_AATEXT_PROTOS_H
 
 /*
- * The bullet.library API of aatext.library. The FreeType API
+ * The bullet.library API of freetype2.library. The FreeType API
  * is declared by the FreeType headers themselves.
  */
 

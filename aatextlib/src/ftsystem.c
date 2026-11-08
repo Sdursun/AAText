@@ -1,5 +1,5 @@
 /*
- * aatext.library - FreeType system interface for AmigaOS: memory, file
+ * freetype2.library - FreeType system interface for AmigaOS: memory, file
  * streams and getenv().
  *
  * Memory: every FT_Memory (one per FT_Library, see FT_Init_FreeType) has

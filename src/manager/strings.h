@@ -41,13 +41,13 @@
     S(MSG_COL_PROBLEM,      23, "To repair") \
     S(MSG_P_MOVED,          24, "font file moved") \
     S(MSG_P_CODEPAGE,       25, "no code page") \
-    S(MSG_P_ENGINE,         26, "engine freetype2") \
+    S(MSG_P_ENGINE,         26, "engine aatext") \
     S(MSG_NOTHING,          27, "Nothing to repair.") \
     S(MSG_TOREPAIR,         28, "%ld fonts to repair.") \
     S(MSG_REPAIR_ASK,       29, "Repair %ld fonts?\n\nThe original .otag files are kept as .otag.bak.") \
     S(MSG_REPAIR_GADS,      30, "Repair|Cancel") \
     S(MSG_REPAIRED,         31, "%ld of %ld fonts repaired.") \
-    S(MSG_CHANGE_ENGINE,    32, "Change engine freetype2 to the chosen one") \
+    S(MSG_CHANGE_ENGINE,    32, "Change engine aatext to freetype2") \
     S(MSG_INFO_INSTALL,     33, "Font files are copied to the directories on the Settings tab, .font and .otag are written to FONTS:.") \
     S(MSG_INFO_REPAIR,      34, "Checks the .otag files in FONTS:. Code page: the character set above.") \
     S(MSG_NOTOPEN,          35, "Installed, but diskfont cannot open %s.") \

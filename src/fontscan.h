@@ -84,7 +84,7 @@ enum
 /* repairs (AARepair.what, aa_RepairNeeded()) */
 #define AA_REPAIR_PATH      1   /* moved font file: point at where it is */
 #define AA_REPAIR_CODEPAGE  2   /* no code page: add the one of charset */
-#define AA_REPAIR_ENGINE    4   /* engine "freetype2" -> engine */
+#define AA_REPAIR_ENGINE    4   /* engine "aatext" (before 2.0) -> engine */
 #define AA_REPAIR_HEIGHT    8   /* height from the bounding box -> hhea */
 #define AA_REPAIR_WIDTH    16   /* fixed width, cells one em wide: the
                                    font's advance / em as OT_SpaceFactor */
@@ -94,7 +94,7 @@ struct AARepair
 {
     ULONG what;             /* AA_REPAIR_* wanted */
     LONG  charset;          /* AA_CHARSET_* for AA_REPAIR_CODEPAGE */
-    const char *engine;     /* for AA_REPAIR_ENGINE, e.g. "aatext" */
+    const char *engine;     /* for AA_REPAIR_ENGINE: "freetype2" */
 };
 
 /*

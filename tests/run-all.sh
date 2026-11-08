@@ -86,8 +86,9 @@ perl -pe 's/DejaVuSans\.ttf/NotThere__.ttf/' tests/data/MovedTest.otag > $M/Miss
 perl -pe 's/DejaVuSans\.ttf/NotAFont__.ttf/' tests/data/MovedTest.otag > $M/NotFont.otag
 echo "garbage" > $M/Broken.otag
 perl tests/otag-engine.pl tests/data/fonts/AutoTest.otag aatext > $M/AAEngine.otag
-# FTManager .otag: engine freetype2, no code page, "Fonts:_ttf/verdana.ttf"
-cp tests/data/verdanaregular.otag $M/FT2.otag
+# FTManager .otag, engine changed to aatext (a font installed with
+# AATextManager before 2.0): no code page, "Fonts:_ttf/verdana.ttf"
+perl tests/otag-engine.pl tests/data/verdanaregular.otag aatext > $M/FT2.otag
 mkdir $M/_ttf
 cp third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf $M/_ttf/verdana.ttf
 # an engine library for the engine column: aatext.library 1.0, no ttf.library

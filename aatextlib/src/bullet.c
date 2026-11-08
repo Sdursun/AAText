@@ -1,6 +1,6 @@
 /*
- * aatext.library - the bullet.library API: an outline engine for
- * diskfont.library (OT_Engine "aatext").
+ * freetype2.library - the bullet.library API: an outline engine for
+ * diskfont.library (OT_Engine "freetype2").
  *
  * The behaviour follows freetype2.library 1.x (AROS, from E. Lesueur's
  * MorphOS ft2.library and R. Griffith's ttf.library) so that existing .otag
@@ -92,7 +92,7 @@ struct FT2Engine
     LONG                    xppem, yppem;
 };
 
-static const char EngineName[] = "aatext";
+static const char EngineName[] = "freetype2";
 
 static LONG seterr(struct FT2Engine *e, LONG err)
 {

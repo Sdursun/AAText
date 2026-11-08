@@ -105,7 +105,6 @@ static struct List tablist, charsetlist, defcharsetlist, enginelist, filelb, rep
 static char statustext[200];
 static char sizestext[80] = "8-16,18,20,24";
 
-static const char *const engines[2] = { "aatext", "freetype2" };
 
 static const LONG charset_msg[AA_NUM_CHARSETS] =
 {
@@ -248,9 +247,10 @@ static LONG Charset(void)
     return (LONG)GetGad(GID_CHARSET, CHOOSER_Selected);
 }
 
+/* the engine of installed fonts: AAText's freetype2.library (2.0+) */
 static const char *Engine(void)
 {
-    return engines[GetGad(GID_ENGINE, CHOOSER_Selected) ? 1 : 0];
+    return "freetype2";
 }
 
 static struct Hook previewhook;
@@ -1645,8 +1645,6 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
         AddChoice(&charsetlist, GetString(charset_msg[i]));
         AddChoice(&defcharsetlist, GetString(charset_msg[i]));
     }
-    AddChoice(&enginelist, GetString(MSG_ENGINE_AATEXT));
-    AddChoice(&enginelist, GetString(MSG_ENGINE_FT2));
     for (i = 0; i < 3; i++)
     {
         AddChoice(&pvsplist, GetString(MSG_PV_SP_OFF + i));
@@ -1682,14 +1680,6 @@ static BOOL OpenWin(struct Screen *scr, LONG charset)
                     CHOOSER_Selected, charset,
                 End,
                 Label(GetString(MSG_CHARSET)),
-                LAYOUT_AddChild, gads[GID_ENGINE] =
-                                 (struct Gadget *)ChooserObject,
-                    GA_ID, GID_ENGINE, GA_RelVerify, TRUE,
-                    CHOOSER_PopUp, TRUE,
-                    CHOOSER_Labels, (ULONG)&enginelist,
-                    CHOOSER_Selected, 0,
-                End,
-                Label(GetString(MSG_ENGINE)),
             End,
             CHILD_WeightedHeight, 0,
 

@@ -3,7 +3,7 @@
 #   make            release build (68020+)
 #   make DEBUG=1    debug build with serial kprintf output
 #   make CPU=68060  build for 68060
-#   make USE_AATEXTLIB=1   FreeType from aatext.library instead of built in
+#   make USE_AATEXTLIB=1   FreeType from freetype2.library 2.x instead of built in
 #                   (build/<cpu>-lib/AAText; headers in include/aatextlib)
 #
 # Normally invoked inside Docker via build.ps1.
@@ -43,7 +43,7 @@ ifeq ($(DEBUG),1)
 CFLAGS  += -DDEBUG
 endif
 
-# FreeType in the program, or from aatext.library: then only AAText's
+# FreeType in the program, or from freetype2.library 2.x: then only AAText's
 # memory functions (aa_ftsystem.c) are linked, the rest is in the library
 ifeq ($(USE_AATEXTLIB),1)
 CFLAGS  += -DAA_USE_AATEXTLIB -Iinclude/aatextlib
@@ -175,7 +175,7 @@ $(BUILDDIR)/lcdtest-ct: tests/lcdtest.c $(CT_LIB) $(BUILDDIR)/cgx.o
 # (docs are UTF-8 in the repository; the Turkish one is converted to
 # ISO-8859-9, the usual Turkish character set on the Amiga)
 DISTDIR := build/dist
-# aatext.library comes from its package, built in aatextlib/
+# freetype2.library 2.x comes from its package, built in aatextlib/
 AATEXTLIB_PKG ?= aatextlib/dist/aatext_lib
 
 .PHONY: dist
@@ -200,8 +200,8 @@ dist:
 	cp docs/AAText_EN.txt docs/AAText.prefs.example $(DISTDIR)/AAText/
 	cp LICENSE $(DISTDIR)/AAText/LICENSE.txt
 	cp LICENSE.APL $(DISTDIR)/AAText/LICENSE.APL.txt
-	# font installer and its library (from the aatext.library package:
-	# Libs/aatext.library, LICENSE.txt, FTL.txt)
+	# font installer and its library (from the freetype2.library package:
+	# Libs/freetype2.library, LICENSE.txt, FTL.txt)
 	cp build/68020/AATextManager $(MGR_ICON) $(DISTDIR)/AAText/
 	chmod 644 $(DISTDIR)/AAText/AATextManager.info
 	cp $(MGR_CATALOG) "$(DISTDIR)/AAText/Catalogs/turkish/"
@@ -218,11 +218,11 @@ dist:
 	cp build/68020/AATextManager_MUI $(DISTDIR)/AAText/MUI/AATextManager
 	chmod 755 $(DISTDIR)/AAText/MUI/AATextPrefs $(DISTDIR)/AAText/MUI/AATextManager
 	mkdir -p $(DISTDIR)/AAText/Libs
-	cp $(AATEXTLIB_PKG)/Libs/aatext.library $(DISTDIR)/AAText/Libs/
+	cp $(AATEXTLIB_PKG)/Libs/freetype2.library $(DISTDIR)/AAText/Libs/
 	cp $(AATEXTLIB_PKG)/LICENSE.txt $(DISTDIR)/AAText/LICENSE.aatext.txt
 	cp $(AATEXTLIB_PKG)/FTL.txt $(DISTDIR)/AAText/FTL.txt
 	chmod 644 $(DISTDIR)/AAText/LICENSE.aatext.txt $(DISTDIR)/AAText/FTL.txt
-	chmod 755 $(DISTDIR)/AAText/Libs/aatext.library $(DISTDIR)/AAText/AATextManager
+	chmod 755 $(DISTDIR)/AAText/Libs/freetype2.library $(DISTDIR)/AAText/AATextManager
 	iconv -f UTF-8 -t ISO-8859-9 docs/AAText_TR.txt > $(DISTDIR)/AAText/AAText_TR.txt
 	# installer script (Turkish strings and paths in ISO-8859-9) and its icon
 	iconv -f UTF-8 -t ISO-8859-9 installer/Install-AAText > $(DISTDIR)/AAText/Install-AAText
@@ -260,7 +260,7 @@ $(BUILDDIR)/gui/%.o: src/%.c src/*.h src/prefsgui/*.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -Wno-pointer-sign -c -o $@ $<
 
-# the mapping preview: AATextManager's, FreeType from aatext.library
+# the mapping preview: AATextManager's, FreeType from freetype2.library 2.x
 $(BUILDDIR)/gui/manager/preview.o: src/manager/preview.c src/manager/preview.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/aatextlib -Wno-pointer-sign -c -o $@ $<
@@ -312,7 +312,7 @@ $(ICON): icons/AATextPrefs.png icons/AATextPrefs_sel.png tools/mkicon.py
 	python3 -I tools/mkicon.py tool icons/AATextPrefs.png \
 		icons/AATextPrefs_sel.png --stack 16384 -o $@
 
-# Font installer; FreeType from aatext.library
+# Font installer; FreeType from freetype2.library 2.x
 MGR_TARGET := $(BUILDDIR)/AATextManager
 MGR_SRCS   := src/manager/main.c src/manager/gui.c src/manager/core.c src/manager/settings.c src/manager/preview.c src/manager/update.c src/manager/strings.c src/prefs.c src/debug.c src/fontinstall.c src/fontinfo.c \
               src/otagfile.c src/otag.c src/charsets.c src/fontscan.c src/fontfile.c \

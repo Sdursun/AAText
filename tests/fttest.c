@@ -264,8 +264,8 @@ int main(int argc, char **argv)
         return strcmp(have ? v : "none", argv[4]) ? 10 : 0;
     }
     /* "repair": add the Latin-5 code page to font argv[3], set its
-       engine freetype2 -> aatext and its height bounding box -> hhea;
-       scan again: ok, engine aatext, code page, hhea, .bak kept; a
+       engine aatext -> freetype2 and its height bounding box -> hhea;
+       scan again: ok, engine freetype2, code page, hhea, .bak kept; a
        second repair has nothing to do */
     if (strcmp(argv[2], "repair") == 0 && argc > 3)
     {
@@ -274,7 +274,7 @@ int main(int argc, char **argv)
         static const struct AARepair rp =
             { AA_REPAIR_PATH | AA_REPAIR_CODEPAGE | AA_REPAIR_ENGINE |
               AA_REPAIR_HEIGHT,
-              AA_CHARSET_LATIN5, "aatext" };
+              AA_CHARSET_LATIN5, "freetype2" };
         LONG cnt = aa_ScanFonts(e, 32), k, r, r2;
         ULONG what;
         BPTR lock;
@@ -299,7 +299,7 @@ int main(int argc, char **argv)
         if (what != (AA_REPAIR_CODEPAGE | AA_REPAIR_ENGINE |
                      AA_REPAIR_HEIGHT) || e[k].bboxheight ||
             r != AA_FIX_OK || r2 != AA_FIX_NOTHING ||
-            strcmp(e[k].engine, "aatext") || !e[k].codepage ||
+            strcmp(e[k].engine, "freetype2") || !e[k].codepage ||
             e[k].status != AA_DIAG_OK || !lock)
         {
             printf("FAIL: after the repair\n");
@@ -405,7 +405,7 @@ int main(int argc, char **argv)
         len = fp ? fread(buf, 1, sizeof(buf), fp) : 0;
         if (fp)
             fclose(fp);
-        if (!aa_ParseOTag(buf, len, &info) || strcmp(info.engine, "aatext") ||
+        if (!aa_ParseOTag(buf, len, &info) || strcmp(info.engine, "freetype2") ||
             strcmp(info.fontfile, in.fontfile) || !info.hascodepage ||
             info.codepage[0xFD] != 0x0131 || info.facenum != 0)
         {

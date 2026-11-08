@@ -1,4 +1,4 @@
-| aatext.library - first code in the file and the stack switcher.
+| freetype2.library - first code in the file and the stack switcher.
 
         .text
         .even

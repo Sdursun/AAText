@@ -1,30 +1,49 @@
-aatext.library 1.2
-==================
+freetype2.library 2.0
+=====================
 
 The library of AAText: FreeType 2.15.0 as an AmigaOS 3 shared library,
 and an outline font engine for diskfont.library.
 
-aatext.library does not replace or change freetype2.library. Both can be
-installed; fonts made for freetype2.library keep using it.
+It replaces freetype2.library 1.x (FreeType 2.1 from 2002, installed with
+FTManager). The function order and the .otag tags are those of 1.x, so
+programs written for it and fonts installed with FTManager work
+unchanged. Until version 1.2 this library was called aatext.library;
+see "Earlier names" below.
 
 
 Installation
 ------------
 
-  Copy Libs/aatext.library LIBS:
+Keep the old library first, then copy the new one:
 
-For a 68060 use Libs/aatext.library.060 instead (copy it as
-LIBS:aatext.library). Libs/aatext.library.debug prints messages to the
-serial port, for bug reports.
+  Copy LIBS:freetype2.library LIBS:freetype2.library.bak
+  Copy Libs/freetype2.library LIBS:
+
+For a 68060 use Libs/freetype2.library.060 instead (copy it as
+LIBS:freetype2.library). Libs/freetype2.library.debug prints messages to
+the serial port, for bug reports. The AAText installer does all this
+(it keeps an older freetype2.library as LIBS:freetype2.library.bak).
+
+To go back to 1.x: Copy LIBS:freetype2.library.bak LIBS:freetype2.library
+
+
+Earlier names
+-------------
+
+Versions 1.0-1.2 were called aatext.library, with the engine name
+"aatext". Fonts installed with AATextManager before 2.0 have
+OT_Engine "aatext" in their .otag file and need LIBS:aatext.library
+until AATextManager's Repair tab changes them to "freetype2" (or:
+AATextManager REPAIR APPLY). After that LIBS:aatext.library can be
+deleted.
 
 
 Font engine
 -----------
 
-diskfont.library uses aatext.library for fonts whose .otag file says
-OT_Engine "aatext". The tags are those of freetype2.library (FTManager),
-so a .otag file made for freetype2.library works with aatext.library when
-its engine is changed from "freetype2" to "aatext".
+diskfont.library uses freetype2.library for fonts whose .otag file says
+OT_Engine "freetype2": those installed with AATextManager and those
+installed with FTManager for freetype2.library 1.x.
 
 What the engine gives diskfont:
 
@@ -39,8 +58,8 @@ What the engine gives diskfont:
   (OT_RotateSin/Cos), width (OT_SetFactor).
 - 32-bit glyph codes (OT_GlyphCode_32, OT_GlyphCode2_32): codes 256 and
   up are Unicode.
-- Font sizes computed as by freetype2.library 1.3, so a font is as tall
-  with either engine.
+- Font sizes computed as by freetype2.library 1.3, so fonts installed
+  for 1.x keep their height.
 
 
 Code page
@@ -50,7 +69,7 @@ Amiga character codes are mapped to Unicode with, in this order:
 
 1. the code page in the .otag file (OT_Spec2_CodePage), if there is one;
 2. ENV:ftcodepage: 256 big-endian 16-bit Unicode values (512 bytes),
-   the same file freetype2.library uses;
+   the same file freetype2.library 1.x uses;
 3. ISO-8859-1.
 
 For Turkish (ISO-8859-9), AAText includes ftcodepage.latin5:
@@ -73,7 +92,7 @@ For Turkish (ISO-8859-9), AAText includes ftcodepage.latin5:
   OT_Spec6_FaceNum     face in a .ttc/.otc collection
   OT_Spec9_Hinter      0 the font's own hinting (default),
                        1 FreeType autohinter, 2 none,
-                       3 light autohinting (aatext.library only)
+                       3 light autohinting (2.0 and aatext.library)
 
 See Developer/include/libraries/aatext.h for the values.
 
@@ -110,7 +129,7 @@ the FreeType 2.15.0 headers. With gcc:
 
   struct Library *AATextBase;
 
-  AATextBase = OpenLibrary("aatext.library", 1);
+  AATextBase = OpenLibrary("freetype2.library", 2);
   if (AATextBase)
   {
       FT_Library lib;
@@ -136,12 +155,15 @@ the FreeType 2.15.0 headers. With gcc:
   CloseEngine, SetInfoA, ObtainInfoA, ReleaseInfoA) take theirs in A0/A1
   as in bullet.library.
 - The function order is that of freetype2.library 1.3 (FreeType API from
-  LVO -90 on), with 71 newer functions after it. Twelve reserved slots
+  LVO -90 on), with 71 newer functions after it; a program for 1.x runs
+  unchanged and can check for version 2 to use the newer ones. Twelve reserved slots
   return FT_Err_Unimplemented_Feature.
 - FreeType's rule applies: an FT_Library and everything made from it
   belongs to one task at a time. Give every task its own FT_Library.
 - Memory for each FT_Library comes from its own exec pool; FT_Done_FreeType
   frees all of it.
+- The header names stay those of 1.0-1.2 (proto/aatext.h, AATextBase,
+  libraries/aatext.h with AATEXTLIBNAME "freetype2.library").
 - Developer/aatext.funcs lists the functions in library order;
   Developer/ft2info.c, ft2bullet.c and ft2dfont.c are examples.
 
@@ -155,7 +177,7 @@ Test programs
   Tests/ft2bullet FONTS:verdanaregular.otag SIZE 13 ART WIDTHS
       the engine as diskfont uses it: glyph maps, widths, kerning
       (AA for 8-bit glyph maps, FONT <file> instead of a .otag file;
-      the .otag may name any engine, the test uses aatext.library)
+      the .otag may name any engine, the test uses freetype2.library)
 
   Tests/ft2dfont FONT myfont.font SIZES 11 13 16 24
       opens the font through diskfont.library and draws it in a window,

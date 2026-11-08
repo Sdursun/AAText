@@ -4,7 +4,7 @@
 /*
  * What AATextManager needs to know about a font file to write its .otag:
  * names, style, weight and width class, spacing. Read with FreeType: in
- * AATextManager from aatext.library, in the host tests from the static
+ * AATextManager from freetype2.library, in the host tests from the static
  * FreeType (same source, see Makefile).
  */
 

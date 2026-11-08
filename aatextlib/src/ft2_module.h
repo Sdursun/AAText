@@ -1,5 +1,5 @@
 /*
- * aatext.library FreeType module list.
+ * freetype2.library FreeType module list.
  *
  * Font drivers: TrueType, OpenType/CFF, Type 1, CID, Type 42, PFR, Windows
  * FNT, PCF and BDF. Renderers: smooth (antialiased) first, then the

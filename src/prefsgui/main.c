@@ -1728,7 +1728,7 @@ int main(int argc, char **argv)
 
     if (!OpenLibs())
         goto out;
-    AATextBase = OpenLibrary((CONST_STRPTR)"aatext.library", 1);
+    AATextBase = OpenLibrary((CONST_STRPTR)"freetype2.library", 2);
     InitStrings(language[0] ? language : NULL);
 
     pc_Init();

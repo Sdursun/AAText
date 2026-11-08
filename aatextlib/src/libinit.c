@@ -1,5 +1,5 @@
 /*
- * aatext.library - library header: RomTag, init, open, close, expunge,
+ * freetype2.library - library header: RomTag, init, open, close, expunge,
  * and the function table.
  */
 
@@ -18,7 +18,7 @@ struct FT2Base *FT2Base;
 
 static const char LibName[] = LIB_NAME;
 static const char LibId[] =
-    "$VER: " LIB_NAME " 1.2 (" LIB_DATE ") " LIB_FTVER "\r\n";
+    "$VER: " LIB_NAME " 2.0 (" LIB_DATE ") " LIB_FTVER "\r\n";
 
 /* ---- functions in registers ------------------------------------------- */
 
@@ -130,7 +130,7 @@ static struct FT2Base *LibInit(REG(d0, struct FT2Base *base),
     if (!DOSBase || !UtilityBase)
         goto fail;
 
-    D(("aatext.library: init %08lx\n", (ULONG)base));
+    D(("freetype2.library: init %08lx\n", (ULONG)base));
     return base;
 
 fail:
@@ -216,7 +216,7 @@ static ULONG MeasuredCall(ULONG (*func)(APTR), APTR arg)
         ULONG *low = sss.stk_Lower;
 
         ft2_MaxUsed = used;
-        D(("aatext.library: stack used %ld bytes (new maximum) by \"%s\", "
+        D(("freetype2.library: stack used %ld bytes (new maximum) by \"%s\", "
            "lowest longs %08lx %08lx %08lx %08lx\n",
            used, (ULONG)FindTask(NULL)->tc_Node.ln_Name,
            low[0], low[1], low[2], low[3]));

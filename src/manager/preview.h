@@ -3,7 +3,7 @@
 
 /*
  * Preview of a font that is not installed yet: sample lines in a few
- * sizes, rendered with FreeType (aatext.library) into an RGB buffer in
+ * sizes, rendered with FreeType (freetype2.library) into an RGB buffer in
  * the program's own process. The gadget's render hook only copies that
  * buffer to the window (WritePixelArray), so FreeType never runs on
  * Intuition's small stacks. RTG screens (RGB) and palette screens

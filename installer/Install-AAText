@@ -4,7 +4,7 @@
 ; UTF-8 here; "make dist" converts it to ISO-8859-9 for the package.
 ;
 ; Installs: C:AAText (68020 or 68060 build), SYS:Prefs/AATextPrefs,
-; SYS:System/AATextManager with LIBS:aatext.library (both programs as
+; SYS:System/AATextManager with LIBS:freetype2.library 2.x (both programs as
 ; ReAction or, with MUI 3.8 or newer, MUI build), the Turkish
 ; catalogs, the documents in LOCALE:Help/türkçe and LOCALE:Help/english,
 ; and "Run >NIL: C:AAText" in S:Startup-Sequence right after IPrefs
@@ -54,8 +54,9 @@
     (delete "SYS:System/AATextManager" (infos)
       (prompt (if #tr "SYS:System/AATextManager silinsin mi?" "Delete SYS:System/AATextManager?"))
       (help @delete-help) (confirm)))
-  ; LIBS:aatext.library stays: fonts installed with the engine "aatext"
-  ; (also the screen font) cannot be opened without it
+  ; LIBS:aatext.library (the library's name before 2.0) stays: fonts
+  ; installed with the engine "aatext" (also the screen font) cannot be
+  ; opened without it until AATextManager repairs them
   (if (exists (tackon #catdir "aatextprefs.catalog"))
     (delete (tackon #catdir "aatextprefs.catalog")))
   (if (exists (tackon #catdir "aatextmanager.catalog"))
@@ -106,10 +107,10 @@
   (askoptions
     (prompt (if #tr "Hangi parçalar kurulsun? (AAText her zaman kurulur)"
                     "Which parts should be installed? (AAText is always installed)"))
-    (help (if #tr "AATextPrefs: ayar programı (SYS:Prefs).\nAATextManager: font kurucu, onarım ve tanılama (SYS:System, LIBS:aatext.library ile).\nTürkçe kataloglar: Türkçe arayüz (LOCALE:Catalogs/türkçe).\nBelgeler: LOCALE:Help/türkçe ve LOCALE:Help/english."
-                  "AATextPrefs: the settings program (SYS:Prefs).\nAATextManager: font installer, repair and diagnostics (SYS:System, with LIBS:aatext.library).\nTurkish catalogs: Turkish user interface (LOCALE:Catalogs/türkçe).\nDocuments: LOCALE:Help/türkçe and LOCALE:Help/english."))
+    (help (if #tr "AATextPrefs: ayar programı (SYS:Prefs).\nAATextManager: font kurucu, onarım ve tanılama (SYS:System, LIBS:freetype2.library 2.x ile).\nTürkçe kataloglar: Türkçe arayüz (LOCALE:Catalogs/türkçe).\nBelgeler: LOCALE:Help/türkçe ve LOCALE:Help/english."
+                  "AATextPrefs: the settings program (SYS:Prefs).\nAATextManager: font installer, repair and diagnostics (SYS:System, with LIBS:freetype2.library 2.x).\nTurkish catalogs: Turkish user interface (LOCALE:Catalogs/türkçe).\nDocuments: LOCALE:Help/türkçe and LOCALE:Help/english."))
     (choices "AATextPrefs"
-             "AATextManager + aatext.library"
+             "AATextManager + freetype2.library"
              (if #tr "Türkçe kataloglar" "Turkish catalogs")
              (if #tr "Belgeler" "Documents"))
     (default 15)))
@@ -167,10 +168,20 @@
     (source (cat #guidir "AATextManager")) (dest "SYS:System")
     (newname "AATextManager"))
   (copyfiles (source "AATextManager.info") (dest "SYS:System"))
+  ; another freetype2.library (1.x, by other authors) is kept as
+  ; LIBS:freetype2.library.bak before ours (2.x) replaces it
+  (if (and (exists "LIBS:freetype2.library")
+           (< (getversion "LIBS:freetype2.library") (* 2 65536))
+           (not (exists "LIBS:freetype2.library.bak")))
+    (copyfiles
+      (prompt (if #tr "Eski freetype2.library, LIBS:freetype2.library.bak olarak saklanıyor." "Keeping the old freetype2.library as LIBS:freetype2.library.bak."))
+      (help @copyfiles-help)
+      (source "LIBS:freetype2.library") (dest "LIBS:")
+      (newname "freetype2.library.bak")))
   (copylib
-    (prompt (if #tr "aatext.library, LIBS: içine kopyalanıyor." "Copying aatext.library to LIBS:."))
+    (prompt (if #tr "freetype2.library 2.x, LIBS: içine kopyalanıyor." "Copying freetype2.library 2.x to LIBS:."))
     (help @copylib-help)
-    (source "Libs/aatext.library") (dest "LIBS:") (confirm))
+    (source "Libs/freetype2.library") (dest "LIBS:") (confirm))
 ))
 (complete 60)
 

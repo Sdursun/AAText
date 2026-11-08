@@ -58,7 +58,7 @@ static BOOL IsFontFile(const char *path)
 }
 
 /* Engines AAText can use: TrueType/OpenType through FreeType (ttf.library,
-   TTEngine, freetype2.library, aatext.library). */
+   TTEngine, freetype2.library, and aatext.library, its name before 2.0). */
 static BOOL KnownEngine(const char *engine)
 {
     return !engine || !Stricmp((CONST_STRPTR)engine, (CONST_STRPTR)"ttf") ||
@@ -407,8 +407,9 @@ ULONG aa_RepairNeeded(const struct AADiagEntry *e, const struct AARepair *r)
         r->charset >= 0 && r->charset < AA_NUM_CHARSETS &&
         e->charset != r->charset && FreeTypeEngine(e->engine))
         what |= AA_REPAIR_CHARSET;
+    /* fonts installed before the library was renamed freetype2.library */
     if ((r->what & AA_REPAIR_ENGINE) && r->engine &&
-        !Stricmp((CONST_STRPTR)e->engine, (CONST_STRPTR)"freetype2") &&
+        !Stricmp((CONST_STRPTR)e->engine, (CONST_STRPTR)"aatext") &&
         Stricmp((CONST_STRPTR)r->engine, (CONST_STRPTR)e->engine))
         what |= AA_REPAIR_ENGINE;
     if ((r->what & AA_REPAIR_HEIGHT) && e->bboxheight &&
@@ -529,7 +530,7 @@ LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
     return aa_RepairOTag(e, &path, backup);
 }
 
-/* "1.0" from "$VER: aatext.library 1.0 (9.10.2026)" */
+/* "2.0" from "$VER: freetype2.library 2.0 (8.11.2026)" */
 static BOOL VersionFromVer(const char *ver, char *buf, LONG len)
 {
     LONG n = 0;

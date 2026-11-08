@@ -40,7 +40,7 @@
 
 #ifdef AA_USE_AATEXTLIB
 /*
- * USE_AATEXTLIB=1 build: FreeType comes from aatext.library. The
+ * USE_AATEXTLIB=1 build: FreeType comes from freetype2.library 2.x. The
  * proto file turns every FreeType call into a call through the library
  * vector; it must follow the FreeType headers.
  */

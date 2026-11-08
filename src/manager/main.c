@@ -6,7 +6,7 @@
  *   AATextManager FILES/M,FACE/N,CHARSET/K,ENGINE/K,SIZES/K,TO/K,
  *                 OVERWRITE/S,REPAIR/S,APPLY/S,LANGUAGE/K
  *
- * FreeType comes from aatext.library.
+ * FreeType comes from freetype2.library.
  */
 
 #include <exec/types.h>
@@ -130,9 +130,10 @@ BOOL mgr_CheckFont(const struct AAInstall *in)
 
 /*
  * REPAIR: check the .otag files in FONTS: and list what would be
- * repaired (moved font file, code page of CHARSET, engine freetype2 ->
- * ENGINE); with APPLY, do it (backups as <otag>.bak). FILES, if given,
- * are the font names to look at.
+ * repaired (moved font file, code page of CHARSET, engine "aatext" of
+ * fonts installed before the library became freetype2.library ->
+ * ENGINE, default "freetype2"); with APPLY, do it (backups as
+ * <otag>.bak). FILES, if given, are the font names to look at.
  */
 static LONG Repair(STRPTR *names, LONG charset, const char *engine,
                    BOOL apply)
@@ -144,11 +145,10 @@ static LONG Repair(STRPTR *names, LONG charset, const char *engine,
 
     r.what = AA_REPAIR_PATH | AA_REPAIR_HEIGHT | AA_REPAIR_WIDTH;
     r.charset = charset;
-    r.engine = engine;
+    r.engine = engine ? engine : "freetype2";
+    r.what |= AA_REPAIR_ENGINE;
     if (charset >= 0)
         r.what |= AA_REPAIR_CODEPAGE;
-    if (engine)
-        r.what |= AA_REPAIR_ENGINE;
 
     if (!(e = AllocVec(sizeof(*e) * MAX_FONTS, MEMF_ANY | MEMF_CLEAR)))
         return RETURN_FAIL;
@@ -184,9 +184,9 @@ static LONG Repair(STRPTR *names, LONG charset, const char *engine,
                (LONG)((what & AA_REPAIR_PATH) ? " font file moved;" : ""),
                (LONG)((what & AA_REPAIR_CODEPAGE) ? " no code page;" : ""),
                (LONG)((what & AA_REPAIR_ENGINE) ?
-                      " engine freetype2 -> " : ""));
+                      " engine aatext -> " : ""));
         if (what & AA_REPAIR_ENGINE)
-            Printf("%s\n", (LONG)engine);
+            Printf("%s\n", (LONG)r.engine);
         else
             Printf("\n");
         if (!apply)
@@ -223,7 +223,7 @@ static LONG Repair(STRPTR *names, LONG charset, const char *engine,
     return rc;
 }
 
-/* Without aatext.library: a requester when started from Workbench */
+/* Without freetype2.library: a requester when started from Workbench */
 static void NoLibrary(BOOL wb)
 {
     struct EasyStruct es;
@@ -254,7 +254,7 @@ static void NoLibrary(BOOL wb)
 /*
  * Run Main() on a stack of at least MIN_STACK bytes. diskfont.library
  * makes the font for the check after installing on our stack, through
- * the engine (aatext.library); a big font such as Calibri overflowed the
+ * the engine (freetype2.library); a big font such as Calibri overflowed the
  * 4 KB a Shell gives and the Amiga rebooted. The window, Shell and
  * Workbench start all come here, whatever stack they were given.
  */
