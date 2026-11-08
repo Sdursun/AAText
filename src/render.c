@@ -826,19 +826,25 @@ static void LineRGB(UBYTE *buf, LONG w, LONG y, LONG x0, LONG x1,
 
 /*
  * Draw the string into the buffer, character by character, keeping the
- * cells of the bitmap font. Called with the glyph lock held; calls no
- * graphics functions.
+ * cells of the bitmap font. ox is the pen origin inside the buffer (room
+ * for italic on the left, see StyleExtent()). Bold and italic as
+ * graphics.library draws them, like DrawReal(). Called with the glyph
+ * lock held; calls no graphics functions.
  */
 static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
                        struct AAFont *font, CONST_STRPTR s, LONG count,
-                       const UBYTE *fg, const struct AABlend *bt)
+                       LONG ox, const UBYTE *fg, const struct AABlend *bt)
 {
     struct TextFont *tf = rp->Font;
     WORD *kern = (WORD *)tf->tf_CharKern;
     WORD *space = (WORD *)tf->tf_CharSpace;
     LONG defidx = tf->tf_HiChar - tf->tf_LoChar + 1;  /* "not in font" glyph */
-    LONG pen = 0;
+    LONG pen = ox;
     LONG baseline = tf->tf_Baseline + font->yoffset;   /* measured, see glyphs.h */
+    UBYTE style = rp->AlgoStyle;
+    LONG italicbase = (style & FSF_ITALIC) ? baseline : -1;
+    LONG smear = (style & FSF_BOLD) ? (tf->tf_BoldSmear ? tf->tf_BoldSmear : 1)
+                                    : 0;
 
     while (count--)
     {
@@ -855,16 +861,37 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
             LONG gx = pen + g->left + (cell - g->advance) / 2;
             LONG gy = baseline + 1 - g->top;  /* see AAGlyph.top */
 
-            BlendGlyph(buf, w, h, g, gx, gy, fg, bt, -1);
+            BlendGlyph(buf, w, h, g, gx, gy, fg, bt, italicbase);
+            if (smear)
+                BlendGlyph(buf, w, h, g, gx + smear, gy, fg, bt, italicbase);
         }
         pen += cell + rp->TxSpacing;
     }
 
     /* one row below the baseline, as graphics.library draws it */
-    if (rp->AlgoStyle & FSF_UNDERLINED)
+    if (style & FSF_UNDERLINED)
         LineRGB(buf, w, tf->tf_Baseline + 1 < h ? tf->tf_Baseline + 1
                                                  : tf->tf_Baseline,
-                0, w, fg);
+                ox, pen, fg);
+}
+
+/*
+ * Pixels that algorithmic styles add left and right of the cells, as
+ * TextExtent() reports them (see aa_MExtent()); the bold smear as
+ * DrawString() draws it.
+ */
+static void StyleExtent(struct RastPort *rp, LONG *left, LONG *right)
+{
+    struct TextFont *tf = rp->Font;
+
+    *left = *right = 0;
+    if (rp->AlgoStyle & FSF_BOLD)
+        *right += tf->tf_BoldSmear ? tf->tf_BoldSmear : 1;
+    if (rp->AlgoStyle & FSF_ITALIC)
+    {
+        *right += tf->tf_Baseline / 2;
+        *left = (tf->tf_YSize - tf->tf_Baseline) / 2;
+    }
 }
 
 /*
@@ -1647,6 +1674,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     BOOL palette;
     LONG sx = 0, sy = 0;           /* cropped columns and rows */
     LONG x, y, w, h, slot = -1;
+    LONG adv, left, right;         /* cells, style overhang */
     BOOL same = FALSE;
     ULONG key;
 #ifdef DEBUG
@@ -1665,10 +1693,6 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
 
     if (rp->DrawMode & (COMPLEMENT | INVERSVID))
         FAIL(R_DRAWMODE);
-    /* underline (MUI's key letters) keeps the cells; bold and italic can
-       change widths and extents, the original draws them */
-    if (rp->AlgoStyle & (FSF_BOLD | FSF_ITALIC))
-        FAIL(R_STYLE);
     if (!bm)
         FAIL(R_NOBITMAP);
     if (mode == AA_MODE_TEXT && !font)
@@ -1699,25 +1723,28 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         FAIL(R_NOVIEWPORT);
     }
 
-    /* Same cell the original Text() covers; cp_x advance == TextLength(). */
-    w = CalcWidth(rp, string, count);
+    /* Same cells the original Text() covers; cp_x advance == TextLength(). */
+    adv = CalcWidth(rp, string, count);
 #ifdef DEBUG
-    CheckWidth(rp, string, count, &w);
+    CheckWidth(rp, string, count, &adv);
 #endif
+    /* the box: the cells plus what bold and italic add, as TextExtent() */
+    StyleExtent(rp, &left, &right);
+    w = adv + left + right;
     h = tf->tf_YSize;
-    x = rp->cp_x;
+    x = rp->cp_x - left;
     y = rp->cp_y - tf->tf_Baseline;
-    if (w <= 0 || h <= 0 || w * h * 3 > AA_MAX_BUFFER ||
+    if (adv <= 0 || h <= 0 || w * h * 3 > AA_MAX_BUFFER ||
         !CoordsOk(rp, bm, x, y, w, h, &sx, &sy))
         FAIL(R_COORDS);
 
     if (mode == AA_MODE_BOX)
     {
         if (rp->DrawMode & JAM2)
-            FillRect(rp, (UBYTE)rp->BgPen, x, y, w, h);
+            FillRect(rp, (UBYTE)rp->BgPen, x + left, y, adv, h);
         /* 1 pixel gap on the right so separate Text() calls are visible */
-        FillRect(rp, GetAPen(rp), x, y, w > 1 ? w - 1 : w, h);
-        rp->cp_x += w;
+        FillRect(rp, GetAPen(rp), x + left, y, adv > 1 ? adv - 1 : adv, h);
+        rp->cp_x += adv;
         COUNT(R_DRAWN);
         return TRUE;
     }
@@ -1749,7 +1776,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
             aa_LockGlyphs();
             aa_GrayCoverage = TRUE;
             if (aa_PrepareFont(font, tf))
-                DrawString(buf, w, h, rp, font, string, count, white,
+                DrawString(buf, w, h, rp, font, string, count, left, white,
                            BlendFor(white));
             aa_GrayCoverage = FALSE;
             aa_UnlockGlyphs();
@@ -1761,7 +1788,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         FreeBuffer(buf);
         if (!done)
             FAIL(R_NOMEM);
-        rp->cp_x += w;
+        rp->cp_x += adv;
         COUNT(R_PALETTE);
         return TRUE;
     }
@@ -1794,7 +1821,8 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         aa_LockGlyphs();
         /* again: new settings may have reset the font since */
         if (aa_PrepareFont(font, tf))
-            DrawString(buf, w, h, rp, font, string, count, fg, BlendFor(fg));
+            DrawString(buf, w, h, rp, font, string, count, left, fg,
+                       BlendFor(fg));
         aa_UnlockGlyphs();
     }
     else
@@ -1822,7 +1850,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     }
 #endif
 
-    rp->cp_x += w;
+    rp->cp_x += adv;
     COUNT(R_DRAWN);
     return TRUE;
 }
