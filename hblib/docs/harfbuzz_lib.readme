@@ -1,0 +1,58 @@
+Short:        HarfBuzz 15.1.0 text shaping as a library
+Author:       Serkan Dursun
+Uploader:     Serkan Dursun <EMAIL>
+Type:         util/libs
+Version:      0.1
+Architecture: m68k-amigaos >= 3.1.0
+Distribution: Aminet
+Requires:     68020+, AmigaOS 3.1+
+
+harfbuzz.library is HarfBuzz 15.1.0 (2026), the OpenType text shaping
+engine used by Firefox, Chrome, LibreOffice and Android, as a shared
+library for AmigaOS 3. It comes from AAText (util/wb/AAText) but is a
+library for any program.
+
+A program gives it a font and a line of Unicode text; HarfBuzz answers
+which glyphs to draw and where:
+- kerning from the GPOS table (most fonts made since about 2010 have
+  no other kerning),
+- ligatures (fi, ffl) and other OpenType features (small caps, old
+  style figures, ...), switched on and off per call,
+- accents placed on their letters,
+- Arabic and Hebrew (right to left), the scripts of India and South-East
+  Asia, Hangul, and every other script HarfBuzz knows.
+Drawing the glyphs is up to the program (FreeType, freetype2.library or
+anything else); harfbuzz.library does not need FreeType.
+
+Built with HB_MINI: OpenType shaping only (no 'kern' table, no Apple
+AAT, no Graphite, no subsetting or glyph drawing). TrueType, OpenType/
+CFF, collections and variable fonts. 126 functions of the HarfBuzz API,
+called exactly like HarfBuzz on any other system: the headers in
+Developer/include make each call a jump through the library vector.
+
+- All calls are serialised by one semaphore, so any number of tasks may
+  use the library.
+- Memory from an exec pool; a call runs on a 32 KB stack of its own when
+  the caller has less than 12 KB left.
+- Output is the same as HarfBuzz 15.1.0 on a PC (tested); 532 malformed
+  fonts of HarfBuzz's fuzzing set: no crash, no leak.
+- Speed (WinUAE, 68060 JIT, 16 px): about 2400 lines of 78 characters
+  per second with Source Sans 3, 7500 with DejaVu Sans.
+
+Installation
+  Copy Libs/harfbuzz.library LIBS:
+(Libs/harfbuzz.library.060 is the 68060 build, copy it as
+LIBS:harfbuzz.library; the .debug build prints to the serial port.)
+
+For programmers
+Developer/include: proto, inline and fd headers and the HarfBuzz
+headers. Developer/examples/hbshape.c is a complete example:
+
+  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o hbshape examples/hbshape.c
+
+Tests/: hbshape, hbinfo, hbbench, hbfuzz. Details in
+harfbuzz_lib_EN.txt (Turkish: harfbuzz_lib_TR.txt).
+
+License: HarfBuzz "Old MIT" (LICENSE.harfbuzz.txt), its Universal
+Shaping Engine data MIT, Microsoft (LICENSE.ms-use.txt); the library
+around it MIT (LICENSE.txt). Source: https://github.com/Sdursun/AAText

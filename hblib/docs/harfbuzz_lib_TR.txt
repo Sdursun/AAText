@@ -1,0 +1,173 @@
+harfbuzz.library 0.1
+====================
+
+OpenType yazı şekillendirme motoru HarfBuzz 15.1.0, AmigaOS 3.1 ve
+üstü, 68020 ve üstü işlemciler için paylaşımlı kütüphane olarak.
+
+Program HarfBuzz'a bir font ve bir satır yazı (Unicode) verir; HarfBuzz
+hangi gliflerin nereye çizileceğini söyler: GPOS tablosundan kerning,
+bitişik harfler (fi, ffl), harflerin üzerine yerleştirilen aksanlar,
+bağlama göre değişen harf biçimleri, sağdan sola yazılar (Arapça,
+İbranice) ve Hindistan ile Güneydoğu Asya'nın karmaşık yazı sistemleri.
+Glifleri çizmek programa kalır (FreeType, freetype2.library ya da başka
+bir şeyle); harfbuzz.library FreeType'a ihtiyaç duymaz.
+
+harfbuzz.library AAText'in (util/wb/AAText) bir parçasıdır, ama her
+program için bir kütüphanedir.
+
+
+Kurulum
+-------
+
+  Copy Libs/harfbuzz.library LIBS:
+
+68060 için Libs/harfbuzz.library.060 dosyasını kullanın (LIBS: içine
+harfbuzz.library adıyla kopyalayın). Libs/harfbuzz.library.debug seri
+porta mesaj yazar; hata bildirimleri içindir.
+
+Kütüphane yaklaşık 500 KB'tır; açıkken bu kadar bellek kullanır, buna
+kullanılan fontların ve yazıların ihtiyacı eklenir.
+
+
+İçinde ne var, ne yok
+---------------------
+
+HarfBuzz HB_MINI ile derlendi: yalnızca OpenType şekillendirme. Var:
+
+- HarfBuzz'ın bildiği tüm yazı sistemlerinin OpenType şekillendirmesi
+  (GSUB, GPOS, GDEF), Universal Shaping Engine dahil.
+- TrueType (.ttf), OpenType/CFF (.otf), koleksiyonlar (.ttc/.otc) ve
+  değişken fontlar (hb_font_set_variations).
+- Fontun kendi tablolarından glif genişlikleri, sınırları ve adları
+  (hb_ot_font_set_funcs varsayılandır).
+
+Yok (HB_MINI, eski ya da Apple fontlarının ihtiyaç duyduklarını
+dışarıda bırakır):
+
+- 'kern' tablosu: GPOS kerning'i olmayan fontlar kerning almaz ('kern'
+  tablosunu kendiniz okuyun, ör. freetype2.library'nin FT_Get_Kerning'i
+  ile);
+- GPOS'ta aksan yerleştirmesi olmayan fontlarda aksanların yerleştirilmesi
+  ("fallback" yerleştirme), çok eski bazı fontların eski cmap alt
+  tabloları;
+- Apple AAT tabloları (morx, kerx), Graphite;
+- font alt kümesi çıkarma (subsetting), glif çizme ve boyama, font
+  dosyasını adıyla açma (dosyayı belleğe okuyup hb_blob_create
+  kullanın), HarfBuzz'ın kendi iş parçacıkları ("Görevler" bölümüne
+  bakın).
+
+126 fonksiyon; Developer/harfbuzz.funcs onları kütüphane sırasıyla
+listeler.
+
+
+Programcılar için
+-----------------
+
+Developer/include'da kütüphanenin başlık dosyaları (proto, inline, fd)
+ve onların ihtiyaç duyduğu HarfBuzz 15.1.0 başlıkları (hb.h, hb-ot.h,
+...) var. gcc ile:
+
+  #include <proto/harfbuzz.h>    /* <hb.h> ve <hb-ot.h>'yi de içerir */
+
+  struct Library *HarfBuzzBase;
+
+  HarfBuzzBase = OpenLibrary("harfbuzz.library", 0);
+  if (HarfBuzzBase)
+  {
+      hb_blob_t *blob = hb_blob_create(data, size,
+                                       HB_MEMORY_MODE_READONLY, NULL, NULL);
+      hb_face_t *face = hb_face_create(blob, 0);
+      hb_font_t *font = hb_font_create(face);
+      hb_buffer_t *buf = hb_buffer_create();
+      unsigned n;
+      hb_glyph_info_t *info;
+      hb_glyph_position_t *pos;
+
+      hb_font_set_scale(font, 16 * 64, 16 * 64);  /* 16 piksel, 1/64 piksel */
+      hb_buffer_add_utf8(buf, "AVATAR office", -1, 0, -1);
+      hb_buffer_set_language(buf, hb_language_from_string("en", -1));
+      hb_buffer_guess_segment_properties(buf);
+      hb_shape(font, buf, NULL, 0);
+      info = hb_buffer_get_glyph_infos(buf, &n);
+      pos = hb_buffer_get_glyph_positions(buf, &n);
+      /* info[i].codepoint glifi kalem x + pos[i].x_offset konumuna,
+         sonra x += pos[i].x_advance */
+
+      hb_buffer_destroy(buf);
+      hb_font_destroy(font);
+      hb_face_destroy(face);
+      hb_blob_destroy(blob);
+      CloseLibrary(HarfBuzzBase);
+  }
+
+Developer/examples/hbshape.c eksiksiz bir programdır (font dosyası,
+Shell'den yazı, glifler ve konumları ekrana); Developer dizininde
+
+  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o hbshape examples/hbshape.c
+
+ile derlenir. hbinfo.c (-DUSE_LIBRARY ile derleyin), hbbench.c ve
+hbfuzz.c, Tests/ içindeki test programlarıdır (hbbench ve hbinfo'yu
+-lm ile bağlayın).
+
+- Çağırma: her fonksiyon argümanlarını HarfBuzz'ın başlık dosyalarındaki
+  gibi, C sırasıyla yığında alır; A6'daki kütüphane tabanı kullanılmaz.
+  <inline/harfbuzz.h> her çağrıyı kütüphane vektörü üzerinden bir
+  atlamaya çevirir; kod normal HarfBuzz koduna benzer. HarfBuzz
+  başlıklarında olup kütüphanede olmayan bir fonksiyon bağlama hatası
+  ("undefined reference") verir.
+- Yazı Unicode'dur: hb_buffer_add_utf8, _utf16, _utf32, _codepoints ya
+  da _latin1. Başka bir karakter setindeki (ör. ISO-8859-9) Amiga yazısı
+  önce çevrilmelidir; hbshape.c bunun ISO-8859-9 için nasıl yapılacağını
+  gösterir.
+- Dil: kütüphanenin yerel ayarı (locale) yoktur; hb_language_get_default()
+  gerçek bir dil değil "c" döndürür. Dili hb_buffer_set_language ile
+  verin: bazı harf biçimleri dile bağlıdır (Türkçe, Rumence, Sırpça...).
+- Bellek: HarfBuzz kütüphanenin exec bellek havuzundan ayırır (varsa
+  fast RAM); hb_*_destroy geri verir. Verdiğiniz veri (bir blob) sizindir:
+  HB_MEMORY_MODE_READONLY ile blob'un destroy fonksiyonu çağrılana kadar
+  geçerli kalmalıdır.
+- Yığın: çağıranın yığınında 12 KB'tan az kalmışsa çağrı geçici bir
+  32 KB'lık yığında çalışır. Şekillendirme testlerde en çok 1,5 KB yığın
+  kullandı.
+
+Görevler: HarfBuzz atomik işlemler ve mutex olmadan derlendi. Bunun
+yerine kütüphane her çağrı boyunca tek bir semafor tutar: istenen
+sayıda görev (task) onu aynı anda kullanabilir, ama çağrıları sırayla
+çalışır. Semafor iç içe alınabilir; HarfBuzz'ın çağırdığı bir destroy
+fonksiyonu ya da başka bir geri çağırma (callback) kütüphaneyi yeniden
+çağırabilir. Geri çağırmalar çağıran görevde (ve belki geçici yığında)
+çalışır.
+
+
+Test programları
+----------------
+
+  Tests/hbshape FONTS:_ttf/DejaVuSans.ttf "AVATAR office" SIZE 16
+      örnek program: bir satır yazının glifleri ve konumları
+
+  Tests/hbinfo FONT FONTS:_ttf/DejaVuSans.ttf
+      Latince, Türkçe, birleşen aksanlar ve Arapça şekillendirir, sonucu
+      font birimiyle yazar (PC'deki HarfBuzz ile aynı)
+
+  Tests/hbbench FONT FONTS:_ttf/DejaVuSans.ttf SECS 3
+      saniyede şekillendirilen satır ve karakter
+
+  Tests/hbfuzz PACK <dosya>
+      kütüphaneye bir paket bozuk font verir (HarfBuzz'ın fuzzing
+      fontları; AAText kaynağında hblib/tests/mkpack.py)
+
+Türkçe yazı için: hbshape'e Shell'den Türkçe harfler LATIN5 ile verilir:
+
+  Tests/hbshape FONTS:_ttf/DejaVuSans.ttf "Ilık ışık" LANG tr LATIN5
+
+
+Lisans
+------
+
+HarfBuzz: "Old MIT" lisansı (LICENSE.harfbuzz.txt); Universal Shaping
+Engine tabloları: MIT, Copyright (c) Microsoft Corporation
+(LICENSE.ms-use.txt).
+
+Çevresindeki kütüphane: MIT Lisansı (LICENSE.txt),
+Copyright (c) 2026 Serkan Dursun. Kaynak: https://github.com/Sdursun/AAText
+(hblib/).

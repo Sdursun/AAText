@@ -1,6 +1,7 @@
 # harfbuzz.library — yol haritası
 
-Durum: **kararlar alındı (8.11.2026); A6, A0, A1, A2 yapıldı; A3'ün WinUAE kısmı yapıldı, A1200 ve OS 3.1 testi bekliyor.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
+Durum: **kararlar alındı (8.11.2026); A6, A0, A1, A2, A4 yapıldı; A3'ün WinUAE kısmı yapıldı, A1200 ve OS 3.1 testi bekliyor.**
+(Belgedeki freetype2.library, 8.11.2026'ya kadar aatext.library adını taşıyordu.) Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
 
 ---
 
@@ -19,14 +20,14 @@ Durum: **kararlar alındı (8.11.2026); A6, A0, A1, A2 yapıldı; A3'ün WinUAE 
 
 | # | Karar |
 |---|---|
-| 1 | **Ayrı bir kütüphane:** `harfbuzz.library`; aatext.library'nin içine girmez. |
+| 1 | **Ayrı bir kütüphane:** `harfbuzz.library`; freetype2.library'nin içine girmez. |
 | 2 | **FreeType'a bağımlı değil:** fontları HarfBuzz'ın kendi OpenType okuyucusu bellekten okur (`hb_ot_font_set_funcs`); `hb_ft` köprüsü yok. |
 | 3 | **`HB_MINI`:** yalnızca OpenType şekillendirmesi; AAT ve eski font biçimleri çıkar. |
 | 4 | **Hedef sistem: en az AmigaOS 3.1** (exec V40, 68020+; 8.11.2026'da 3.0+'tan 3.1+'ya çevrildi). OS 3.2'ye özgü bir şey kullanılmaz. |
 
 ## 3. Sonraki kararlar (8.11.2026, kullanıcı: "önerinle başla, sen karar ver")
 
-1. **Çağırma biçimi:** aatext.library'deki FreeType fonksiyonları gibi
+1. **Çağırma biçimi:** freetype2.library'deki FreeType fonksiyonları gibi
    argümanlar yığından, C sırasıyla; tablo ve başlıklar `genfuncs.py` ile.
 2. **Sıra:** önce A6 (AAText'te GPOS kerning), sonra A0–A1.
 3. **Yön:** HarfBuzz'ın getirdiği her şey ileride sistem yazısının
@@ -132,11 +133,11 @@ Durum: **kararlar alındı (8.11.2026); A6, A0, A1, A2 yapıldı; A3'ün WinUAE 
   yığınla çalışan program doğru sonuç veriyor (geçici yığın yolu); debug
   ölçümü: şekillendirme en çok **1,2 KB** yığın kullanıyor (TTF ve CFF).
 - Henüz yok: OS 3.1'de deneme, A1200 (Emu68), geliştirici paketi.
-- Başlangıç kodu aatext.library'den (`start.s`, `libinit.c`).
+- Başlangıç kodu freetype2.library'den (`start.s`, `libinit.c`).
 - API alt kümesi (~60–80 fonksiyon): blob, face, font, buffer, `hb_shape`,
   OpenType bilgileri, dil ve yazı sistemi.
 - Tek exec semaforu tüm giriş noktalarında (6. bölüm).
-- Yığın: aatext.library'deki "az kalmışsa kendi 48 KB yığınında çalış".
+- Yığın: freetype2.library'deki "az kalmışsa kendi 48 KB yığınında çalış".
 - C++ çalışma zamanı: statik yapıcılar, `__cxa_*` sembolleri.
 - Başlıklar: proto, inline, clib, fd.
 - OS 3.1 uyumu: kullanılan exec fonksiyonları bellek havuzları (V39),
@@ -160,9 +161,26 @@ Durum: **kararlar alındı (8.11.2026); A6, A0, A1, A2 yapıldı; A3'ün WinUAE 
   WinUAE ve A1200 (Emu68).
 - HarfBuzz'ın bozuk font test dosyaları; 16 KB yığınlı programlar.
 
-**A4. Belgeler ve dağıtım**
-- Türkçe ve İngilizce belgeler, örnekler, Aminet `.readme`, `Developer/`.
-- *Kabul:* örnek program yalnızca paketteki dosyalarla derlenir.
+**A4. Belgeler ve dağıtım — YAPILDI (8.11.2026)**
+- `hblib/docs/`: `harfbuzz_lib.readme` (Aminet), `harfbuzz_lib_EN.txt`,
+  `harfbuzz_lib_TR.txt` (pakette ISO-8859-9): kurulum, içinde ne var/ne
+  yok (HB_MINI: `kern` tablosu, fallback aksan yerleştirme, AAT,
+  Graphite yok), çağırma biçimi, Unicode ve dil, bellek, yığın, görevler.
+- `hblib/examples/hbshape.c`: font + Shell'den yazı (ISO-8859-1, `LATIN5`
+  ile ISO-8859-9), `LANG`, `FEATURES`; glifler, konumlar, satır genişliği.
+- `hblib/LICENSE`: HarfBuzz "Old MIT", USE tabloları (Microsoft, MIT),
+  kütüphane MIT.
+- `make dist` → `hblib/dist/harfbuzz_lib.lha` (923 KB): `Libs/` (68020,
+  68060, debug), `Developer/include` (proto, inline, fd + `hb.h`'nin
+  dahil çektiği 29 HarfBuzz başlığı, derleyicinin `-M` listesinden),
+  `Developer/examples` (hbshape, hbinfo, hbbench, hbfuzz),
+  `Developer/harfbuzz.funcs`, `Tests/`, belgeler, üç lisans dosyası.
+- *Kabul:* `make dist` örneği paketin `Developer/` dizininden yalnızca
+  `-Iinclude` ile yeniden derliyor; dört örneğin dördü de böyle derlendi.
+  WinUAE'de arşiv LHA ile açıldı; `hbinfo`, `hbshape` (kerning, `ffi`
+  bağı, `-kern,-liga`, Türkçe `LATIN5`) ve `hbbench` paketteki
+  kütüphaneyle çalıştı. Bu ölçümde şekillendirme en çok 1,4–1,5 KB yığın
+  kullandı (belgelerde 1,5 KB).
 
 **A5. Bakım**
 - HarfBuzz son iki ayda üç sürüm çıkardı; bozuk fontlarla ilgili
@@ -201,7 +219,7 @@ HarfBuzz'ın atomik işlemleri 15.0.0'dan beri dışarıdan değiştirilemiyor.
 | AmigaOS 3 paylaşılan kütüphanesinde C++ (statik yapıcılar, çalışma zamanı sembolleri) | Kütüphane kurulamayabilir | A1'de önce statik program |
 | Boyut | Disk ve bellek | `HB_MINI`, OFF 5 kapalı, boyut için optimize, kullanılmayan kodu bağlamada atmak |
 | 68020/030'da hız | Programlarda yavaşlık | A3'te ölçmek; programlar sonuçları önbelleğe alır |
-| Yığın taşması | Çökme | aatext.library'deki büyük yığın yöntemi |
+| Yığın taşması | Çökme | freetype2.library'deki büyük yığın yöntemi |
 | Atomik işlemler | Görevler arası bozulma | 6. bölüm, a) |
 | Sık sürüm | Bakım yükü | Sürüm + SHA256 sabitleme; düzeltme sürümlerini izlemek |
 

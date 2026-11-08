@@ -16,3 +16,6 @@ __pycache__/
 aatextlib/dist/
 aatextlib/reference/
 aatextlib/ttengine-7.2/
+
+# harfbuzz.library (hblib/): built archive
+hblib/dist/
