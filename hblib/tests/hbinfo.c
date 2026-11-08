@@ -2,12 +2,16 @@
  * hbinfo - shapes test strings with HarfBuzz and prints the glyphs, for
  * comparing the Amiga build with HarfBuzz on a PC (tests/hbinfo.py).
  *
- *   hbinfo FONT <file> [TIMES <n>]
+ *   hbinfo FONT <file> [TIMES <n>] [LIB <path>]
  *
  * The font is shaped at its units per em, so the positions are integers
  * in font units and must equal HarfBuzz's anywhere. Lines starting with
  * '#' (timing, memory, stack) are not compared. TIMES: shapes per string
- * for the timing (default 200).
+ * for the timing (default 200). LIB (hbinfo_lib): the library to open,
+ * e.g. RAM:harfbuzz.library (default harfbuzz.library).
+ *
+ * Built twice: with HarfBuzz linked in (hbinfo) and with -DUSE_LIBRARY
+ * through harfbuzz.library (hbinfo_lib); both must print the same.
  */
 
 #include <exec/types.h>
@@ -22,10 +26,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef USE_LIBRARY
+#include <proto/harfbuzz.h>
+struct Library *HarfBuzzBase;
+#else
 #include <hb.h>
 #include <hb-ot.h>
-
 #include "../src/hbmem.h"
+#endif
 
 struct Device *TimerBase;
 
@@ -94,8 +102,8 @@ static void StackFill(struct Task *me)
 
 int main(void)
 {
-    static const char template[] = "FONT/A,TIMES/K/N";
-    LONG args[2] = { 0, 0 };
+    static const char template[] = "FONT/A,TIMES/K/N,LIB/K";
+    LONG args[3] = { 0, 0, 0 };
     struct RDArgs *rda;
     struct timerequest tr;
     struct Task *me = FindTask(NULL);
@@ -123,11 +131,23 @@ int main(void)
 
         freq = ReadEClock(&e);
     }
+#ifdef USE_LIBRARY
+    HarfBuzzBase = OpenLibrary((CONST_STRPTR)(args[2] ? (const char *)args[2]
+                                                   : "harfbuzz.library"), 0);
+    if (!HarfBuzzBase)
+    {
+        printf("hbinfo: cannot open harfbuzz.library\n");
+        rc = RETURN_FAIL;
+        goto out;
+    }
+    printf("# %s", (const char *)HarfBuzzBase->lib_IdString);
+#else
     if (!hbmem_Init())
     {
         rc = RETURN_FAIL;
         goto out;
     }
+#endif
     data = ReadAll((const char *)args[0], &size);
     if (!data)
     {
@@ -207,7 +227,12 @@ int main(void)
     hb_blob_destroy(blob);
     FreeVec(data);
 out:
+#ifdef USE_LIBRARY
+    if (HarfBuzzBase)
+        CloseLibrary(HarfBuzzBase);
+#else
     hbmem_Cleanup();
+#endif
     CloseDevice((struct IORequest *)&tr);
     FreeArgs(rda);
     return rc;

@@ -1,6 +1,6 @@
 # harfbuzz.library — yol haritası
 
-Durum: **kararlar alındı (8.11.2026); A6, A0 ve A1 yapıldı, A2 sırada.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
+Durum: **kararlar alındı (8.11.2026); A6, A0, A1 ve A2 yapıldı, A3 sırada (A1200 testi bekliyor).** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
 
 ---
 
@@ -108,7 +108,30 @@ Durum: **kararlar alındı (8.11.2026); A6, A0 ve A1 yapıldı, A2 sırada.** He
 - Ölçülür: boyut, yığın, hız.
 - *Kabul:* WinUAE'de PC ile aynı çıktı; ölçümlerle "devam / dur" kararı.
 
-**A2. Kütüphane kabuğu (harfbuzz.library 0.1)**
+**A2. Kütüphane kabuğu (harfbuzz.library 0.1) — YAPILDI (8.11.2026)**
+- `hblib/src/harfbuzz.funcs`: 126 fonksiyon (sıra sabit, yalnızca sona
+  eklenir); her biri HarfBuzz 15.1.0 başlıklarıyla otomatik karşılaştırıldı
+  (ad, dönüş ve argüman tipleri). Makro olan iki fonksiyon çıkarıldı.
+- `hblib/tools/hbfuncs.py`: fonksiyon tablosu, sarmalayıcılar
+  (`src/gen/wrappers.c`: argümanlar yapıya, `hb_Call()`), `fd`,
+  `inline/harfbuzz.h`, `proto/harfbuzz.h`. Taban: `HarfBuzzBase`.
+- `hb_Call()`: tek semafor (iç içe alınabilir); 12 KB'tan az yığın kaldıysa
+  32 KB'lık geçici yığın (`StackSwap`).
+- `LibInit`: exec V39 ve 68020 kontrolü; libnix'in yazılımsal kayan nokta
+  ve libm'i için dört `mathieee*.library` açılıyor.
+- `src/libcstub.c`: libnix'in stdio'su (ve onu kullanan `snprintf`'i)
+  kütüphanede olamaz (`__initstdio` → `exit`): HarfBuzz'ın kullandığı
+  biçimler için kendi `snprintf`/`vsnprintf`; `stderr` çıktısı boş.
+- Debug derlemesi: libdebug'ın `kprintf`'i bu kütüphanede Amiga'yı
+  yeniden başlattı; yerine exec `RawDoFmt` + `RawPutChar` ile kendi
+  `kprintf`'imiz.
+- Boyut: **harfbuzz.library 508 KB** (kod 474 KB).
+- Test (WinUAE, OS 3.2.3): `hbinfo_lib` çıktısı PC'deki HarfBuzz ile
+  bayt bayt aynı (DejaVu Sans, Source Sans 3); 4 görev aynı anda (her biri
+  30000 şekillendirme): dördü de aynı ve doğru; 4096 ve 6000 baytlık
+  yığınla çalışan program doğru sonuç veriyor (geçici yığın yolu); debug
+  ölçümü: şekillendirme en çok **1,2 KB** yığın kullanıyor (TTF ve CFF).
+- Henüz yok: OS 3.1'de deneme, A1200 (Emu68), geliştirici paketi.
 - Başlangıç kodu aatext.library'den (`start.s`, `libinit.c`).
 - API alt kümesi (~60–80 fonksiyon): blob, face, font, buffer, `hb_shape`,
   OpenType bilgileri, dil ve yazı sistemi.
