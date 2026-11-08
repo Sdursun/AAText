@@ -1,6 +1,6 @@
 # harfbuzz.library — yol haritası
 
-Durum: **kararlar alındı (8.11.2026); A6 ve A0 yapıldı, A1 sırada.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
+Durum: **kararlar alındı (8.11.2026); A6, A0 ve A1 yapıldı, A2 sırada.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
 
 ---
 
@@ -78,7 +78,28 @@ Durum: **kararlar alındı (8.11.2026); A6 ve A0 yapıldı, A1 sırada.** Her a�
   otomatik `-pthreads` eklemesi; çözülmeden kalmış, derleme ayrıntısı
   yok. Biz meson kullanmadığımız için bizi etkilemez.
 
-**A1. Derlenebiliyor mu? (statik test programı)**
+**A1. Derlenebiliyor mu? (statik test programı) — YAPILDI (8.11.2026)**
+- `hblib/`: `Makefile`, `src/hbmem.c` (exec havuzu ile `hb_*_impl`),
+  `tests/hbinfo.c` (Amiga) ve `tests/hbinfo.py` (PC, uharfbuzz).
+- bebbo GCC 16.2 (`m68k-amigaos-g++ -m68020 -Os -std=c++11
+  -fno-exceptions -fno-rtti -fno-threadsafe-statics`), `HB_MINI HB_NO_MT
+  HB_NO_OPEN HB_NO_MMAP HB_NO_GETENV HB_NO_SETLOCALE HB_NO_ATEXIT
+  HB_NO_ERRNO`: hatasız derleniyor (yalnızca `%u`/`long` ve görünürlük
+  uyarıları).
+- **C++ çalışma zamanından hiçbir sembol gerekmiyor** (`__cxa_*`,
+  `operator new`, statik yapıcı yok); yalnızca libgcc kayan nokta
+  yardımcıları ve C fonksiyonları (bellek, `memcpy`, `qsort`,
+  `snprintf`, matematik). En büyük risk ortadan kalktı.
+- Boyut: `harfbuzz.cc` kodu 594 KB; `--gc-sections` ile bağlanan test
+  programı 506 KB (C kütüphanesi dahil).
+- Doğruluk: WinUAE'de DejaVu Sans (117 satır) ve Source Sans 3 (121
+  satır) için kerning, ligatür, Türkçe, birleşen aksan ve Arapça
+  testlerinin çıktısı PC'deki HarfBuzz (uharfbuzz, HarfBuzz 15.0.0) ile
+  bayt bayt aynı.
+- Hız (WinUAE 68060 JIT, bir satır): 39–310 µs. Gerçek 68020/030'da
+  ölçülmedi (A1200 o sırada bağlı değildi).
+- Yığın: ölçüm `hb_shape` için yaklaşık 1,1–1,4 KB gösterdi; yöntem
+  kaba, A3'te 16 KB yığınlı programlarla doğrulanacak.
 - `m68k-amigaos-g++ -fno-exceptions -fno-rtti`, `HB_MINI`, `HB_NO_MT`,
   OFF 5 kapalı, boyut için optimize; libstdc++ yok.
 - Bellek: exec havuzu (`hb_malloc_impl` vb. ile).
