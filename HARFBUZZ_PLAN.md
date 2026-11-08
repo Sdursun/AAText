@@ -1,6 +1,6 @@
 # harfbuzz.library — yol haritası
 
-Durum: **kararlar alındı (8.11.2026); A6 yapıldı, A0 sırada.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
+Durum: **kararlar alındı (8.11.2026); A6 ve A0 yapıldı, A1 sırada.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
 
 ---
 
@@ -47,19 +47,36 @@ Durum: **kararlar alındı (8.11.2026); A6 yapıldı, A0 sırada.** Her aşamada
   (bkz. 6. bölüm).
 - 15.0.0'dan beri **Open Font Format 5. baskı** desteği (65536'dan fazla
   harf, `GLYF` içinde kübik eğriler, 24 bitlik GSUB/GPOS) varsayılan olarak
-  açık. Amiga programları için gereksiz; kapatan derleme seçeneği aranacak
-  (`HB_NO_BEYOND_64K` benzeri bir ad bekleniyor, **doğrulanmadı**).
+  açık. **Doğrulandı:** `HB_MINI` bunu zaten kapatıyor (`src/hb-config.hh`:
+  `HB_NO_AAT`, `HB_NO_LEGACY`, `HB_NO_BEYOND_64K`, `HB_NO_CUBIC_GLYF`).
 - `hb_font_set_face()` 15.0.0'da kullanımdan kaldırıldı: kütüphaneye konmaz.
 - Kapsam dışı: raster, vector, GPU kütüphaneleri; Graphite2, HarfRust,
   WebAssembly ve kbts şekillendiricileri.
 
 ## 5. Aşamalar
 
-**A0. Hazırlık**
-- `tools/fetch-harfbuzz.sh` (15.1.0, SHA256).
-- AmigaOS 4 portunun derleme notları (os4coding.net: meson'un otomatik
-  `-pthreads`'i sorun çıkarmış; biz kendi Makefile'ımızı kullanacağız).
-- *Kabul:* kaynak indiriliyor, sürüm ve lisans belgelendi.
+**A0. Hazırlık — YAPILDI (8.11.2026)**
+- `tools/fetch-harfbuzz.sh`: 15.1.0, SHA256 GitHub'ın sürüm dosyası için
+  verdiği özet (`0fc7c565…0c8d`); `third_party/harfbuzz-15.1.0`.
+- Lisans: "Old MIT" (`COPYING`); bazı alt klasörlerin kendi `COPYING`
+  dosyaları var, A4'te pakete eklenecek.
+- Kaynak bulguları:
+  - Tek dosyalı derleme birimi var: `src/harfbuzz.cc` (CoreText,
+    DirectWrite, GDI, glib, graphite2, `hb-ft` dosyaları kendi
+    `HAVE_*` makroları olmadan boş derlenir).
+  - Özel bellek ayırıcı: `hb_malloc_impl`, `hb_calloc_impl`,
+    `hb_realloc_impl`, `hb_free_impl` tanımlanınca HarfBuzz bunları
+    kullanır (`src/hb.hh`).
+  - `HB_NO_MT`: `<atomic>` hiç kullanılmaz, atomik tipler düz
+    değişkenlere döner, mutex boştur; yalnızca bir derleyici bariyeri
+    (`asm volatile("":::"memory")`) kalır. 6. bölümdeki a) seçeneği
+    (tek semafor) böylece doğrulandı: nesnelerin referans sayaçları da
+    atomik değil, tüm erişim semafor altında olmalı.
+  - `_hb_CrapPool` küresel bir yazılabilir tampon (thread_local değil);
+    tek semafor bunu da korur.
+- AmigaOS 4 portu (os4coding.net, 27.4.2023): tek sorun meson'un
+  otomatik `-pthreads` eklemesi; çözülmeden kalmış, derleme ayrıntısı
+  yok. Biz meson kullanmadığımız için bizi etkilemez.
 
 **A1. Derlenebiliyor mu? (statik test programı)**
 - `m68k-amigaos-g++ -fno-exceptions -fno-rtti`, `HB_MINI`, `HB_NO_MT`,
