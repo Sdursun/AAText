@@ -19,7 +19,8 @@ struct AAGlyph
     struct MinNode  lru;        /* must be first: LRU list node */
     struct AAGlyph *next;       /* hash chain */
     struct AAFont  *font;
-    UWORD  code;                /* Amiga character code */
+    UWORD  code;                /* Amiga character code; bold glyphs:
+                                   code | smear << 8 */
     WORD   left;                /* bitmap offset from pen position */
     /*
      * FreeType's bitmap_top: rows above the baseline *line*, so the
@@ -234,6 +235,8 @@ void aa_LockGlyphs(void);
 void aa_UnlockGlyphs(void);
 BOOL aa_PrepareFont(struct AAFont *font, struct TextFont *tf);
 struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code);
+/* the glyph made bold with smear pixels, see glyphs.c; NULL: blend twice */
+struct AAGlyph *aa_GetBoldGlyph(struct AAFont *font, UBYTE code, LONG smear);
 
 /* Current cache size, for tests and statistics (lock held). */
 void aa_GetCacheStats(ULONG *bytes, ULONG *count);

@@ -101,6 +101,8 @@ static ULONG aa_EFreq;
 static ULONG stat_ticks, stat_maxticks, stat_chars, stat_offscreen, stat_menu;
 static ULONG stat_widthmismatch;
 static ULONG stat_phase[4];          /* setup, read, draw, write */
+static ULONG stat_rphase[4], stat_rcalls;  /* the same, real metrics */
+static ULONG stat_same, stat_jam2;  /* RedrawSame() hits, JAM2 calls */
 static ULONG stat_declined, stat_declinedticks;
 /* E-clock low word for phase timing (differences only, never wraps) */
 #define TSTAMP(v) \
@@ -663,6 +665,47 @@ static void BlendLCD(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
         y0 = -gy;
     if (gy + y1 > h)
         y1 = h - gy;
+    if (y0 >= y1)
+        return;
+    if (bt)
+    {
+        /*
+         * The usual path, as in BlendGlyph(): one table per channel, rows
+         * advanced by additions, a count down instead of x. Few values
+         * are live in the loop, so they stay in the 68k's registers.
+         */
+        const UBYTE (*tr)[256] = bt->t[0];
+        const UBYTE (*tg)[256] = bt->t[1];
+        const UBYTE (*tb)[256] = bt->t[2];
+        const UBYTE *lv = aa_Level;
+        LONG stride = w * 3, gstride = gw * 3;
+        const UBYTE *srow = g->data + y0 * gstride;
+        UBYTE *drow = buf + (gy + y0) * stride;
+
+        for (y = y0; y < y1; y++, srow += gstride, drow += stride)
+        {
+            LONG rx = gx + ItalicShift(gy + y, italicbase);
+            LONG x0 = rx < 0 ? -rx : 0;
+            LONG n = (rx + gw > w ? w - rx : gw) - x0;
+            const UBYTE *src = srow + x0 * 3;
+            UBYTE *dst = drow + (rx + x0) * 3;
+
+            for (; n > 0; n--, src += 3, dst += 3)
+            {
+                LONG l;
+
+                if (!(src[0] | src[1] | src[2]))
+                    continue;
+                if ((l = lv[src[0]]))
+                    dst[0] = tr[l][dst[0]];
+                if ((l = lv[src[1]]))
+                    dst[1] = tg[l][dst[1]];
+                if ((l = lv[src[2]]))
+                    dst[2] = tb[l][dst[2]];
+            }
+        }
+        return;
+    }
     for (y = y0; y < y1; y++)
     {
         LONG rx = gx + ItalicShift(gy + y, italicbase);
@@ -853,8 +896,15 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
                    defidx : c - tf->tf_LoChar;
         LONG k = kern ? kern[idx] : 0;
         LONG cell = k + (space ? space[idx] : tf->tf_XSize);
-        struct AAGlyph *g = aa_GetGlyph(font, c);
+        /* bold: the smeared glyph from the cache, blended once */
+        struct AAGlyph *g = smear ? aa_GetBoldGlyph(font, c, smear) : NULL;
+        LONG twice = 0;
 
+        if (!g)
+        {
+            g = aa_GetGlyph(font, c);
+            twice = smear;
+        }
         if (g && g->width)
         {
             /* centre the TrueType advance in the original cell */
@@ -862,8 +912,8 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
             LONG gy = baseline + 1 - g->top;  /* see AAGlyph.top */
 
             BlendGlyph(buf, w, h, g, gx, gy, fg, bt, italicbase);
-            if (smear)
-                BlendGlyph(buf, w, h, g, gx + smear, gy, fg, bt, italicbase);
+            if (twice)
+                BlendGlyph(buf, w, h, g, gx + twice, gy, fg, bt, italicbase);
         }
         pen += cell + rp->TxSpacing;
     }
@@ -977,7 +1027,7 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
     LONG italicbase = (style & FSF_ITALIC) ? baseline : -1;
     LONG smear = (style & FSF_BOLD) ? (tf->tf_BoldSmear ? tf->tf_BoldSmear : 1)
                                     : 0;
-    LONG pen = ox, i;
+    LONG pen = ox, i, twice;
 
     for (i = 0; i < count; i++)
     {
@@ -986,7 +1036,15 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
 
         if (i > 0)                  /* as aa_MExtent() measures it */
             pen += aa_KernPair(font, s[i - 1], c);
-        g = aa_GetGlyph(font, c);
+        /* bold, blended: the smeared glyph from the cache, see DrawString();
+           1 bit templates set the plain glyph's bits twice */
+        g = smear && rgb ? aa_GetBoldGlyph(font, c, smear) : NULL;
+        twice = 0;
+        if (!g)
+        {
+            g = aa_GetGlyph(font, c);
+            twice = smear;
+        }
 
         if (g && g->width)
         {
@@ -996,8 +1054,8 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
             if (rgb)
             {
                 BlendGlyph(rgb, w, h, g, gx, gy, fg, bt, italicbase);
-                if (smear)
-                    BlendGlyph(rgb, w, h, g, gx + smear, gy, fg, bt,
+                if (twice)
+                    BlendGlyph(rgb, w, h, g, gx + twice, gy, fg, bt,
                                italicbase);
             }
             else
@@ -1523,7 +1581,11 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
     struct ViewPort *vp;
     LONG x, y, w, h, ox, sx = 0, sy = 0;
     BOOL ok;
+#ifdef DEBUG
+    ULONG ts0 = 0, ts1 = 0, ts2 = 0, ts3 = 0, ts4 = 0;
+#endif
 
+    TSTAMP(ts0);
     if (!rp->BitMap)
         FAIL(R_NOBITMAP);
 
@@ -1562,6 +1624,7 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
 
             PenToRGB(vp, GetAPen(rp), fg);
             key = (fg[0] << 16) | (fg[1] << 8) | fg[2];
+            TSTAMP(ts1);
             if (rp->DrawMode & JAM2)
             {
                 PenToRGB(vp, GetBPen(rp), bg);
@@ -1577,6 +1640,7 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
                 same = RedrawSame(buf, rp, string, count, x, y, w, h, sx, sy,
                                   key, &slot);
             }
+            TSTAMP(ts2);
 
             if (!same)
             {
@@ -1594,11 +1658,25 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
                 ReleaseSemaphore(&aa_RedrawLock);
             }
 
+            TSTAMP(ts3);
             if (!same)
                 cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp,
                                     x + sx, y + sy, w - sx, h - sy,
                                     RECTFMT_RGB);
             FreeBuffer(buf);
+            TSTAMP(ts4);
+#ifdef DEBUG
+            if (aa_TimerOpen)
+            {
+                stat_rphase[0] += ts1 - ts0;
+                stat_rphase[1] += ts2 - ts1;
+                stat_rphase[2] += ts3 - ts2;
+                stat_rphase[3] += ts4 - ts3;
+                stat_rcalls++;
+                stat_same += same;
+                stat_jam2 += (rp->DrawMode & JAM2) != 0;
+            }
+#endif
             rp->cp_x += te.te_Width;
             COUNT(R_REAL_AA);
             return TRUE;
@@ -1936,6 +2014,14 @@ void aa_PrintRenderStats(void)
                 TicksToMicros(stat_phase[1]) / drawn,
                 TicksToMicros(stat_phase[2]) / drawn,
                 TicksToMicros(stat_phase[3]) / drawn);
+    if (stat_rcalls && aa_EFreq)
+        kprintf("AAText: per drawn call (real metrics, %ld calls, %ld JAM2, "
+                "%ld redraws skipped): setup %ld us, read %ld us, draw %ld us, "
+                "write %ld us\n", stat_rcalls, stat_jam2, stat_same,
+                TicksToMicros(stat_rphase[0]) / stat_rcalls,
+                TicksToMicros(stat_rphase[1]) / stat_rcalls,
+                TicksToMicros(stat_rphase[2]) / stat_rcalls,
+                TicksToMicros(stat_rphase[3]) / stat_rcalls);
     if (stat_declined && aa_EFreq)
         kprintf("AAText: declined calls: %ld, %ld us each\n", stat_declined,
                 TicksToMicros(stat_declinedticks) / stat_declined);

@@ -2562,6 +2562,79 @@ struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code)
     return g;
 }
 
+/*
+ * The glyph of code made bold: the glyph and itself smear pixels to the
+ * right in one, each value a + b - ab/255. That is what blending the
+ * glyph twice gives (graphics.library draws bold that way), so bold
+ * text looks the same but is blended once. Kept in the cache like any
+ * glyph, under the code | smear << 8 (codes are 8 bits; same hash
+ * bucket as the plain glyph, never found by aa_GetGlyph()). NULL: no
+ * memory, or a smear this cache does not make; the caller then blends
+ * the plain glyph twice. Glyph lock held.
+ */
+struct AAGlyph *aa_GetBoldGlyph(struct AAFont *font, UBYTE code, LONG smear)
+{
+    ULONG h = HashOf(font, code);
+    UWORD key;
+    struct AAGlyph *g, *b;
+    LONG ch, w, x, y, c, gw;
+    ULONG size;
+
+    if (smear < 1 || smear > 16)
+        return NULL;
+    key = code | (smear << 8);
+    for (b = aa_Hash[h]; b; b = b->next)
+    {
+        if (b->font == font && b->code == key)
+        {
+            if ((struct MinNode *)b != aa_LRU.mlh_Head)
+            {
+                Remove((struct Node *)&b->lru);
+                AddHead((struct List *)&aa_LRU, (struct Node *)&b->lru);
+            }
+            return b;
+        }
+    }
+
+    g = aa_GetGlyph(font, code);
+    if (!g || !g->width || !g->rows)
+        return g;                       /* nothing to smear */
+    ch = g->lcd ? 3 : 1;
+    gw = g->width;
+    w = gw + smear;
+    size = sizeof(*b) + w * g->rows * ch;
+    if (!(b = AllocMem(size, MEMF_ANY)))
+        return NULL;
+    *b = *g;
+    b->code = key;
+    b->width = w;
+    b->allocsize = size;
+    for (y = 0; y < g->rows; y++)
+    {
+        const UBYTE *src = g->data + y * gw * ch;
+        UBYTE *dst = b->data + y * w * ch;
+
+        for (x = 0; x < w; x++)
+            for (c = 0; c < ch; c++)
+            {
+                ULONG a = x < gw ? src[x * ch + c] : 0;
+                ULONG s = x >= smear ? src[(x - smear) * ch + c] : 0;
+
+                *dst++ = a + s - (a * s + 127) / 255;
+            }
+    }
+
+    b->next = aa_Hash[h];
+    aa_Hash[h] = b;
+    AddHead((struct List *)&aa_LRU, (struct Node *)&b->lru);
+    aa_CacheBytes += size;
+    aa_CacheCount++;
+    while (aa_CacheBytes > aa_CacheLimit &&
+           aa_LRU.mlh_TailPred != (struct MinNode *)b)
+        EvictOldest();
+    return b;
+}
+
 void aa_GetCacheStats(ULONG *bytes, ULONG *count)
 {
     *bytes = aa_CacheBytes;
