@@ -2,7 +2,8 @@
  * harfbuzz.library - library header: RomTag, init, open, close, expunge,
  * the function table, and hb_Call() around every function.
  *
- * AmigaOS 3.0+ (exec V39: memory pools, StackSwap) on a 68020 or better.
+ * AmigaOS 3.1+ (exec V40) on a 68020 or better. Of exec it needs memory
+ * pools (V39) and StackSwap (V37); the IEEE math libraries are V37.
  */
 
 #include <exec/types.h>
@@ -140,8 +141,8 @@ static struct HBBase *LibInit(REG(d0, struct HBBase *base),
     base->lib.lib_IdString = (char *)LibId + 6;
     InitSemaphore(&base->lock);
 
-    /* exec V39 for memory pools, 68020 for the compiled code */
-    if (sysbase->LibNode.lib_Version < 39 ||
+    /* AmigaOS 3.1 (exec V40), 68020 for the compiled code */
+    if (sysbase->LibNode.lib_Version < 40 ||
         !(sysbase->AttnFlags & AFF_68020) || !OpenLibs() || !hbmem_Init())
     {
         CloseLibs();

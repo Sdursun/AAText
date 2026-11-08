@@ -1,4 +1,4 @@
-# harfbuzz.library - HarfBuzz for AmigaOS 3.0+ (68020+), see HARFBUZZ_PLAN.md
+# harfbuzz.library - HarfBuzz for AmigaOS 3.1+ (68020+), see HARFBUZZ_PLAN.md
 #
 #   make              build/68020/harfbuzz.library and the test programs
 #   make DEBUG=1      debug build: serial kprintf output, stack measuring
@@ -50,7 +50,8 @@ GEN_HDRS := include/fd/harfbuzz_lib.fd include/inline/harfbuzz.h \
             include/proto/harfbuzz.h
 
 .PHONY: all clean headers
-all: $(TARGET) $(BUILDDIR)/hbinfo $(BUILDDIR)/hbinfo_lib
+all: $(TARGET) $(BUILDDIR)/hbinfo $(BUILDDIR)/hbinfo_lib $(BUILDDIR)/hbfuzz \
+     $(BUILDDIR)/hbbench
 
 $(BUILDDIR):
 	mkdir -p $@
@@ -90,6 +91,13 @@ $(BUILDDIR)/hbinfo: tests/hbinfo.c $(BUILDDIR)/harfbuzz.o $(BUILDDIR)/hbmem.o
 # the same test through harfbuzz.library
 $(BUILDDIR)/hbinfo_lib: tests/hbinfo.c $(GEN_HDRS) | $(BUILDDIR)
 	$(CC) $(CFLAGS) -DUSE_LIBRARY -o $@ tests/hbinfo.c -lm
+
+# malformed fonts (tests/mkpack.py packs them) and speed, through the library
+$(BUILDDIR)/hbfuzz: tests/hbfuzz.c $(GEN_HDRS) | $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ tests/hbfuzz.c
+
+$(BUILDDIR)/hbbench: tests/hbbench.c $(GEN_HDRS) | $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ tests/hbbench.c -lm
 
 clean:
 	rm -rf build

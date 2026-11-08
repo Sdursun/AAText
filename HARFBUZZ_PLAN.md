@@ -1,6 +1,6 @@
 # harfbuzz.library — yol haritası
 
-Durum: **kararlar alındı (8.11.2026); A6, A0, A1 ve A2 yapıldı, A3 sırada (A1200 testi bekliyor).** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
+Durum: **kararlar alındı (8.11.2026); A6, A0, A1, A2 yapıldı; A3'ün WinUAE kısmı yapıldı, A1200 ve OS 3.1 testi bekliyor.** Her aşamadan önce onay alınır (CLAUDE.md, 9. bölüm).
 
 ---
 
@@ -22,7 +22,7 @@ Durum: **kararlar alındı (8.11.2026); A6, A0, A1 ve A2 yapıldı, A3 sırada (
 | 1 | **Ayrı bir kütüphane:** `harfbuzz.library`; aatext.library'nin içine girmez. |
 | 2 | **FreeType'a bağımlı değil:** fontları HarfBuzz'ın kendi OpenType okuyucusu bellekten okur (`hb_ot_font_set_funcs`); `hb_ft` köprüsü yok. |
 | 3 | **`HB_MINI`:** yalnızca OpenType şekillendirmesi; AAT ve eski font biçimleri çıkar. |
-| 4 | **Hedef sistem: AmigaOS 3.0+** (68020+). Yalnızca V39 exec/dos fonksiyonları; OS 3.2'ye özgü bir şey kullanılmaz. |
+| 4 | **Hedef sistem: en az AmigaOS 3.1** (exec V40, 68020+; 8.11.2026'da 3.0+'tan 3.1+'ya çevrildi). OS 3.2'ye özgü bir şey kullanılmaz. |
 
 ## 3. Sonraki kararlar (8.11.2026, kullanıcı: "önerinle başla, sen karar ver")
 
@@ -117,7 +117,7 @@ Durum: **kararlar alındı (8.11.2026); A6, A0, A1 ve A2 yapıldı, A3 sırada (
   `inline/harfbuzz.h`, `proto/harfbuzz.h`. Taban: `HarfBuzzBase`.
 - `hb_Call()`: tek semafor (iç içe alınabilir); 12 KB'tan az yığın kaldıysa
   32 KB'lık geçici yığın (`StackSwap`).
-- `LibInit`: exec V39 ve 68020 kontrolü; libnix'in yazılımsal kayan nokta
+- `LibInit`: exec V40 (OS 3.1) ve 68020 kontrolü; libnix'in yazılımsal kayan nokta
   ve libm'i için dört `mathieee*.library` açılıyor.
 - `src/libcstub.c`: libnix'in stdio'su (ve onu kullanan `snprintf`'i)
   kütüphanede olamaz (`__initstdio` → `exit`): HarfBuzz'ın kullandığı
@@ -139,13 +139,23 @@ Durum: **kararlar alındı (8.11.2026); A6, A0, A1 ve A2 yapıldı, A3 sırada (
 - Yığın: aatext.library'deki "az kalmışsa kendi 48 KB yığınında çalış".
 - C++ çalışma zamanı: statik yapıcılar, `__cxa_*` sembolleri.
 - Başlıklar: proto, inline, clib, fd.
-- OS 3.0 uyumu: exec bellek havuzları (`CreatePool`/`AllocPooled`) V39'da
-  var; daha yeni bir fonksiyon kullanılmaz. aatext.library'nin başlangıç
-  kodunun OS 3.0'da çalıştığı **doğrulanmadı** (AAText OS 3.2 hedefli).
+- OS 3.1 uyumu: kullanılan exec fonksiyonları bellek havuzları (V39),
+  `StackSwap` (V37), `RawDoFmt`/`RawPutChar` (debug); `mathieee*.library`
+  V37. OS 3.1'de çalıştığı henüz **denenmedi** (WinUAE'deki OS 3.1
+  yapılandırması gerekiyor).
 - *Kabul:* `hbinfo` kütüphaneyle aynı çıktıyı verir; birkaç görev aynı
   anda çalışırken çökme yok; OS 3.1 (WinUAE) ve OS 3.2'de çalışır.
 
-**A3. Hız ve dayanıklılık**
+**A3. Hız ve dayanıklılık — WinUAE kısmı YAPILDI (8.11.2026)**
+- `tests/hbfuzz.c` + `tests/mkpack.py`: HarfBuzz'ın 532 bozuk/uç durum
+  fontu (`test/fuzzing/fonts`) tek paket hâlinde; her font için face, font,
+  7 yazı sisteminde şekillendirme, varyasyon, eğik, OpenType bilgileri.
+  WinUAE (OS 3.2.3): **532/532, çökme yok**, ~10 sn; iki tur arka arkaya,
+  kütüphane bellekten atılınca boş bellek başlangıçtakiyle aynı (sızıntı yok).
+- `tests/hbbench.c`: 16 px, WinUAE 68060 JIT: Source Sans 3 Latin
+  2385 satır/s (78 karakter), Türkçe 3614, Arapça 6191; DejaVu Sans
+  Latin 7564, Türkçe 10605, Arapça 7634.
+- Bekleyen: A1200 (Emu68), WinUAE'deki OS 3.1 yapılandırması.
 - `hbbench` (aabench gibi): saniyede şekillendirilen satır ve karakter;
   WinUAE ve A1200 (Emu68).
 - HarfBuzz'ın bozuk font test dosyaları; 16 KB yığınlı programlar.

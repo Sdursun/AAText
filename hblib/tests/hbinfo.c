@@ -140,7 +140,9 @@ int main(void)
         rc = RETURN_FAIL;
         goto out;
     }
-    printf("# %s", (const char *)HarfBuzzBase->lib_IdString);
+    printf("# %.*s\n",
+           (int)strcspn((const char *)HarfBuzzBase->lib_IdString, "\r\n"),
+           (const char *)HarfBuzzBase->lib_IdString);
 #else
     if (!hbmem_Init())
     {
