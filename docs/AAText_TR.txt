@@ -737,13 +737,13 @@ Geçmiş
 Teşekkürler
 -----------
 
-FreeType: AAText, FreeType 2 font motorunu (sürüm 2.14.3) kullanır.
+FreeType: AAText, FreeType 2 font motorunu (sürüm 2.15.0) kullanır.
 This software is based in part on the work of the FreeType Team.
 Portions of this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved.
 
 aatext.library (Libs/, AATextManager kullanır) paylaşılan kütüphane
-olarak FreeType 2.14.3'tür; lisansları LICENSE.aatext.txt ve FTL.txt'de.
+olarak FreeType 2.15.0'dır; lisansları LICENSE.aatext.txt ve FTL.txt'de.
 
 AROS: Gerçek ölçü modunun ölçüm kodu (TextExtent ve TextFit) AROS'tan
 türetilmiştir, Copyright (C) 1995-2026 The AROS Development Team. Bu

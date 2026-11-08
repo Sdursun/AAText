@@ -2,7 +2,7 @@ aatext.library 1.0 for AmigaOS 3 (the library of AAText)
 
 The library contains two kinds of code under two licenses.
 
-1. FreeType 2.14.3 (third_party/freetype-2.14.3/ in the AAText source), used under the FreeType License
+1. FreeType 2.15.0 (third_party/freetype-2.15.0/ in the AAText source), used under the FreeType License
    (FTL.txt):
 
    Portions of this software are copyright (C) 2026 The FreeType Project

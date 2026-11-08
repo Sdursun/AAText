@@ -1,4 +1,4 @@
-# aatext.library 1.1 - AAText's library: FreeType 2.14.3 for AmigaOS 3
+# aatext.library 1.2 - AAText's library: FreeType 2.15.0 for AmigaOS 3
 #
 #   make              68020 build:  build/68020/aatext.library
 #   make CPU=68060    68060 build:  build/68060/aatext.library
@@ -18,7 +18,7 @@ PYTHON  ?= python3
 CPU     ?= 68020
 DEBUG   ?= 0
 
-FT_VER  := 2.14.3
+FT_VER  := 2.15.0
 # the same FreeType source as AAText's own build
 FT_DIR  ?= ../third_party/freetype-$(FT_VER)
 

@@ -1,6 +1,6 @@
-# aatext.library 1.1
+# aatext.library 1.2
 
-AAText'in kütüphanesi: FreeType 2.14.3'ü AmigaOS 3 (68020+) için paylaşımlı
+AAText'in kütüphanesi: FreeType 2.15.0'ı AmigaOS 3 (68020+) için paylaşımlı
 kütüphane olarak sunar ve diskfont.library için bir bullet (outline) motoru
 içerir (`OT_Engine "aatext"`). Sistemdeki **freetype2.library**'ye (1.3, 2002,
 FreeType 2.1, Aminet `util/libs/freetype2_lib`) dokunmaz; ikisi yan yana durur.
@@ -23,7 +23,7 @@ Fonksiyon sırası 1.3 ile aynıdır, `.otag` etiketleri de FTManager'ınkilerle
 | `docs/` | Aminet readme, kullanıcı belgeleri (EN, TR) |
 | `build/<cpu>/` | derlenmiş kütüphane ve testler; `build/lvo.txt` LVO haritası |
 | `dist/` | Aminet paketi (`aatext_lib.lha`, `aatext_lib.readme`) |
-| `../third_party/freetype-2.14.3/` | değiştirilmemiş FreeType kaynağı (AAText ile ortak, `tools/fetch-freetype.sh`) |
+| `../third_party/freetype-2.15.0/` | değiştirilmemiş FreeType kaynağı (AAText ile ortak, `tools/fetch-freetype.sh`) |
 | `ttengine-7.2/` | referans: ttengine.library 7.2 kaynağı (derlemede kullanılmaz) |
 | `reference/old-freetype2.library/` | eski freetype2.library 1.3 ikilisi ve örnek `.otag`/`.font` dosyaları (karşılaştırma için) |
 
@@ -101,5 +101,5 @@ RAM:aat/ft2bullet FONTS:verdanaregular.otag SIZE 13 ART WIDTHS LIB RAM:aat/aatex
 
 ## Lisans
 
-FreeType: FreeType License (`third_party/freetype-2.14.3/docs/FTL.TXT`). Kütüphane kodu: MIT
+FreeType: FreeType License (`third_party/freetype-2.15.0/docs/FTL.TXT`). Kütüphane kodu: MIT
 (`LICENSE`).

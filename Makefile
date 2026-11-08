@@ -19,7 +19,7 @@ CPU     ?= 68020
 DEBUG   ?= 0
 USE_AATEXTLIB ?= 0
 
-FT_VER  := 2.14.3
+FT_VER  := 2.15.0
 FT_DIR  := third_party/freetype-$(FT_VER)
 
 BUILDDIR := build/$(CPU)$(if $(filter 1,$(DEBUG)),-debug,)$(if $(filter 1,$(USE_AATEXTLIB)),-lib,)

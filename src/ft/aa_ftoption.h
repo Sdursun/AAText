@@ -27,6 +27,7 @@
 #undef TT_CONFIG_OPTION_EMBEDDED_BITMAPS          /* always use outlines */
 #undef TT_CONFIG_OPTION_COLOR_LAYERS
 #undef TT_CONFIG_OPTION_GX_VAR_SUPPORT
+#undef TT_CONFIG_OPTION_VARC                  /* 2.15: CJK variable composites */
 #undef TT_CONFIG_OPTION_BDF
 
 /* CFF only, no Type 1 fonts: no AFM metrics files */

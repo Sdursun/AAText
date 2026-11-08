@@ -1,18 +1,18 @@
-Short:        AAText's library: FreeType 2.14.3 + font engine
+Short:        AAText's library: FreeType 2.15.0 + font engine
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/libs
-Version:      1.1
+Version:      1.2
 Architecture: m68k-amigaos >= 3.0.0
 Distribution: Aminet
 Requires:     68020+, AmigaOS 3.0+
 
-aatext.library is the library of AAText (util/wb/AAText): FreeType 2.14.3
+aatext.library is the library of AAText (util/wb/AAText): FreeType 2.15.0
 (2026) as an AmigaOS 3 shared library, and an outline font engine for
 diskfont.library. It does not replace or change freetype2.library;
 both can be installed side by side.
 
-- FreeType API: the full FreeType 2.14.3 API for programs (165 functions),
+- FreeType API: the full FreeType 2.15.0 API for programs (165 functions),
   with the same function order as freetype2.library 1.3, so a program
   written for freetype2.library can use aatext.library by opening it
   under the new name.
@@ -21,7 +21,7 @@ both can be installed side by side.
   freetype2.library works when its engine is changed to "aatext".
 
 What the engine does better than freetype2.library 1.3
-- FreeType 2.14.3: TrueType, OpenType/CFF (.otf), CFF2 and variable
+- FreeType 2.15.0: TrueType, OpenType/CFF (.otf), CFF2 and variable
   fonts, WOFF, Type 1 (.pfb/.pfa), CID, Type 42, PFR, Windows FNT, PCF
   and BDF bitmap fonts (also gzip or LZW compressed).
 - 1-bit glyphs hinted for monochrome output (the font's own TrueType
@@ -51,7 +51,7 @@ freetype2.library), or ISO-8859-1.
 
 For programmers
 Developer/include has the headers (proto, inline, clib, fd, libraries)
-and the FreeType 2.14.3 headers. With gcc:
+and the FreeType 2.15.0 headers. With gcc:
 
   #include <proto/aatext.h>
   struct Library *AATextBase;

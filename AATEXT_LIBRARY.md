@@ -1,7 +1,7 @@
-# aatext.library 1.1 – AAText'in kütüphanesi
+# aatext.library 1.2 – AAText'in kütüphanesi
 
-AAText için ayrı bir paylaşımlı kütüphane geliştirildi: **aatext.library 1.1**
-(FreeType 2.14.3). Kaynağı bu deponun `aatextlib/` klasöründe
+AAText için ayrı bir paylaşımlı kütüphane geliştirildi: **aatext.library 1.2**
+(FreeType 2.15.0). Kaynağı bu deponun `aatextlib/` klasöründe
 (`src/`, derleme `build/`, Aminet paketi `dist/`; AAText'in `make dist`'i
 kütüphaneyi oradan derleyip pakete alır). Bu dosya, kütüphanenin AAText geliştirmesinde nasıl
 kullanılacağını ve AAText'i ilgilendiren özelliklerini listeler.
@@ -22,7 +22,7 @@ Sistemdeki **freetype2.library 1.3**'e (FTManager ile gelen, FreeType 2.1)
 
 ## 1. FreeType'ı gömmek yerine kütüphaneyi kullanmak
 
-AAText bugün FreeType'ı statik gömüyor (`third_party/freetype-2.14.3`,
+AAText bugün FreeType'ı statik gömüyor (`third_party/freetype-2.15.0`,
 `src/ft/`). `build/68020/AAText` 350 KB; bunun büyük kısmı FreeType.
 Kütüphaneyle:
 
@@ -75,8 +75,8 @@ AATextBase = OpenLibrary("aatext.library", 1);
   (`proto/aatext.h` bunu yapar). AAText'in kendi `#include <ft2build.h>`
   satırları proto'dan önce kalabilir.
 - Başlıklar: `freetype2/include` (proto, inline, clib, fd, libraries) +
-  `freetype2/freetype-2.14.3/include`. Makefile'da
-  `-I../freetype2/include -I../freetype2/freetype-2.14.3/include`.
+  `freetype2/freetype-2.15.0/include`. Makefile'da
+  `-I../freetype2/include -I../freetype2/freetype-2.15.0/include`.
 - Kütüphane yoksa AAText başlamamalı ve bunu söylemeli (ya da statik
   FreeType'lı bir yapı ayrıca dağıtılır – karar verilmedi).
 

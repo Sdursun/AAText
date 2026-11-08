@@ -29,4 +29,8 @@
 #undef AF_CONFIG_OPTION_CJK
 #undef AF_CONFIG_OPTION_INDIC
 
+/* FreeType 2.15: variable composite glyphs ('VARC'), made for CJK
+   variable fonts; nothing in AmigaOS 3 code pages needs them */
+#undef TT_CONFIG_OPTION_VARC
+
 #endif

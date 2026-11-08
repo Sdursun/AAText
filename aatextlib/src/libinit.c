@@ -18,7 +18,7 @@ struct FT2Base *FT2Base;
 
 static const char LibName[] = LIB_NAME;
 static const char LibId[] =
-    "$VER: " LIB_NAME " 1.1 (" LIB_DATE ") " LIB_FTVER "\r\n";
+    "$VER: " LIB_NAME " 1.2 (" LIB_DATE ") " LIB_FTVER "\r\n";
 
 /* ---- functions in registers ------------------------------------------- */
 

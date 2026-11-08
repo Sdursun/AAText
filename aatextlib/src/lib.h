@@ -10,9 +10,9 @@
 
 #define LIB_NAME     "aatext.library"
 #define LIB_VERSION  1
-#define LIB_REVISION 1
-#define LIB_DATE     "25.10.2026"
-#define LIB_FTVER    "FreeType 2.14.3"
+#define LIB_REVISION 2
+#define LIB_DATE     "08.11.2026"
+#define LIB_FTVER    "FreeType 2.15.0"
 
 struct FT2Base
 {

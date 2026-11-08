@@ -1,8 +1,8 @@
 #!/bin/sh
 # Downloads the pinned FreeType release into third_party/.
 set -e
-VER=2.14.3
-SHA256=36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f
+VER=2.15.0
+SHA256=93cd47eb719c325107f2d3cf087d06299e944c3b48a40b55537302304dea1dd5
 cd "$(dirname "$0")/.."
 mkdir -p third_party
 cd third_party

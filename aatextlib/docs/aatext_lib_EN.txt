@@ -1,7 +1,7 @@
-aatext.library 1.1
+aatext.library 1.2
 ==================
 
-The library of AAText: FreeType 2.14.3 as an AmigaOS 3 shared library,
+The library of AAText: FreeType 2.15.0 as an AmigaOS 3 shared library,
 and an outline font engine for diskfont.library.
 
 aatext.library does not replace or change freetype2.library. Both can be
@@ -104,7 +104,7 @@ For programmers
 ---------------
 
 Developer/include has proto, inline, clib, fd and libraries headers and
-the FreeType 2.14.3 headers. With gcc:
+the FreeType 2.15.0 headers. With gcc:
 
   #include <proto/aatext.h>
 

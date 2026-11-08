@@ -78,7 +78,7 @@ AAText is cross-compiled with [bebbo's amiga-gcc](https://codeberg.org/bebbo/ami
 in Docker; on Windows the scripts are PowerShell.
 
 ```sh
-sh tools/fetch-freetype.sh      # FreeType 2.14.3 into third_party/ (sha256 checked)
+sh tools/fetch-freetype.sh      # FreeType 2.15.0 into third_party/ (sha256 checked)
 sh tools/fetch-amissl.sh        # AmiSSL 5 SDK headers (AATextManager update check)
 .\build.ps1                     # build/68020/AAText
 .\build.ps1 DEBUG=1             # build/68020-debug/AAText (serial kprintf output)
@@ -142,7 +142,7 @@ Exceptions and third-party code:
   `textfit.c`), Copyright © 1995-2026 The AROS Development Team, and is
   distributed under the [AROS Public License 1.1](LICENSE.APL). Its header
   lists the changes made.
-- Binary releases contain FreeType 2.14.3. This software is based in part
+- Binary releases contain FreeType 2.15.0. This software is based in part
   on the work of the FreeType Team. Portions of this software are copyright
   © 2026 The FreeType Project (https://freetype.org). All rights reserved.
   FreeType itself is not part of this repository; `tools/fetch-freetype.sh`

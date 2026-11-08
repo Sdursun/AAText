@@ -4,7 +4,7 @@
 /*
  * aatext.library 1.1 - definitions for programs and font installers.
  *
- * aatext.library is AAText's library: FreeType 2.14.3 as a shared library
+ * aatext.library is AAText's library: FreeType 2.15.0 as a shared library
  * (see <proto/aatext.h>) and a bullet.library-compatible outline engine for
  * diskfont.library (OT_Engine "aatext" in a .otag file). It does not
  * replace freetype2.library; both can be installed.

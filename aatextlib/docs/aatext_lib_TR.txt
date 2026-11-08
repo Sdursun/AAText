@@ -1,7 +1,7 @@
-aatext.library 1.1
+aatext.library 1.2
 ==================
 
-AAText'in kütüphanesi: FreeType 2.14.3, AmigaOS 3 için paylaşımlı
+AAText'in kütüphanesi: FreeType 2.15.0, AmigaOS 3 için paylaşımlı
 kütüphane olarak; ayrıca diskfont.library için bir outline font motoru.
 
 aatext.library, freetype2.library'nin yerine geçmez ve onu değiştirmez.
@@ -105,7 +105,7 @@ Programcılar için
 -----------------
 
 Developer/include içinde proto, inline, clib, fd ve libraries başlıkları
-ile FreeType 2.14.3 başlıkları vardır. gcc ile:
+ile FreeType 2.15.0 başlıkları vardır. gcc ile:
 
   #include <proto/aatext.h>
 

@@ -717,12 +717,12 @@ History
 Credits
 -------
 
-FreeType: AAText uses the FreeType 2 font engine (version 2.14.3). This
+FreeType: AAText uses the FreeType 2 font engine (version 2.15.0). This
 software is based in part on the work of the FreeType Team. Portions of
 this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved.
 
-aatext.library (Libs/, used by AATextManager) is FreeType 2.14.3 as a
+aatext.library (Libs/, used by AATextManager) is FreeType 2.15.0 as a
 shared library; licenses in LICENSE.aatext.txt and FTL.txt.
 
 AROS: the measuring code of the real metrics mode (TextExtent and
