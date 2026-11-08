@@ -38,8 +38,18 @@
 #include <stddef.h>
 #include <string.h>
 
+/*
+ * Pixel buffers hold RGBA, 4 bytes a pixel (the alpha byte is not used):
+ * Picasso96 writes RECTFMT_RGBA about three times faster than 3 byte
+ * RECTFMT_RGB (WinUAE: 13 against 44 us for a 400 x 20 line, see
+ * tests/pxbench.c); reading costs the same. The blend code uses bytes
+ * 0-2 of each pixel as R, G, B.
+ */
+#define AA_BPP          4
+#define AA_RECTFMT      RECTFMT_RGBA
+
 /* Upper limit for one temporary pixel buffer (bytes). */
-#define AA_MAX_BUFFER   (512 * 1024)
+#define AA_MAX_BUFFER   (704 * 1024)
 
 /*
  * Preallocated buffers, so strings need no AllocVec(): two for short
@@ -49,7 +59,7 @@
 #define AA_NUM_BUFFERS  4
 static const ULONG aa_BufferSize[AA_NUM_BUFFERS] =
 {
-    32 * 1024, 32 * 1024, 128 * 1024, 128 * 1024
+    48 * 1024, 48 * 1024, 176 * 1024, 176 * 1024
 };
 
 /* Preallocated chip RAM templates for the 1 bit real metrics path. */
@@ -588,11 +598,12 @@ static void FillBuffer(UBYTE *buf, LONG pixels, const UBYTE *rgb)
 {
     UBYTE r = rgb[0], g = rgb[1], b = rgb[2];
 
-    while (pixels--)
+    while (pixels--)            /* RGBA, see AA_BPP */
     {
         *buf++ = r;
         *buf++ = g;
         *buf++ = b;
+        *buf++ = 0;
     }
 }
 
@@ -678,7 +689,7 @@ static void BlendLCD(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
         const UBYTE (*tg)[256] = bt->t[1];
         const UBYTE (*tb)[256] = bt->t[2];
         const UBYTE *lv = aa_Level;
-        LONG stride = w * 3, gstride = gw * 3;
+        LONG stride = w * AA_BPP, gstride = gw * 3;
         const UBYTE *srow = g->data + y0 * gstride;
         UBYTE *drow = buf + (gy + y0) * stride;
 
@@ -688,9 +699,12 @@ static void BlendLCD(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
             LONG x0 = rx < 0 ? -rx : 0;
             LONG n = (rx + gw > w ? w - rx : gw) - x0;
             const UBYTE *src = srow + x0 * 3;
-            UBYTE *dst = drow + (rx + x0) * 3;
+            UBYTE *dst = drow + (rx + x0) * AA_BPP;
 
-            for (; n > 0; n--, src += 3, dst += 3)
+            /* bytes, not one 32 bit read and write: gcc makes those into
+               bit field instructions (bfins/bfextu), slow on a 68020/030
+               and not compiled by WinUAE's JIT (2.5 times slower) */
+            for (; n > 0; n--, src += 3, dst += AA_BPP)
             {
                 LONG l;
 
@@ -712,9 +726,9 @@ static void BlendLCD(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
         LONG x0 = rx < 0 ? -rx : 0;
         LONG x1 = rx + gw > w ? w - rx : gw;
         const UBYTE *src = g->data + (y * gw + x0) * 3;
-        UBYTE *dst = buf + ((gy + y) * w + rx + x0) * 3;
+        UBYTE *dst = buf + ((gy + y) * w + rx + x0) * AA_BPP;
 
-        for (x = x0; x < x1; x++, src += 3, dst += 3)
+        for (x = x0; x < x1; x++, src += 3, dst += AA_BPP)
         {
             LONG c;
 
@@ -757,9 +771,9 @@ static void BlendLCDGray(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
         LONG rx = gx + ItalicShift(gy + y, italicbase);
         LONG x0 = rx < 0 ? -rx : 0;
         LONG x1 = rx + g->width > w ? w - rx : g->width;
-        UBYTE *dst = buf + ((gy + y) * w + rx + x0) * 3;
+        UBYTE *dst = buf + ((gy + y) * w + rx + x0) * AA_BPP;
 
-        for (x = x0; x < x1; x++, dst += 3)
+        for (x = x0; x < x1; x++, dst += AA_BPP)
         {
             ULONG a = aa_GlyphCov(g, x, y);
 
@@ -795,7 +809,7 @@ static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
         const UBYTE (*tr)[256] = bt->t[0];
         const UBYTE (*tg)[256] = bt->t[1];
         const UBYTE (*tb)[256] = bt->t[2];
-        LONG stride = w * 3, gw = g->width;
+        LONG stride = w * AA_BPP, gw = g->width;
         const UBYTE *srow;
         UBYTE *drow;
 
@@ -814,9 +828,9 @@ static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
             LONG x0 = rx < 0 ? -rx : 0;
             LONG x1 = rx + gw > w ? w - rx : gw;
             const UBYTE *src = srow + x0;
-            UBYTE *dst = drow + (rx + x0) * 3;
+            UBYTE *dst = drow + (rx + x0) * AA_BPP;
 
-            for (x = x0; x < x1; x++, dst += 3)
+            for (x = x0; x < x1; x++, dst += AA_BPP)
             {
                 LONG l = aa_Level[*src++];
 
@@ -841,9 +855,9 @@ static void BlendGlyph(UBYTE *buf, LONG w, LONG h, const struct AAGlyph *g,
         LONG x0 = rx < 0 ? -rx : 0;
         LONG x1 = rx + g->width > w ? w - rx : g->width;
         const UBYTE *src = g->data + y * g->width + x0;
-        UBYTE *dst = buf + ((gy + y) * w + rx + x0) * 3;
+        UBYTE *dst = buf + ((gy + y) * w + rx + x0) * AA_BPP;
 
-        for (x = x0; x < x1; x++, dst += 3)
+        for (x = x0; x < x1; x++, dst += AA_BPP)
         {
             ULONG a = *src++;
 
@@ -989,7 +1003,7 @@ static void LineRGB(UBYTE *buf, LONG w, LONG y, LONG x0, LONG x1,
         x0 = 0;
     if (x1 > w)
         x1 = w;
-    for (p = buf + (y * w + x0) * 3; x0 < x1; x0++, p += 3)
+    for (p = buf + (y * w + x0) * AA_BPP; x0 < x1; x0++, p += AA_BPP)
     {
         p[0] = fg[0];
         p[1] = fg[1];
@@ -1087,9 +1101,9 @@ static void DrawGradient(UBYTE *buf, LONG w, LONG h, const UBYTE *fg)
 
     for (j = 0; j < h; j++)
     {
-        UBYTE *p = buf + j * w * 3;
+        UBYTE *p = buf + j * w * AA_BPP;
 
-        for (i = 0; i < w; i++, p += 3)
+        for (i = 0; i < w; i++, p += AA_BPP)
         {
             LONG a = (i + 1) * 256 / w;
 
@@ -1411,7 +1425,7 @@ static BOOL PaletteCompose(struct RastPort *rp, struct ViewPort *vp,
         const UBYTE *cv = cov + r * covmod;
         UBYTE *p = pens + r * mod;
 
-        for (c = 0; c < w; c++, cv += 3, p++)
+        for (c = 0; c < w; c++, cv += AA_BPP, p++)
         {
             LONG step = (*cv * AA_PAL_STEPS + 127) / 255;
             UWORD *m;
@@ -1452,7 +1466,7 @@ static struct ViewPort *CanBlend(struct RastPort *rp, LONG x, LONG y,
         !cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_ISCYBERGFX) ||
         cgx_GetCyberMapAttr(CyberGfxBase, bm, CYBRMATTR_PIXFMT) == PIXFMT_LUT8)
         return NULL;
-    if (w * h * 3 > AA_MAX_BUFFER || !CoordsOk(rp, bm, x, y, w, h, sx, sy))
+    if (w * h * AA_BPP > AA_MAX_BUFFER || !CoordsOk(rp, bm, x, y, w, h, sx, sy))
         return NULL;
     return FindViewPort(rp);
 }
@@ -1477,7 +1491,7 @@ static struct ViewPort *CanBlend(struct RastPort *rp, LONG x, LONG y,
  */
 #define AA_REDRAW_SLOTS   64
 #define AA_REDRAW_MAXSTR  64
-#define AA_REDRAW_MAXBUF  (16 * 1024)      /* bytes of the text box */
+#define AA_REDRAW_MAXBUF  (22 * 1024)      /* bytes of the text box */
 
 struct AARedraw
 {
@@ -1498,11 +1512,11 @@ static LONG aa_RedrawNext;
 static ULONG HashPixels(const UBYTE *buf, LONG w, LONG h, LONG sx, LONG sy)
 {
     ULONG hash = 0x9E3779B9UL;
-    LONG y, i, n = (w - sx) * 3;
+    LONG y, i, n = (w - sx) * AA_BPP;
 
     for (y = sy; y < h; y++)
     {
-        const UBYTE *p = buf + (y * w + sx) * 3;
+        const UBYTE *p = buf + (y * w + sx) * AA_BPP;
 
         for (i = 0; i < n; i++)
             hash = ((hash << 5) | (hash >> 27)) ^ p[i];
@@ -1525,7 +1539,7 @@ static BOOL RedrawSame(const UBYTE *buf, struct RastPort *rp,
 
     *slot = -1;
     /* short strings only: hashing long Shell lines would cost time */
-    if (count > AA_REDRAW_MAXSTR || w * h * 3 > AA_REDRAW_MAXBUF)
+    if (count > AA_REDRAW_MAXSTR || w * h * AA_BPP > AA_REDRAW_MAXBUF)
         return FALSE;
     for (i = 0; i < AA_REDRAW_SLOTS; i++)
     {
@@ -1614,7 +1628,7 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
     if (vp && vp->ColorMap)
     {
         UBYTE fg[3], bg[3];
-        UBYTE *buf = GetBuffer(w * h * 3);
+        UBYTE *buf = GetBuffer(w * h * AA_BPP);
 
         if (buf)
         {
@@ -1632,9 +1646,9 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
             }
             else
             {
-                cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp,
+                cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * AA_BPP, rp,
                                    x + sx, y + sy, w - sx, h - sy,
-                                   RECTFMT_RGB);
+                                   AA_RECTFMT);
                 /* drawn here already? see RedrawSame() */
                 ObtainSemaphore(&aa_RedrawLock);
                 same = RedrawSame(buf, rp, string, count, x, y, w, h, sx, sy,
@@ -1660,9 +1674,9 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
 
             TSTAMP(ts3);
             if (!same)
-                cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp,
+                cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * AA_BPP, rp,
                                     x + sx, y + sy, w - sx, h - sy,
-                                    RECTFMT_RGB);
+                                    AA_RECTFMT);
             FreeBuffer(buf);
             TSTAMP(ts4);
 #ifdef DEBUG
@@ -1686,18 +1700,18 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
     /* "aga on": palette screens with mixed pens */
     if (!vp && IsPaletteBitMap(rp->BitMap) &&
         !(rp->DrawMode & (COMPLEMENT | INVERSVID)) &&
-        w * h * 3 <= AA_MAX_BUFFER &&
+        w * h * AA_BPP <= AA_MAX_BUFFER &&
         CoordsOk(rp, rp->BitMap, x, y, w, h, &sx, &sy) &&
         (vp = FindViewPort(rp)) && vp->ColorMap)
     {
         static const UBYTE white[3] = { 255, 255, 255 };
-        UBYTE *buf = GetBuffer(w * h * 3);
+        UBYTE *buf = GetBuffer(w * h * AA_BPP);
 
         if (buf)
         {
             BOOL done;
 
-            memset(buf, 0, w * h * 3);
+            memset(buf, 0, w * h * AA_BPP);
             aa_LockGlyphs();
             aa_GrayCoverage = TRUE;
             if (aa_PrepareFont(font, tf))
@@ -1705,7 +1719,7 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
                          white, BlendFor(white));
             aa_GrayCoverage = FALSE;
             aa_UnlockGlyphs();
-            done = PaletteCompose(rp, vp, buf + (sy * w + sx) * 3, w * 3,
+            done = PaletteCompose(rp, vp, buf + (sy * w + sx) * AA_BPP, w * AA_BPP,
                                   x + sx, y + sy, w - sx, h - sy);
             FreeBuffer(buf);
             if (done)
@@ -1812,7 +1826,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     h = tf->tf_YSize;
     x = rp->cp_x - left;
     y = rp->cp_y - tf->tf_Baseline;
-    if (adv <= 0 || h <= 0 || w * h * 3 > AA_MAX_BUFFER ||
+    if (adv <= 0 || h <= 0 || w * h * AA_BPP > AA_MAX_BUFFER ||
         !CoordsOk(rp, bm, x, y, w, h, &sx, &sy))
         FAIL(R_COORDS);
 
@@ -1838,7 +1852,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
             FAIL(R_FONTFAIL);
     }
 
-    buf = GetBuffer(w * h * 3);
+    buf = GetBuffer(w * h * AA_BPP);
     if (!buf)
         FAIL(R_NOMEM);
 
@@ -1848,7 +1862,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         static const UBYTE white[3] = { 255, 255, 255 };
         BOOL done;
 
-        memset(buf, 0, w * h * 3);
+        memset(buf, 0, w * h * AA_BPP);
         if (font)
         {
             aa_LockGlyphs();
@@ -1861,7 +1875,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         }
         else
             DrawGradient(buf, w, h, white);
-        done = PaletteCompose(rp, vp, buf + (sy * w + sx) * 3, w * 3,
+        done = PaletteCompose(rp, vp, buf + (sy * w + sx) * AA_BPP, w * AA_BPP,
                               x + sx, y + sy, w - sx, h - sy);
         FreeBuffer(buf);
         if (!done)
@@ -1883,8 +1897,8 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     }
     else
     {
-        cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp, x + sx,
-                           y + sy, w - sx, h - sy, RECTFMT_RGB);
+        cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * AA_BPP, rp, x + sx,
+                           y + sy, w - sx, h - sy, AA_RECTFMT);
         /* drawn here already? see RedrawSame() */
         ObtainSemaphore(&aa_RedrawLock);
         same = RedrawSame(buf, rp, string, count, x, y, w, h, sx, sy, key,
@@ -1914,8 +1928,8 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
 
     TSTAMP(ts3);
     if (!same)
-        cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * 3, rp, x + sx,
-                            y + sy, w - sx, h - sy, RECTFMT_RGB);
+        cgx_WritePixelArray(CyberGfxBase, buf, sx, sy, w * AA_BPP, rp, x + sx,
+                            y + sy, w - sx, h - sy, AA_RECTFMT);
     FreeBuffer(buf);
     TSTAMP(ts4);
 #ifdef DEBUG
