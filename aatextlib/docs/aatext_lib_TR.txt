@@ -54,7 +54,10 @@ Motorun diskfont'a verdikleri:
 - 8 bit yumuşatılmış (antialiased) glif haritaları (OT_GlyphMap8Bit).
 - 1 bit gliflerle aynı hinting ile ölçülmüş genişlik listeleri
   (OT_WidthList, OT_WidthList32).
-- 'kern' tablosundan kerning (OT_TextKernPair, OT_DesignKernPair).
+- Kerning (OT_TextKernPair, OT_DesignKernPair): GPOS tablosunun 'kern'
+  özelliğinden, HarfBuzz'ın uyguladığı gibi (yaklaşık 2010'dan beri
+  yapılan fontların çoğunda artık 'kern' tablosu yok); GPOS'u olmayan
+  fontlarda 'kern' tablosundan.
 - Algoritmik kalın (OT_EmboldenX/Y), eğik (OT_ShearSin/Cos), döndürme
   (OT_RotateSin/Cos), genişlik (OT_SetFactor).
 - 32 bit glif kodları (OT_GlyphCode_32, OT_GlyphCode2_32): 256 ve üstü

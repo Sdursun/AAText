@@ -80,6 +80,9 @@ Docker ile (`ghcr.io/rondoval/amiga-build-container`, bebbo gcc + NDK 3.2):
   haritası: `build/68020/aatext.map`). `malloc` ve stdio yok.
 - **Bullet davranışı.** Boyut hesabı, GlyphMap alanları, genişlik listesi ve
   kerning freetype2.library 1.3 ile aynı formüller (font boyları değişmez).
+  Kerning 2.0'dan beri önce GPOS'un `kern` özelliğinden (`../src/gposkern.h`,
+  AAText ile ortak; WinUAE'de 3 Google fontunda 168 çift HarfBuzz ile birebir),
+  yoksa `kern` tablosundan.
   1 bit gliflerde `FT_LOAD_TARGET_MONO` hinting'i kasıtlı bir farktır (daha
   düzgün glifler).
 

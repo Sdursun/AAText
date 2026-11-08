@@ -9,8 +9,8 @@
  *
  * New: monochrome hinting for 1-bit glyph maps, 8-bit antialiased glyph
  * maps (OT_GlyphMap8Bit), 32-bit glyph codes, OT_EmboldenX/Y, OT_SetFactor,
- * symbol fonts, bitmap fonts (PCF, BDF, FNT) and a stack that is always
- * big enough for FreeType.
+ * symbol fonts, bitmap fonts (PCF, BDF, FNT), kerning from GPOS and a
+ * stack that is always big enough for FreeType.
  */
 
 #include <exec/types.h>
@@ -34,8 +34,10 @@
 #include <freetype/ftoutln.h>
 #include <freetype/tttables.h>
 #include <freetype/ftglyph.h>
+#include <freetype/tttags.h>
 
 #include "lib.h"
+#include "../../src/gposkern.h"     /* shared with AAText */
 #include <libraries/aatext.h>
 
 #define REG(r, decl) register decl __asm(#r)
@@ -90,6 +92,14 @@ struct FT2Engine
     BOOL                    dirty;      /* size must be set again */
     LONG                    upem;       /* em height in font units */
     LONG                    xppem, yppem;
+
+    /* GPOS 'kern' feature of the open face, read at the first kerning
+       request: gpos == NULL and gposread: none, the 'kern' table counts */
+    BOOL                    gposread;
+    UBYTE                  *gpos;
+    ULONG                   gposlen;
+    struct GPSubtable      *gpsub;
+    LONG                    gpns;
 };
 
 static const char EngineName[] = "freetype2";
@@ -156,8 +166,22 @@ static void set_transform(struct FT2Engine *e)
         FT_Set_Transform(e->face, NULL, NULL);
 }
 
+static void free_gpos(struct FT2Engine *e)
+{
+    if (e->gpos)
+        FreeVec(e->gpos);
+    if (e->gpsub)
+        FreeVec(e->gpsub);
+    e->gpos = NULL;
+    e->gpsub = NULL;
+    e->gposlen = 0;
+    e->gpns = 0;
+    e->gposread = FALSE;
+}
+
 static void close_face(struct FT2Engine *e)
 {
+    free_gpos(e);
     if (e->face)
         FT_Done_Face(e->face);
     e->face = NULL;
@@ -648,7 +672,36 @@ nomem:
     return NULL;
 }
 
-/* kerning of code/code2 as a fraction of the em; positive moves apart */
+/* Reads the GPOS table of the open face and its 'kern' feature's
+   PairPos subtables; keeps nothing if it has no such feature. */
+static void read_gpos(struct FT2Engine *e)
+{
+    FT_ULong len = 0;
+    UWORD lk[GP_MAX_LOOKUPS];
+    LONG nl;
+
+    e->gposread = TRUE;
+    if (!FT_IS_SFNT(e->face) ||
+        FT_Load_Sfnt_Table(e->face, TTAG_GPOS, 0, NULL, &len) || len < 10 ||
+        !(e->gpos = AllocVec(len, MEMF_ANY)) ||
+        FT_Load_Sfnt_Table(e->face, TTAG_GPOS, 0, e->gpos, &len) ||
+        !(nl = gp_KernLookups(e->gpos, len, lk)) ||
+        !(e->gpsub = AllocVec(GP_MAX_SUBS * sizeof(*e->gpsub), MEMF_ANY)))
+    {
+        free_gpos(e);
+        e->gposread = TRUE;
+        return;
+    }
+    e->gposlen = len;
+    e->gpns = gp_Subtables(e->gpos, len, lk, nl, e->gpsub);
+    D(("ft2: GPOS kern: %ld lookups, %ld pair subtables\n", nl, e->gpns));
+}
+
+/*
+ * Kerning of code/code2 as a fraction of the em; positive moves apart.
+ * From the GPOS 'kern' feature if the font has one (as HarfBuzz does,
+ * the 'kern' table is not used then), else from the 'kern' table.
+ */
 static FIXED kerning(struct FT2Engine *e)
 {
     FT_UInt l, r;
@@ -658,9 +711,17 @@ static FIXED kerning(struct FT2Engine *e)
         return 0;
     l = glyph_index(e, e->code);
     r = glyph_index(e, e->code2);
-    if (!l || !r || !FT_HAS_KERNING(e->face))
+    if (!l || !r)
         return 0;
-    if (FT_Get_Kerning(e->face, l, r, FT_KERNING_UNSCALED, &k))
+    if (!e->gposread)
+        read_gpos(e);
+    if (e->gpos)
+    {
+        k.x = gp_PairKern(e->gpos, e->gposlen, e->gpsub, e->gpns, l, r);
+        return (-k.x << 16) / e->upem;
+    }
+    if (!FT_HAS_KERNING(e->face) ||
+        FT_Get_Kerning(e->face, l, r, FT_KERNING_UNSCALED, &k))
         return 0;
     return (-k.x << 16) / e->upem;
 }

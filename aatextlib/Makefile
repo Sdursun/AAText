@@ -79,7 +79,7 @@ headers $(GEN) $(GEN_HDRS) &: src/aatext.funcs tools/genfuncs.py
 
 $(BUILDDIR)/libinit.o: $(GEN)
 
-$(BUILDDIR)/%.o: src/%.c src/*.h include/libraries/aatext.h | $(BUILDDIR)
+$(BUILDDIR)/%.o: src/%.c src/*.h ../src/gposkern.h include/libraries/aatext.h | $(BUILDDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/%.o: src/%.s | $(BUILDDIR)

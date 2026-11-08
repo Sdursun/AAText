@@ -57,6 +57,7 @@ void FT_Done_Memory(FT_Memory memory);
 #include "charsets.h"
 #include "fontfile.h"
 #include "debug.h"
+#include "gposkern.h"
 
 #define AA_STACK_SIZE   (32 * 1024)
 #define AA_HASH_SIZE    256
@@ -1930,21 +1931,8 @@ out:
 
 /* ---- GPOS pair kerning ----------------------------------------------- */
 
-/*
- * The 'kern' feature of the GPOS table, as HarfBuzz applies it to two
- * neighbouring letters of Latin text: the lookups of the 'kern'
- * features of script 'latn' (else 'DFLT'; else of all 'kern' features),
- * in lookup list order, their values added up. Within a lookup the
- * first PairPos subtable that applies to a pair wins: format 1 when the
- * pair is listed, format 2 when the left glyph is covered. Only the left
- * glyph's XAdvance is used. Every offset is checked against the table.
- * Checked against HarfBuzz (uharfbuzz 0.57) with 9 Google fonts: all
- * pairs equal except with the soft hyphen (0xAD), which HarfBuzz treats
- * as invisible but Amiga fonts draw.
- */
-#define GP_MAX_LOOKUPS  64
-#define GP_MAX_SUBS     128
-
+/* The GPOS reader is shared with freetype2.library (gposkern.h). For a
+   whole font, format 2 subtables get the class of every right code. */
 struct GPSub
 {
     ULONG  off;                 /* PairPos subtable in the GPOS table */
@@ -1952,248 +1940,32 @@ struct GPSub
     UWORD *c2;                  /* format 2: class of each right code */
 };
 
-static inline BOOL GPIn(ULONG len, ULONG off, ULONG n)
-{
-    return off <= len && n <= len - off;
-}
-
-/* Coverage index of glyph g, -1 if not covered. */
-static LONG GPCoverage(const UBYTE *t, ULONG len, ULONG off, UWORD g)
-{
-    LONG n, a, b;
-
-    if (!GPIn(len, off, 4))
-        return -1;
-    n = KU16(t + off + 2);
-    a = 0;
-    b = n - 1;
-    if (KU16(t + off) == 1)
-    {
-        const UBYTE *gl = t + off + 4;
-
-        if (!GPIn(len, off + 4, n * 2))
-            return -1;
-        while (a <= b)
-        {
-            LONG m = (a + b) >> 1;
-            UWORD v = KU16(gl + m * 2);
-
-            if (v == g)
-                return m;
-            if (v < g)
-                a = m + 1;
-            else
-                b = m - 1;
-        }
-    }
-    else if (KU16(t + off) == 2)
-    {
-        const UBYTE *rg = t + off + 4;
-
-        if (!GPIn(len, off + 4, n * 6))
-            return -1;
-        while (a <= b)
-        {
-            LONG m = (a + b) >> 1;
-            const UBYTE *e = rg + m * 6;
-
-            if (g < KU16(e))
-                b = m - 1;
-            else if (g > KU16(e + 2))
-                a = m + 1;
-            else
-                return KU16(e + 4) + g - KU16(e);
-        }
-    }
-    return -1;
-}
-
-/* Class of glyph g in the ClassDef table at off (0 if not listed). */
-static UWORD GPClass(const UBYTE *t, ULONG len, ULONG off, UWORD g)
-{
-    LONG n, a, b;
-
-    if (!GPIn(len, off, 6))
-        return 0;
-    if (KU16(t + off) == 1)
-    {
-        UWORD start = KU16(t + off + 2);
-
-        n = KU16(t + off + 4);
-        if (g < start || g - start >= n ||
-            !GPIn(len, off + 6, (g - start + 1) * 2))
-            return 0;
-        return KU16(t + off + 6 + (g - start) * 2);
-    }
-    if (KU16(t + off) != 2)
-        return 0;
-    n = KU16(t + off + 2);
-    if (!GPIn(len, off + 4, n * 6))
-        return 0;
-    a = 0;
-    b = n - 1;
-    while (a <= b)
-    {
-        LONG m = (a + b) >> 1;
-        const UBYTE *e = t + off + 4 + m * 6;
-
-        if (g < KU16(e))
-            b = m - 1;
-        else if (g > KU16(e + 2))
-            a = m + 1;
-        else
-            return KU16(e + 4);
-    }
-    return 0;
-}
-
-static LONG GPValueSize(UWORD fmt)
-{
-    LONG n = 0;
-
-    for (fmt &= 0xFF; fmt; fmt &= fmt - 1)
-        n++;
-    return n * 2;
-}
-
-/* XAdvance of the value record at off, 0 if the format has none. */
-static LONG GPXAdvance(const UBYTE *t, ULONG len, ULONG off, UWORD fmt)
-{
-    if (!(fmt & 4))
-        return 0;
-    off += GPValueSize(fmt & 3);
-    return GPIn(len, off, 2) ? (WORD)KU16(t + off) : 0;
-}
-
-/* The lookups of the 'kern' feature, sorted; returns how many. */
-static LONG GPKernLookups(const UBYTE *t, ULONG len, UWORD *lk)
-{
-    ULONG sl, fl, so = 0, ls = 0;
-    LONG ns, nf, i, j, n = 0, nidx = -1;
-
-    if (!GPIn(len, 0, 10) || KU16(t) != 1)
-        return 0;
-    sl = KU16(t + 4);
-    fl = KU16(t + 6);
-    if (!GPIn(len, sl, 2) || !GPIn(len, fl, 2))
-        return 0;
-
-    /* script 'latn', else 'DFLT': its default language system */
-    ns = KU16(t + sl);
-    if (GPIn(len, sl + 2, ns * 6))
-    {
-        ULONG latn = 0, dflt = 0;
-
-        for (i = 0; i < ns; i++)
-        {
-            const UBYTE *e = t + sl + 2 + i * 6;
-
-            if (!memcmp(e, "latn", 4))
-                latn = sl + KU16(e + 4);
-            else if (!memcmp(e, "DFLT", 4))
-                dflt = sl + KU16(e + 4);
-        }
-        so = latn ? latn : dflt;
-    }
-    if (so && GPIn(len, so, 2) && KU16(t + so))
-    {
-        ls = so + KU16(t + so);
-        if (GPIn(len, ls, 6) && GPIn(len, ls + 6, KU16(t + ls + 4) * 2))
-            nidx = KU16(t + ls + 4);
-    }
-
-    nf = KU16(t + fl);
-    if (!GPIn(len, fl + 2, nf * 6))
-        return 0;
-    for (i = 0; i < nf; i++)
-    {
-        const UBYTE *e = t + fl + 2 + i * 6;
-        ULONG fo = fl + KU16(e + 4);
-        LONG k, nl;
-        BOOL used = nidx < 0;
-
-        if (memcmp(e, "kern", 4))
-            continue;
-        for (k = 0; k < nidx && !used; k++)
-            used = KU16(t + ls + 6 + k * 2) == i;
-        if (!used || !GPIn(len, fo, 4))
-            continue;
-        nl = KU16(t + fo + 2);
-        if (!GPIn(len, fo + 4, nl * 2))
-            continue;
-        for (k = 0; k < nl && n < GP_MAX_LOOKUPS; k++)
-        {
-            UWORD l = KU16(t + fo + 4 + k * 2);
-
-            for (j = 0; j < n && lk[j] < l; j++)
-                ;
-            if (j < n && lk[j] == l)
-                continue;               /* already there */
-            memmove(lk + j + 1, lk + j, (n - j) * sizeof(*lk));
-            lk[j] = l;
-            n++;
-        }
-    }
-    return n;
-}
-
-/*
- * The PairPos subtables of the lookups (Extension lookups resolved), in
- * order; format 2 subtables get the class of every right code.
- */
 static LONG GPSubtables(const UBYTE *t, ULONG len, const UWORD *lk, LONG nl,
                         const UWORD *glyph, LONG n, struct GPSub *sub)
 {
-    ULONG ll = KU16(t + 8);
-    LONG ns = 0, i, j, c;
+    struct GPSubtable *st = AllocVec(GP_MAX_SUBS * sizeof(*st), MEMF_ANY);
+    LONG ns = 0, i, c, k;
 
-    if (!GPIn(len, ll, 2))
+    if (!st)
         return 0;
-    for (i = 0; i < nl; i++)
+    k = gp_Subtables(t, len, lk, nl, st);
+    for (i = 0; i < k; i++)
     {
-        ULONG lo;
-        UWORD type;
-        LONG nsub;
-
-        if (lk[i] >= KU16(t + ll) || !GPIn(len, ll + 2 + lk[i] * 2, 2))
-            continue;
-        lo = ll + KU16(t + ll + 2 + lk[i] * 2);
-        if (!GPIn(len, lo, 6))
-            continue;
-        type = KU16(t + lo);
-        nsub = KU16(t + lo + 4);
-        if (!GPIn(len, lo + 6, nsub * 2))
-            continue;
-        for (j = 0; j < nsub && ns < GP_MAX_SUBS; j++)
+        sub[ns].off = st[i].off;
+        sub[ns].lookup = st[i].lookup;
+        sub[ns].c2 = NULL;
+        if (st[i].format == 2)
         {
-            ULONG st = lo + KU16(t + lo + 6 + j * 2);
-            UWORD ty = type;
+            ULONG cd2 = st[i].off + KU16(t + st[i].off + 10);
 
-            if (ty == 9)                /* Extension */
-            {
-                if (!GPIn(len, st, 8))
-                    continue;
-                ty = KU16(t + st + 2);
-                st += ((ULONG)KU16(t + st + 4) << 16) | KU16(t + st + 6);
-            }
-            if (ty != 2 || !GPIn(len, st, 16) ||
-                (KU16(t + st) != 1 && KU16(t + st) != 2))
+            if (!(sub[ns].c2 = AllocVec(n * sizeof(UWORD), MEMF_ANY)))
                 continue;
-            sub[ns].off = st;
-            sub[ns].lookup = i;
-            sub[ns].c2 = NULL;
-            if (KU16(t + st) == 2)
-            {
-                ULONG cd2 = st + KU16(t + st + 10);
-
-                if (!(sub[ns].c2 = AllocVec(n * sizeof(UWORD), MEMF_ANY)))
-                    continue;
-                for (c = 0; c < n; c++)
-                    sub[ns].c2[c] = GPClass(t, len, cd2, glyph[c]);
-            }
-            ns++;
+            for (c = 0; c < n; c++)
+                sub[ns].c2[c] = gp_Class(t, len, cd2, glyph[c]);
         }
+        ns++;
     }
+    FreeVec(st);
     return ns;
 }
 
@@ -2219,7 +1991,7 @@ static BOOL KernGPOS(FT_Face face, const UBYTE *code, const UWORD *glyph,
     if (FT_Load_Sfnt_Table(face, TTAG_GPOS, 0, NULL, &len) || len < 10 ||
         !(t = AllocVec(len, MEMF_ANY)) ||
         FT_Load_Sfnt_Table(face, TTAG_GPOS, 0, t, &len) ||
-        !(nl = GPKernLookups(t, len, lk)))
+        !(nl = gp_KernLookups(t, len, lk)))
         goto out;
     ok = TRUE;                  /* a GPOS 'kern' feature: no 'kern' table */
     sub = AllocVec(GP_MAX_SUBS * sizeof(*sub), MEMF_ANY);
@@ -2242,8 +2014,8 @@ static BOOL KernGPOS(FT_Face face, const UBYTE *code, const UWORD *glyph,
         {
             ULONG st = sub[s].off;
             UWORD vf1 = KU16(t + st + 4), vf2 = KU16(t + st + 6);
-            LONG vsz = GPValueSize(vf1) + GPValueSize(vf2);
-            LONG ci = GPCoverage(t, len, st + KU16(t + st + 2), glyph[i]);
+            LONG vsz = gp_ValueSize(vf1) + gp_ValueSize(vf2);
+            LONG ci = gp_Coverage(t, len, st + KU16(t + st + 2), glyph[i]);
 
             if (sub[s].lookup != lookup)
             {
@@ -2258,13 +2030,13 @@ static BOOL KernGPOS(FT_Face face, const UBYTE *code, const UWORD *glyph,
                 LONG np, rec = 2 + vsz, k;
 
                 if (ci >= KU16(t + st + 8) ||
-                    !GPIn(len, st + 10 + ci * 2, 2))
+                    !gp_In(len, st + 10 + ci * 2, 2))
                     continue;
                 ps = st + KU16(t + st + 10 + ci * 2);
-                if (!GPIn(len, ps, 2))
+                if (!gp_In(len, ps, 2))
                     continue;
                 np = KU16(t + ps);
-                if (!GPIn(len, ps + 2, np * rec))
+                if (!gp_In(len, ps + 2, np * rec))
                     continue;
                 for (k = 0; k < np; k++)
                 {
@@ -2278,14 +2050,14 @@ static BOOL KernGPOS(FT_Face face, const UBYTE *code, const UWORD *glyph,
                         if (j < 0 || done[j])
                             continue;
                         done[j] = 1;
-                        acc[j] += GPXAdvance(t, len, pr + 2, vf1);
+                        acc[j] += gp_XAdvance(t, len, pr + 2, vf1);
                     }
                 }
             }
             else                        /* format 2: class pairs */
             {
                 UWORD n1 = KU16(t + st + 12), n2 = KU16(t + st + 14);
-                UWORD k1 = GPClass(t, len, st + KU16(t + st + 8), glyph[i]);
+                UWORD k1 = gp_Class(t, len, st + KU16(t + st + 8), glyph[i]);
                 ULONG row = st + 16 + (ULONG)k1 * n2 * vsz;
 
                 if (k1 >= n1)
@@ -2295,7 +2067,7 @@ static BOOL KernGPOS(FT_Face face, const UBYTE *code, const UWORD *glyph,
                     if (done[j] || sub[s].c2[j] >= n2)
                         continue;
                     done[j] = 1;
-                    acc[j] += GPXAdvance(t, len, row + sub[s].c2[j] * vsz,
+                    acc[j] += gp_XAdvance(t, len, row + sub[s].c2[j] * vsz,
                                          vf1);
                 }
             }

@@ -32,6 +32,8 @@ What the engine does better than freetype2.library 1.3
 - 8-bit antialiased glyph maps (OT_GlyphMap8Bit of the AmigaOS 3.2 NDK).
 - Symbol fonts (Symbol and other MS symbol encoded fonts) find their
   glyphs.
+- Kerning from the GPOS table (as HarfBuzz applies the 'kern' feature),
+  so newer fonts without a 'kern' table are kerned too.
 - OT_EmboldenX/Y (algorithmic bold), OT_SetFactor (width), 32-bit glyph
   codes (OT_GlyphCode_32, OT_WidthList32), OT_NumGlyphs.
 - OT_Spec9_Hinter: default, autohinter, none, and new "light".

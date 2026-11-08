@@ -53,7 +53,10 @@ What the engine gives diskfont:
 - 8-bit antialiased glyph maps (OT_GlyphMap8Bit).
 - Width lists (OT_WidthList, OT_WidthList32) measured with the same
   hinting as the 1-bit glyphs.
-- Kerning (OT_TextKernPair, OT_DesignKernPair) from the 'kern' table.
+- Kerning (OT_TextKernPair, OT_DesignKernPair) from the 'kern' feature
+  of the GPOS table, as HarfBuzz applies it (pair kerning of most fonts
+  made since about 2010, which have no 'kern' table any more); from the
+  'kern' table for fonts without one.
 - Algorithmic bold (OT_EmboldenX/Y), slant (OT_ShearSin/Cos), rotation
   (OT_RotateSin/Cos), width (OT_SetFactor).
 - 32-bit glyph codes (OT_GlyphCode_32, OT_GlyphCode2_32): codes 256 and
