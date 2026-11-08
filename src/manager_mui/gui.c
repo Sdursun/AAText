@@ -82,6 +82,8 @@ static Object *app, *win, *obj[GID_COUNT];
 static Object *status, *filelist, *repairlist, *dfontlist, *dllist,
               *pvbox, *dlbox, *gauge, *scansum, *advice, *detail[5],
               *dirfield[MGR_NUM_DIRS];
+/* the listviews of filelist, repairlist, dfontlist, dllist (pages 0-3) */
+static Object *listview[4];
 static struct MUI_CustomClass *boxclass;
 
 static char sizestext[80] = "8-16,18,20,24";
@@ -202,10 +204,10 @@ static Object *DetailText(void)
 }
 
 /* a list in its listview; display draws the entries */
-static Object *MkList(Object **list, struct Hook *display, const char *format,
-                      BOOL multi)
+static Object *MkList(Object **list, Object **lv, struct Hook *display,
+                      const char *format, BOOL multi)
 {
-    return ListviewObject,
+    return *lv = ListviewObject,
         MUIA_CycleChain, TRUE,
         multi ? MUIA_Listview_MultiSelect : TAG_IGNORE,
             MUIV_Listview_MultiSelect_Shifted,
@@ -264,6 +266,59 @@ static const char *Engine(void)
 static LONG CurrentPage(void)
 {
     return (LONG)Get(obj[GID_TABS], MUIA_Group_ActivePage);
+}
+
+/* Register page of a gadget (0-4), -1 for those outside the pages. */
+static LONG PageOf(LONG gid)
+{
+    if (gid >= GID_FILES && gid <= GID_INSTALL)
+        return 0;
+    if (gid >= GID_CHECK && gid <= GID_REPAIR)
+        return 1;
+    if (gid >= GID_DSCAN && gid <= GID_DREPORT)
+        return 2;
+    if (gid >= GID_DLFILTER && gid <= GID_DLINSTALL)
+        return 3;
+    if (gid >= GID_TTFPICK && gid <= GID_SAVESET)
+        return 4;
+    return -1;
+}
+
+static void ChainOne(Object *o, BOOL on)
+{
+    if (o)
+        set(o, MUIA_CycleChain, on && !Get(o, MUIA_Disabled));
+}
+
+/*
+ * As in AATextPrefs: MUI 3.8 does not skip the objects of hidden
+ * Register pages or disabled ones, so Tab went to fields nobody could
+ * see. Only the shown page's objects (of those built into the chain)
+ * are in it; again after every page change and whenever an object is
+ * enabled or disabled.
+ */
+static void UpdateCycleChain(void)
+{
+    static UBYTE chained[GID_COUNT];    /* in the chain as built */
+    static BOOL known;
+    LONG page, i;
+
+    if (!obj[GID_TABS])                 /* not built yet */
+        return;
+    if (!known)
+    {
+        for (i = 0; i < GID_COUNT; i++)
+            chained[i] = obj[i] && Get(obj[i], MUIA_CycleChain);
+        known = TRUE;
+    }
+    page = CurrentPage();
+    for (i = GID_FILES; i < GID_COUNT; i++)
+        if (PageOf(i) >= 0 && chained[i])
+            ChainOne(obj[i], PageOf(i) == page);
+    for (i = 0; i < 4; i++)
+        ChainOne(listview[i], i == page);
+    for (i = 0; i < MGR_NUM_DIRS; i++)
+        ChainOne(dirfield[i], page == 4);
 }
 
 /* ------------------------------------------------------------------ */
@@ -565,7 +620,7 @@ static Object *InstallPage(void)
 
     return VGroup,
         Child, InfoText(GetString(MSG_INFO_INSTALL)),
-        Child, MkList(&filelist, &display, "BAR,BAR,BAR,", FALSE),
+        Child, MkList(&filelist, &listview[0], &display, "BAR,BAR,BAR,", FALSE),
         Child, HGroup,
             Child, MkButton(MSG_ADD, GID_ADD),
             Child, HSpace(0),
@@ -679,6 +734,7 @@ static LONG CheckFonts(void)
         SetStatus(msg);
     }
     set(obj[GID_REPAIR], MUIA_Disabled, todo <= 0);
+    UpdateCycleChain();
     return todo > 0 ? todo : 0;
 }
 
@@ -716,7 +772,7 @@ static Object *RepairPage(void)
         Child, MkCheck(MSG_CHANGE_ENGINE, GID_CHANGEENGINE, TRUE),
         /* off by default: a Cyrillic or Greek font may be meant so */
         Child, MkCheck(MSG_CHANGE_CHARSET, GID_CHANGECHARSET, FALSE),
-        Child, MkList(&repairlist, &display, "BAR,", FALSE),
+        Child, MkList(&repairlist, &listview[1], &display, "BAR,", FALSE),
         Child, HGroup,
             Child, MkButton(MSG_CHECK, GID_CHECK),
             Child, HSpace(0),
@@ -820,6 +876,7 @@ static void DiagDetail(void)
         set(detail[i], MUIA_Text_Contents, (ULONG)text[i]);
     set(advice, MUIA_Text_Contents, (ULONG)adv);
     set(obj[GID_DDELETE], MUIA_Disabled, sel < 0 || sel >= mcore.numdscan);
+    UpdateCycleChain();
 }
 
 static void DiagShow(void)
@@ -971,7 +1028,7 @@ static Object *DiagPage(void)
             Child, MkButton(MSG_DIAG_SCAN, GID_DSCAN),
             Child, scansum = InfoText(""),
         End,
-        Child, MkList(&dfontlist, &display, "BAR,BAR,", FALSE),
+        Child, MkList(&dfontlist, &listview[2], &display, "BAR,BAR,", FALSE),
         Child, fields,
         Child, advice = InfoText(""),
         Child, HGroup,
@@ -1229,7 +1286,7 @@ static Object *DownloadPage(void)
             End,
             Child, MkButton(MSG_DL_LOAD, GID_DLLOAD),
         End,
-        Child, MkList(&dllist, &display, "BAR,BAR,BAR,", TRUE),
+        Child, MkList(&dllist, &listview[3], &display, "BAR,BAR,BAR,", TRUE),
         Child, VGroup,
             GroupFrameT(GetString(MSG_PREVIEW)),
             Child, dlbox = PreviewBox(3),
@@ -1508,6 +1565,7 @@ static BOOL OpenWin(LONG charset)
         set(obj[buttons[i]], MUIA_CycleChain, TRUE);
         Notify(obj[buttons[i]], MUIA_Pressed, FALSE, buttons[i]);
     }
+    UpdateCycleChain();
     DoMethod(win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, (ULONG)app,
              2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
     Notify(obj[GID_TABS], MUIA_Group_ActivePage, MUIV_EveryTime, GID_TABS);
@@ -1537,6 +1595,7 @@ static void Action(ULONG id)
     {
         case GID_FILES:     ShowPreview();  break;
         case GID_TABS:
+            UpdateCycleChain();
             /* the shared preview buffer: this tab's font again */
             if (CurrentPage() == 0 && pvpage != 0)
                 ShowPreview();
@@ -1573,6 +1632,7 @@ static void Action(ULONG id)
                   pvaa);
             set(obj[GID_PVSP], MUIA_Disabled, !pvaa);
             set(obj[GID_DLSP], MUIA_Disabled, !pvaa);
+            UpdateCycleChain();
             if (id == GID_PVAA)
                 ShowPreview();
             else

@@ -93,7 +93,7 @@ static const LONG charset_msg[AA_NUM_CHARSETS] =
 static Object *app, *win, *obj[GID_COUNT];
 static Object *preview, *fontinfotext, *status, *cacheused,
               *fontmemused, *blacklist, *runlist, *runlv, *popobj, *maplist,
-              *mappreview;
+              *mappreview, *blacklv, *maplv;
 static struct MUI_CustomClass *boxclass, *gammaclass;
 
 static char fontinfo[80];
@@ -686,6 +686,55 @@ static LONG CurrentPage(void)
     return (LONG)Get(obj[GID_TABS], MUIA_Group_ActivePage);
 }
 
+/* Register page of a gadget (0-3), -1 for those outside the pages. */
+static LONG PageOf(LONG gid)
+{
+    if (gid >= GID_GAMMA && gid <= GID_SUBPIXEL)
+        return 0;
+    if (gid >= GID_PROGNAME && gid <= GID_PICKFILE)
+        return 1;
+    if (gid >= GID_AUTO && gid <= GID_MANAGER)
+        return 2;
+    if (gid >= GID_MAPLIST && gid <= GID_MAPPX)
+        return 3;
+    return -1;
+}
+
+static void ChainOne(Object *o, BOOL on)
+{
+    if (o)
+        set(o, MUIA_CycleChain, on && !Get(o, MUIA_Disabled));
+}
+
+/*
+ * Tab moves through the cycle chain. MUI 3.8 does not skip the objects
+ * of hidden Register pages (nor disabled ones): Tab went to fields
+ * nobody could see, and typing was lost. So only the shown page's
+ * objects (of those built into the chain) are in it; again after every
+ * page change and whenever an object is enabled or disabled.
+ */
+static void UpdateCycleChain(void)
+{
+    static UBYTE chained[GID_COUNT];    /* in the chain as built */
+    static BOOL known;
+    LONG page, i;
+
+    if (!obj[GID_TABS])                 /* not built yet */
+        return;
+    if (!known)
+    {
+        for (i = 0; i < GID_COUNT; i++)
+            chained[i] = obj[i] && Get(obj[i], MUIA_CycleChain);
+        known = TRUE;
+    }
+    page = CurrentPage();
+    for (i = GID_GAMMA; i < GID_COUNT; i++)
+        if (PageOf(i) >= 0 && chained[i])
+            ChainOne(obj[i], PageOf(i) == page);
+    ChainOne(blacklv, page == 1);
+    ChainOne(maplv, page == 3);
+}
+
 /* the selected mapping's TrueType file in the preview, or nothing */
 static void MapPreview(void)
 {
@@ -715,6 +764,7 @@ static void MapSelectionChanged(void)
     set(obj[GID_MAPPX], MUIA_Disabled, sel < 0);
     set(obj[GID_MAPCHANGE], MUIA_Disabled, sel < 0);
     set(obj[GID_MAPREMOVE], MUIA_Disabled, sel < 0);
+    UpdateCycleChain();
     MapPreview();
 }
 
@@ -956,7 +1006,7 @@ static Object *ProgramsPage(void)
 
     page = VGroup,
         Child, InfoText(GetString(MSG_PROGRAMS_INFO)),
-        Child, ListviewObject,
+        Child, blacklv = ListviewObject,
             MUIA_CycleChain, TRUE,
             MUIA_Listview_List, blacklist = ListObject,
                 InputListFrame,
@@ -1032,7 +1082,7 @@ static Object *MappingsPage(void)
 
     return VGroup,
         Child, InfoText(GetString(MSG_MAP_INFO)),
-        Child, ListviewObject,
+        Child, maplv = ListviewObject,
             MUIA_CycleChain, TRUE,
             MUIA_Listview_List, maplist = ListObject,
                 InputListFrame,
@@ -1163,6 +1213,7 @@ static BOOL OpenWin(const char *pubname)
     for (i = GID_ADD; i < GID_COUNT; i++)
         if (obj[i])
             set(obj[i], MUIA_CycleChain, TRUE);
+    UpdateCycleChain();
     DoMethod(win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, (ULONG)app,
              2, MUIM_Application_ReturnID, GID_CANCEL);
     Notify(obj[GID_TABS], MUIA_Group_ActivePage, MUIV_EveryTime, GID_TABS);
@@ -1229,6 +1280,7 @@ static BOOL Action(ULONG id)
             break;
 
         case GID_TABS:
+            UpdateCycleChain();
             switch (CurrentPage())
             {
                 case 2:
