@@ -60,6 +60,27 @@ and MUI programs — everything that draws text through `graphics.library`.
 
 Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 
+## Changes since 0.45 (not released yet)
+
+- **`aatext.library` is no longer used.** AAText's FreeType library is now
+  `freetype2.library` 2.0 (FreeType 2.15.0), with the same function order and
+  `.otag` tags as `freetype2.library` 1.x, so fonts installed with FTManager
+  and programs written for 1.x keep working. Fonts installed with
+  AATextManager before (engine `aatext`) are switched to `freetype2` by
+  AATextManager's Repair tab; after that `LIBS:aatext.library` can be deleted.
+- **The old library is kept automatically.** `Install-AAText` copies an
+  older `LIBS:freetype2.library` (1.x) to `LIBS:freetype2.library.bak`
+  before it installs the new one; to go back, copy it back.
+- Kerning from the GPOS table also in `freetype2.library`'s font engine.
+- ClearType (subpixel): hinting for LCD output, new `lcdfilter` setting
+  (AATextPrefs), and the installer asks about ClearType on a first
+  installation.
+- Faster drawing: ClearType blending and bold text (on the A1200 with
+  PiStorm: lines +13%, bold +65%), and RGBA buffers, which Picasso96 writes
+  about three times faster on WinUAE.
+- New `harfbuzz.library` (HarfBuzz 15.1.0 text shaping as a shared library,
+  `hblib/`), not yet part of the AAText archive.
+
 ## Download and installation
 
 Binary releases are on Aminet (`util/wb/AAText.lha`) and on the
@@ -191,6 +212,28 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
   ![AATextManager: kurulacak fontlar, bir .ttc'nin her yüzü ayrı satır, seçilen fontun önizlemesiyle](docs/screenshots/aatextmanager.png)
 
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
+
+**0.45'ten sonraki değişiklikler (henüz yayınlanmadı):**
+
+- **`aatext.library` artık kullanılmıyor.** AAText'in FreeType kütüphanesi
+  artık `freetype2.library` 2.0 (FreeType 2.15.0). Fonksiyon sırası ve `.otag`
+  etiketleri `freetype2.library` 1.x ile aynı; FTManager ile kurulmuş fontlar
+  ve 1.x için yazılmış programlar çalışmaya devam eder. Daha önce
+  AATextManager ile kurulmuş fontların (`aatext` motoru) motorunu
+  AATextManager'ın Onar sekmesi `freetype2` yapar; ondan sonra
+  `LIBS:aatext.library` silinebilir.
+- **Eski kütüphane otomatik yedeklenir.** `Install-AAText`, yenisini kurmadan
+  önce eski `LIBS:freetype2.library` (1.x) dosyasını
+  `LIBS:freetype2.library.bak` olarak saklar; geri dönmek için onu geri
+  kopyalayın.
+- `freetype2.library`'nin font motorunda da GPOS tablosundan kerning.
+- ClearType (alt piksel): LCD'ye uygun hinting, yeni `lcdfilter` ayarı
+  (AATextPrefs), kurulum programı ilk kurulumda ClearType'ı sorar.
+- Daha hızlı çizim: ClearType karıştırması ve kalın yazı (PiStorm'lu A1200'de
+  satırlar +%13, kalın yazı +%65) ve Picasso96'nın WinUAE'de yaklaşık üç kat
+  hızlı yazdığı RGBA tamponlar.
+- Yeni `harfbuzz.library` (HarfBuzz 15.1.0 yazı şekillendirme, paylaşımlı
+  kütüphane olarak, `hblib/`); henüz AAText arşivinde değil.
 
 **Kurulum:** Arşivi açıp `Install-AAText`'e çift tıklayın (OS 3.2 Installer):
 her şeyi kurar, AAText'i `S:User-Startup`'a ekler ve yeniden kaldırabilir.
