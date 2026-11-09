@@ -9,7 +9,7 @@
  * Opens a window on the Workbench screen (run AAText or not, it does not
  * matter: no text is drawn) and prints microseconds per call.
  *
- * Build: m68k-amigaos-gcc -m68020 -O2 -noixemul -o pxbench tests/pxbench.c src/cgx.s -lm
+ * Build: m68k-amigaos-gcc -m68020 -O2 -noixemul -o pxbench tests/pxbench.c src/cgx.s tests/cgxlock.s -lm
  */
 
 #include <exec/types.h>
@@ -26,6 +26,15 @@
 #include <stdio.h>
 
 #include "../src/cgx.h"
+
+/* tests/cgxlock.s; tag values from the AROS cybergraphics.h */
+#define LBMI_PIXFMT       0x84001004UL
+#define LBMI_BYTESPERPIX  0x84001005UL
+#define LBMI_BYTESPERROW  0x84001006UL
+#define LBMI_BASEADDRESS  0x84001007UL
+APTR cgx_LockBitMapTagList(struct Library *base, struct BitMap *bm,
+                           struct TagItem *tags);
+void cgx_UnLockBitMap(struct Library *base, APTR handle);
 
 struct Library *CyberGfxBase;
 struct Device *TimerBase;
@@ -110,6 +119,63 @@ int main(void)
         }
         wr = (Now(freq) - t0) * 1e6 / n;
         printf("%-6s %9.1f %10.1f\n", fmts[f].name, rd, wr);
+    }
+
+    /*
+     * The same rectangle read straight from the locked bitmap (screen
+     * coordinates: window position + inner offset), in the screen's own
+     * pixel format; and what lock + unlock alone cost.
+     */
+    {
+        ULONG base = 0, bpr = 0, bpp = 0, pixfmt = 0, n;
+        struct TagItem tags[] =
+        {
+            { LBMI_BASEADDRESS, (ULONG)&base },
+            { LBMI_BYTESPERROW, (ULONG)&bpr },
+            { LBMI_BYTESPERPIX, (ULONG)&bpp },
+            { LBMI_PIXFMT, (ULONG)&pixfmt },
+            { TAG_DONE, 0 }
+        };
+        LONG sx = win->LeftEdge + win->BorderLeft + 10;
+        LONG sy = win->TopEdge + win->BorderTop + 10;
+        APTR lock = cgx_LockBitMapTagList(CyberGfxBase, win->RPort->BitMap,
+                                          tags);
+        double t0, t1, lk, rd;
+
+        if (lock)
+            cgx_UnLockBitMap(CyberGfxBase, lock);
+        printf("lock: %s, base %08lx, %lu bytes a row, %lu a pixel, "
+               "pixfmt %lu\n", lock ? "ok" : "FAILED", (unsigned long)base,
+               (unsigned long)bpr, (unsigned long)bpp,
+               (unsigned long)pixfmt);
+        if (lock && base && bpp >= 2 && bpp <= 4 && bpr >= w * bpp)
+        {
+            for (n = 0, t0 = t1 = Now(freq); t1 - t0 < secs; n++)
+            {
+                lock = cgx_LockBitMapTagList(CyberGfxBase,
+                                             win->RPort->BitMap, tags);
+                cgx_UnLockBitMap(CyberGfxBase, lock);
+                if ((n & 15) == 15)
+                    t1 = Now(freq);
+            }
+            lk = (Now(freq) - t0) * 1e6 / n;
+            for (n = 0, t0 = t1 = Now(freq); t1 - t0 < secs; n++)
+            {
+                ULONG r;
+
+                lock = cgx_LockBitMapTagList(CyberGfxBase,
+                                             win->RPort->BitMap, tags);
+                for (r = 0; r < h; r++)
+                    CopyMem((APTR)(base + (sy + r) * bpr + sx * bpp),
+                            buf + r * w * bpp, w * bpp);
+                cgx_UnLockBitMap(CyberGfxBase, lock);
+                if ((n & 15) == 15)
+                    t1 = Now(freq);
+            }
+            rd = (Now(freq) - t0) * 1e6 / n;
+            printf("direct read: lock+unlock %.1f us, lock+copy+unlock "
+                   "%.1f us\n", lk, rd);
+        }
     }
 out:
     if (win)
