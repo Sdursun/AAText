@@ -85,7 +85,7 @@ S:User-Startup'a ekler. Kurulu bir sürümü yerinde günceller, ayarlarınız
 korunur. "Kaldır" seçeneği kurulan dosyaları ve bu satırı yeniden siler;
 LIBS:freetype2.library ve LIBS:aatext.library'ye dokunmaz.
 
-freetype2.library 2.0, AAText'in FreeType 2.15.0 kütüphanesidir;
+freetype2.library 2.15, AAText'in FreeType 2.15.0 kütüphanesidir;
 1.0-1.2 sürümlerinin adı aatext.library idi. freetype2.library 1.x'in
 (FTManager ile kurulan FreeType 2.1) yerine geçer; kurulum programı
 eskisini LIBS:freetype2.library.bak olarak saklar. FTManager ile kurulan
@@ -218,7 +218,7 @@ Font kurucu (AATextManager)
 
 AATextManager, TrueType ve OpenType fontları (.ttf, .otf, .ttc)
 FTManager gibi diskfont.library için kurar ve önceden kurulmuş fontları
-onarır. LIBS:'te freetype2.library 2.0 ya da daha yenisi gerekir.
+onarır. LIBS:'te freetype2.library 2.15 ya da daha yenisi gerekir.
 
 Kurulum, font dosyasını Ayarlar sekmesindeki dizine (değiştirilmediyse
 dosya türüne göre FONTS:_ttf/, FONTS:_otf/ ya da FONTS:_ttc/; olmayan
@@ -243,7 +243,7 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  gösterir (yalnızca önizlemede).
   Onar sekmesi   "Fontları denetle" FONTS:'taki onarılabilir fontları
                  listeler: font dosyası taşınmış, kod sayfası yok,
-                 freetype2.library 2.0'dan önce kurulan fontlarda motor
+                 freetype2.library 2.15'dan önce kurulan fontlarda motor
                  aatext (kutu işaretliyse freetype2 yapılır). Yükseklik sınır kutusuna göre (FTManager ya da
                  AATextManager 0.15/0.16 ile kurulan fontlar fazla küçük
                  olup yukarıda durabilir): hhea'ya çevrilir.
@@ -282,7 +282,7 @@ böylece Türkçe ve diğer harfler ENV:ftcodepage olmadan çalışır.
                  silinemez.
                  OT_Engine, .otag'da yazan motordur, ör. ttf (ttf.library),
                  freetype2 (AATextManager, FTManager), ttengine ya da
-                 aatext (aatext.library, freetype2.library'nin 2.0'dan
+                 aatext (aatext.library, freetype2.library'nin 2.15'ten
                  önceki adı); yanında o kütüphanenin sürümü vardır
                  ("Version LIBS:ttf.library" gibi, dosyadaki $VER
                  satırından). Kütüphane kurulu değilse o fontu hiçbir
@@ -541,6 +541,33 @@ Lütfen debug sürümünün çıktısını ekleyin:
 Geçmiş
 ------
 
+0.46  FreeType 2.15.0 üzerine kuruldu (önceden 2.14.3). aatext.library
+      artık kullanılmıyor: AAText'in FreeType kütüphanesi yeniden
+      freetype2.library 2.15; fonksiyon sırası ve .otag etiketleri
+      freetype2.library 1.x ile aynı, FTManager ile kurulmuş fontlar
+      ve 1.x için yazılmış programlar çalışmaya devam eder.
+      Install-AAText, 2.15'i kurmadan önce eski LIBS:freetype2.library
+      (1.x) dosyasını LIBS:freetype2.library.bak olarak saklar.
+      AATextManager fontları "freetype2" motoruyla kurar; Onar sekmesi
+      önceden kurulmuş ("aatext" motorlu) fontları buna çevirir, sonra
+      LIBS:aatext.library silinebilir.
+      GPOS tablosundan kerning (yaklaşık 2010'dan beri yapılan
+      fontların çoğunda başka kerning yok): gerçek ölçü modunda ve
+      freetype2.library'nin font motorunda.
+      Kalın ve eğik yazı güvenli ölçü modunda da yumuşatılır (TextEdit
+      anahtar kelimeleri yumuşatmasız ve farklı görünüyordu).
+      MUI AATextPrefs ve AATextManager: Tab tuşu gösterilen sayfada
+      kalır.
+      ClearType (alt piksel): glifler LCD için hint'lenir, yeni ayar
+      "lcdfilter light|default|none" (AATextPrefs: Görünüm), ve
+      Install-AAText ilk kurulumda ClearType'ı sorar.
+      Daha hızlı çizim: ClearType karıştırması ve kalın yazı
+      (PiStorm'lu A1200: satırlar +%13, kalın +%65); Picasso96'nın
+      WinUAE'de üç kat hızlı yazdığı RGBA karıştırma tamponları.
+      Yeni, ayrı bir arşivde: harfbuzz.library 15.1, programlar için
+      paylaşımlı kütüphane olarak HarfBuzz 15.1.0 yazı şekillendirme
+      motoru.
+
 0.45  Yazı ilk çizimde yumuşatılır. İlk kez kullanılan (ya da
       sonradan bellekten çıkarılmış) bir font arka planda yüklenirken
       yazı bitmap fontla çiziliyor ve bir daha çizilmiyordu: Font
@@ -773,7 +800,7 @@ This software is based in part on the work of the FreeType Team.
 Portions of this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved.
 
-freetype2.library 2.0 (Libs/, AATextManager kullanır) paylaşılan
+freetype2.library 2.15 (Libs/, AATextManager kullanır) paylaşılan
 kütüphane olarak FreeType 2.15.0'dır; lisansları LICENSE.aatext.txt ve FTL.txt'de.
 
 AROS: Gerçek ölçü modunun ölçüm kodu (TextExtent ve TextFit) AROS'tan

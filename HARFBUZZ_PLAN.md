@@ -109,7 +109,7 @@ Durum: **kararlar alındı (8.11.2026); A6, A0, A1, A2, A4 yapıldı; A3'ün Win
 - Ölçülür: boyut, yığın, hız.
 - *Kabul:* WinUAE'de PC ile aynı çıktı; ölçümlerle "devam / dur" kararı.
 
-**A2. Kütüphane kabuğu (harfbuzz.library 0.1) — YAPILDI (8.11.2026)**
+**A2. Kütüphane kabuğu (harfbuzz.library 0.1, 9.11.2026'dan beri HarfBuzz sürümünü izleyerek 15.1) — YAPILDI (8.11.2026)**
 - `hblib/src/harfbuzz.funcs`: 126 fonksiyon (sıra sabit, yalnızca sona
   eklenir); her biri HarfBuzz 15.1.0 başlıklarıyla otomatik karşılaştırıldı
   (ad, dönüş ve argüman tipleri). Makro olan iki fonksiyon çıkarıldı.

@@ -1,5 +1,7 @@
-harfbuzz.library 0.1
-====================
+harfbuzz.library 15.1
+=====================
+
+(Kütüphane sürümü, dayandığı HarfBuzz sürümünü izler.)
 
 OpenType yazı şekillendirme motoru HarfBuzz 15.1.0, AmigaOS 3.1 ve
 üstü, 68020 ve üstü işlemciler için paylaşımlı kütüphane olarak.

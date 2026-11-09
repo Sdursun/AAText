@@ -84,7 +84,7 @@ enum
 /* repairs (AARepair.what, aa_RepairNeeded()) */
 #define AA_REPAIR_PATH      1   /* moved font file: point at where it is */
 #define AA_REPAIR_CODEPAGE  2   /* no code page: add the one of charset */
-#define AA_REPAIR_ENGINE    4   /* engine "aatext" (before 2.0) -> engine */
+#define AA_REPAIR_ENGINE    4   /* engine "aatext" (before 2.15) -> engine */
 #define AA_REPAIR_HEIGHT    8   /* height from the bounding box -> hhea */
 #define AA_REPAIR_WIDTH    16   /* fixed width, cells one em wide: the
                                    font's advance / em as OT_SpaceFactor */

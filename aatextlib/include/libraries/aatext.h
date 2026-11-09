@@ -2,7 +2,7 @@
 #define LIBRARIES_AATEXT_H
 
 /*
- * freetype2.library 2.0 - definitions for programs and font installers.
+ * freetype2.library 2.15 - definitions for programs and font installers.
  *
  * AAText's freetype2.library: FreeType 2.15.0 as a shared library (see
  * <proto/aatext.h>) and a bullet.library-compatible outline engine for
@@ -10,7 +10,7 @@
  * freetype2.library 1.x (FTManager, Aminet util/libs/freetype2_lib): the
  * functions keep their offsets, the .otag tags are the same.
  *
- * Until 2.0 the library was called aatext.library (engine "aatext");
+ * Until 2.15 the library was called aatext.library (engine "aatext");
  * AATextManager's Repair tab changes such .otag files to "freetype2".
  * Open version 2 or later: version 1 may be the old freetype2.library.
  */
@@ -25,7 +25,7 @@
 #define AATEXTLIBNAME     "freetype2.library"
 #define AATEXTLIBVERSION  2     /* AAText's; 1.x is the old library */
 
-/* OT_Engine value (OTE_AAText_Old: before 2.0) */
+/* OT_Engine value (OTE_AAText_Old: before 2.15) */
 #define OTE_AAText        "freetype2"
 #define OTE_AAText_Old    "aatext"
 

@@ -1,4 +1,4 @@
-freetype2.library 2.0 for AmigaOS 3 (the library of AAText; called aatext.library in 1.0-1.2)
+freetype2.library 2.15 for AmigaOS 3 (the library of AAText; called aatext.library in 1.0-1.2)
 
 The library contains two kinds of code under two licenses.
 

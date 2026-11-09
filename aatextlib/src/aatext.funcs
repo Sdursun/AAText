@@ -8,7 +8,7 @@
 # freetype2.library 1.3 (util/libs/freetype2_lib on Aminet), checked
 # against that binary: old programs find every function at the same
 # offset. (AROS changed its own order in 2021; that order is not used.)
-# AAText's freetype2.library (2.0; called aatext.library before) keeps
+# AAText's freetype2.library (2.15; called aatext.library before) keeps
 # this order, so programs written for freetype2.library 1.3 run unchanged.
 #
 #   - the bullet.library API first, arguments in registers;

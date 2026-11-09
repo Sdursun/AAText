@@ -66,7 +66,7 @@ static BOOL OpenLibs(void)
 
 static const char LibName[] = LIB_NAME;
 static const char LibId[] =
-    "$VER: " LIB_NAME " 0.1 (" LIB_DATE ") " LIB_HBVER "\r\n";
+    "$VER: " LIB_NAME " 15.1 (" LIB_DATE ") " LIB_HBVER "\r\n";
 
 #define REG(r, decl) register decl __asm(#r)
 

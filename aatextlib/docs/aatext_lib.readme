@@ -1,13 +1,13 @@
-Short:        freetype2.library 2.0: FreeType 2.15.0 + engine
+Short:        FreeType 2.15.0 library + font engine
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/libs
-Version:      2.0
+Version:      2.15
 Architecture: m68k-amigaos >= 3.0.0
 Distribution: Aminet
 Requires:     68020+, AmigaOS 3.0+
 
-freetype2.library 2.0 is the library of AAText (util/wb/AAText):
+freetype2.library 2.15 is the library of AAText (util/wb/AAText):
 FreeType 2.15.0 (2026) as an AmigaOS 3 shared library, and an outline
 font engine for diskfont.library. It replaces freetype2.library 1.x
 (FreeType 2.1, 2002, installed with FTManager). Versions 1.0-1.2 were
@@ -18,7 +18,7 @@ called aatext.library.
   written for 1.x run unchanged.
 - diskfont engine: fonts whose .otag file names OT_Engine "freetype2",
   so fonts installed with FTManager for 1.x use it unchanged. Fonts
-  installed with AATextManager before 2.0 name the engine "aatext":
+  installed with AATextManager before 2.15 name the engine "aatext":
   AATextManager's Repair tab changes them (until then keep
   LIBS:aatext.library).
 

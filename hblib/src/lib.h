@@ -10,9 +10,9 @@
 #include <dos/dos.h>
 
 #define LIB_NAME     "harfbuzz.library"
-#define LIB_VERSION  0
+#define LIB_VERSION  15         /* 15.1: HarfBuzz 15.1.0 */
 #define LIB_REVISION 1
-#define LIB_DATE     "08.11.2026"
+#define LIB_DATE     "09.11.2026"
 #define LIB_HBVER    "HarfBuzz 15.1.0"
 
 struct HBBase

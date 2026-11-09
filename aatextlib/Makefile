@@ -1,4 +1,4 @@
-# freetype2.library 2.0 - AAText's library: FreeType 2.15.0 for AmigaOS 3
+# freetype2.library 2.15 - AAText's library: FreeType 2.15.0 for AmigaOS 3
 #
 #   make              68020 build:  build/68020/freetype2.library
 #   make CPU=68060    68060 build:  build/68060/freetype2.library

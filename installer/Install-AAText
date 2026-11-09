@@ -56,7 +56,7 @@
     (delete "SYS:System/AATextManager" (infos)
       (prompt (if #tr "SYS:System/AATextManager silinsin mi?" "Delete SYS:System/AATextManager?"))
       (help @delete-help) (confirm)))
-  ; LIBS:aatext.library (the library's name before 2.0) stays: fonts
+  ; LIBS:aatext.library (the library's name before 2.15) stays: fonts
   ; installed with the engine "aatext" (also the screen font) cannot be
   ; opened without it until AATextManager repairs them
   (if (exists (tackon #catdir "aatextprefs.catalog"))

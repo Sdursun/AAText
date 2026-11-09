@@ -1,5 +1,7 @@
-harfbuzz.library 0.1
-====================
+harfbuzz.library 15.1
+=====================
+
+(The library version follows the HarfBuzz version it is built on.)
 
 HarfBuzz 15.1.0, the OpenType text shaping engine, as a shared library
 for AmigaOS 3.1 or newer on a 68020 or better.

@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text, AmigaOS 3.x
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <blasterreal@gmail.com>
 Type:         util/wb
-Version:      0.45
+Version:      0.46
 Architecture: m68k-amigaos >= 3.1.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
@@ -43,7 +43,7 @@ Features
   the code page of a character set in the .otag and a path without
   volume name, with a preview before installing; repairs installed
   fonts (moved file, no code page, engine aatext -> freetype2). Needs
-  freetype2.library 2.0 (included: FreeType 2.15.0, called
+  freetype2.library 2.15 (included: FreeType 2.15.0, called
   aatext.library before; it replaces freetype2.library 1.x, which the
   installer keeps as LIBS:freetype2.library.bak); "Check for updates" downloads a newer
   release to RAM: (needs TCP/IP and AmiSSL 5)
@@ -67,6 +67,11 @@ tested yet; the ReAction GUIs need 3.2, use the MUI ones there.
 Please report your results: https://github.com/Sdursun/AAText/issues
 
 Changes since 0.34
+- 0.46: FreeType 2.15.0; aatext.library is no longer used, AAText's
+  library is freetype2.library 2.15 (Install-AAText keeps an older
+  freetype2.library as LIBS:freetype2.library.bak); GPOS kerning;
+  bold/italic antialiased in safe metrics mode; ClearType hinting and
+  LCD filter setting; faster ClearType and bold drawing.
 - 0.45: text is antialiased on the first draw: the Font prefs preview
   of a font not used before, the title bar of a new screen, and YAM's
   message text (TextEditor.mcc) were drawn in the bitmap font.
@@ -120,5 +125,5 @@ This software is based in part on the work of the FreeType Team.
 Portions of this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved.
 
-freetype2.library 2.0: FreeType 2.15.0 as a shared library, see
+freetype2.library 2.15: FreeType 2.15.0 as a shared library, see
 LICENSE.aatext.txt and FTL.txt.

@@ -58,7 +58,7 @@ static BOOL IsFontFile(const char *path)
 }
 
 /* Engines AAText can use: TrueType/OpenType through FreeType (ttf.library,
-   TTEngine, freetype2.library, and aatext.library, its name before 2.0). */
+   TTEngine, freetype2.library, and aatext.library, its name before 2.15). */
 static BOOL KnownEngine(const char *engine)
 {
     return !engine || !Stricmp((CONST_STRPTR)engine, (CONST_STRPTR)"ttf") ||
@@ -530,7 +530,7 @@ LONG aa_FixOTag(struct AADiagEntry *e, char *backup)
     return aa_RepairOTag(e, &path, backup);
 }
 
-/* "2.0" from "$VER: freetype2.library 2.0 (8.11.2026)" */
+/* "2.0" from "$VER: freetype2.library 2.15 (8.11.2026)" */
 static BOOL VersionFromVer(const char *ver, char *buf, LONG len)
 {
     LONG n = 0;

@@ -81,7 +81,7 @@ It updates an installed version in place; your settings are kept. Its
 "Remove" choice deletes the installed files and the line again; it
 leaves LIBS:freetype2.library and LIBS:aatext.library.
 
-freetype2.library 2.0 is AAText's FreeType 2.15.0 library; versions
+freetype2.library 2.15 is AAText's FreeType 2.15.0 library; versions
 1.0-1.2 were called aatext.library. It replaces freetype2.library 1.x
 (FreeType 2.1, installed with FTManager), which the installer keeps as
 LIBS:freetype2.library.bak; fonts installed with FTManager and programs
@@ -209,7 +209,7 @@ Font installer (AATextManager)
 
 AATextManager installs TrueType and OpenType fonts (.ttf, .otf, .ttc)
 for diskfont.library, as FTManager does, and repairs fonts installed
-before. It needs freetype2.library 2.0 or newer in LIBS:.
+before. It needs freetype2.library 2.15 or newer in LIBS:.
 
 Installing copies the font file to the directory set on the Settings
 tab (unless changed FONTS:_ttf/, FONTS:_otf/ or FONTS:_ttc/, by the
@@ -236,7 +236,7 @@ ENV:ftcodepage.
                  without (the preview only).
   Repair tab     "Check fonts" lists the fonts in FONTS: that can be
                  repaired: font file moved, no code page, engine
-                 aatext of fonts installed before freetype2.library 2.0
+                 aatext of fonts installed before freetype2.library 2.15
                  (changed to freetype2 if the box is ticked). Height from the bounding box (fonts
                  installed with FTManager or AATextManager 0.15/0.16
                  can be too small and sit high): changed to hhea. "Repair..." asks once, then repairs them all;
@@ -271,7 +271,7 @@ ENV:ftcodepage.
                  OT_Engine is the engine named in the .otag, e.g. ttf
                  (ttf.library), freetype2 (AATextManager, FTManager),
                  ttengine or aatext (aatext.library, the name of
-                 freetype2.library before 2.0), with the version of that library from
+                 freetype2.library before 2.15), with the version of that library from
                  its $VER string, as "Version LIBS:ttf.library" shows it.
                  If the library is not installed, no program can open the
                  font, and the line below says so.
@@ -523,6 +523,32 @@ Please include the output of the debug version:
 History
 -------
 
+0.46  Built on FreeType 2.15.0 (was 2.14.3). aatext.library is no
+      longer used: AAText's FreeType library is freetype2.library 2.15
+      again, with the function order and .otag tags of
+      freetype2.library 1.x, so fonts installed with FTManager and
+      programs for 1.x keep working. Install-AAText keeps an older
+      LIBS:freetype2.library (1.x) as LIBS:freetype2.library.bak
+      before it installs 2.15. AATextManager installs fonts with the
+      engine "freetype2"; its Repair tab switches fonts installed
+      before (engine "aatext") to it, after that LIBS:aatext.library
+      can be deleted.
+      Kerning from the GPOS table (most fonts made since about 2010
+      have no other) in real metrics mode and in freetype2.library's
+      font engine.
+      Bold and italic text is antialiased in safe metrics mode too
+      (TextEdit keywords were drawn aliased in another look).
+      MUI AATextPrefs and AATextManager: the Tab key stays on the
+      shown page.
+      ClearType (subpixel): glyphs hinted for LCD output, new setting
+      "lcdfilter light|default|none" (AATextPrefs: Appearance), and
+      Install-AAText asks about ClearType on a first installation.
+      Faster drawing: ClearType blending and bold text (A1200 with
+      PiStorm: lines +13%, bold +65%); blend buffers in RGBA, which
+      Picasso96 writes three times faster on WinUAE.
+      New, as a separate archive: harfbuzz.library 15.1, the HarfBuzz
+      15.1.0 text shaping engine as a shared library for programs.
+
 0.45  Text is antialiased on the first draw. A font used for the first
       time (or freed from memory since) was loaded in the background
       while the text was drawn in the bitmap font, and nothing drew it
@@ -751,7 +777,7 @@ software is based in part on the work of the FreeType Team. Portions of
 this software are copyright (C) 2026 The FreeType Project
 (https://freetype.org). All rights reserved.
 
-freetype2.library 2.0 (Libs/, used by AATextManager) is FreeType 2.15.0
+freetype2.library 2.15 (Libs/, used by AATextManager) is FreeType 2.15.0
 as a shared library; licenses in LICENSE.aatext.txt and FTL.txt.
 
 AROS: the measuring code of the real metrics mode (TextExtent and

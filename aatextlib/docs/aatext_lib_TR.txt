@@ -1,5 +1,7 @@
-freetype2.library 2.0
-=====================
+freetype2.library 2.15
+======================
+
+(Kütüphane sürümü, dayandığı FreeType sürümünü izler.)
 
 AAText'in kütüphanesi: FreeType 2.15.0, AmigaOS 3 için paylaşımlı
 kütüphane olarak; ayrıca diskfont.library için bir outline font motoru.
@@ -32,7 +34,7 @@ Eski ad
 -------
 
 1.0-1.2 sürümlerinin adı aatext.library, motor adı "aatext" idi.
-AATextManager ile 2.0'dan önce kurulmuş fontların .otag dosyasında
+AATextManager ile 2.15'ten önce kurulmuş fontların .otag dosyasında
 OT_Engine "aatext" yazar; bu fontlar, AATextManager'ın Onarım sekmesi
 motoru "freetype2" yapana kadar (ya da: AATextManager REPAIR APPLY)
 LIBS:aatext.library'ye ihtiyaç duyar. Ondan sonra LIBS:aatext.library
@@ -96,7 +98,7 @@ Motorun anladığı .otag etiketleri
   OT_Spec6_FaceNum     .ttc/.otc koleksiyonunda yüz numarası
   OT_Spec9_Hinter      0 fontun kendi hinting'i (varsayılan),
                        1 FreeType autohinter, 2 yok,
-                       3 hafif autohinting (2.0 ve aatext.library)
+                       3 hafif autohinting (2.15 ve aatext.library)
 
 Değerler için Developer/include/libraries/aatext.h dosyasına bakın.
 

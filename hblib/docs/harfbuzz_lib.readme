@@ -1,8 +1,8 @@
-Short:        HarfBuzz 15.1.0 text shaping as a library
+Short:        HarfBuzz 15.1.0 text shaping library
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <EMAIL>
 Type:         util/libs
-Version:      0.1
+Version:      15.1
 Architecture: m68k-amigaos >= 3.1.0
 Distribution: Aminet
 Requires:     68020+, AmigaOS 3.1+

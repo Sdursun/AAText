@@ -1,4 +1,4 @@
-# freetype2.library 2.0
+# freetype2.library 2.15
 
 AAText'in kütüphanesi: FreeType 2.15.0'ı AmigaOS 3 (68020+) için paylaşımlı
 kütüphane olarak sunar ve diskfont.library için bir bullet (outline) motoru
@@ -8,7 +8,7 @@ FreeType 2.1, Aminet `util/libs/freetype2_lib`) yerine geçer: fonksiyon sıras�
 
 > Ad geçmişi: 9.10.2026'da `freetype2.library 2.14`'ten `aatext.library 1.0`'a
 > yeniden adlandırıldı (test dönemi); 8.11.2026'da kullanıcının kararıyla
-> yeniden `freetype2.library` oldu, sürüm 2.0. 2.11.2026'dan beri AAText
+> yeniden `freetype2.library` oldu, sürüm 2.15 (FreeType 2.15.0'a göre). 2.11.2026'dan beri AAText
 > deposunun `aatextlib/` klasöründe (önceden ayrı bir `freetype2` klasörüydü).
 > Paket ve başlık adları (`aatext_lib.lha`, `proto/aatext.h`, `AATextBase`)
 > değişmedi.
@@ -57,10 +57,10 @@ Docker ile (`ghcr.io/rondoval/amiga-build-container`, bebbo gcc + NDK 3.2):
 
 ## Mimari kararlar
 
-- **Ad.** `freetype2.library` 2.0, motor adı `freetype2`, taban `AATextBase`.
+- **Ad.** `freetype2.library` 2.15, motor adı `freetype2`, taban `AATextBase`.
   1.x'in yerine kurulur (kurulum betiği eskisini `LIBS:freetype2.library.bak`
   olarak saklar); FTManager fontları (`OT_Engine "freetype2"`) yeni motoru
-  değişmeden kullanır. 2.0'dan önce AATextManager ile kurulmuş fontların
+  değişmeden kullanır. 2.15'ten önce AATextManager ile kurulmuş fontların
   motoru `aatext`; AATextManager'ın Onarım'ı bunu `freetype2` yapar,
   o zamana kadar `LIBS:aatext.library` kalır.
 - **ABI.** Bullet fonksiyonları argümanlarını register'da alır (A0/A1). FreeType
@@ -80,7 +80,7 @@ Docker ile (`ghcr.io/rondoval/amiga-build-container`, bebbo gcc + NDK 3.2):
   haritası: `build/68020/aatext.map`). `malloc` ve stdio yok.
 - **Bullet davranışı.** Boyut hesabı, GlyphMap alanları, genişlik listesi ve
   kerning freetype2.library 1.3 ile aynı formüller (font boyları değişmez).
-  Kerning 2.0'dan beri önce GPOS'un `kern` özelliğinden (`../src/gposkern.h`,
+  Kerning 2.15'ten beri önce GPOS'un `kern` özelliğinden (`../src/gposkern.h`,
   AAText ile ortak; WinUAE'de 3 Google fontunda 168 çift HarfBuzz ile birebir),
   yoksa `kern` tablosundan.
   1 bit gliflerde `FT_LOAD_TARGET_MONO` hinting'i kasıtlı bir farktır (daha

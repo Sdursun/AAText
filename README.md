@@ -38,9 +38,9 @@ and MUI programs — everything that draws text through `graphics.library`.
   FTManager, but writes the code page of a character set into the `.otag` (so
   Turkish and other letters work without `ENV:ftcodepage`) and names the font
   file without a volume name. It also repairs installed fonts: moved file, no
-  code page, engine `aatext` (fonts installed before 2.0) -> `freetype2`.
+  code page, engine `aatext` (fonts installed before 2.15) -> `freetype2`.
   Selecting a font shows a preview in several sizes before it is installed.
-  Window and Shell, English and Turkish; uses `freetype2.library` 2.0
+  Window and Shell, English and Turkish; uses `freetype2.library` 2.15
   (included: AAText's FreeType 2.15.0 library, called `aatext.library`
   before; it replaces freetype2.library 1.x, which the installer keeps as
   `LIBS:freetype2.library.bak`).
@@ -60,10 +60,13 @@ and MUI programs — everything that draws text through `graphics.library`.
 
 Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 
-## Changes since 0.45 (not released yet)
+## Changes in 0.46
+
+Built on FreeType 2.15.0; the new harfbuzz.library (separate archive) on
+HarfBuzz 15.1.0.
 
 - **`aatext.library` is no longer used.** AAText's FreeType library is now
-  `freetype2.library` 2.0 (FreeType 2.15.0), with the same function order and
+  `freetype2.library` 2.15 (FreeType 2.15.0), with the same function order and
   `.otag` tags as `freetype2.library` 1.x, so fonts installed with FTManager
   and programs written for 1.x keep working. Fonts installed with
   AATextManager before (engine `aatext`) are switched to `freetype2` by
@@ -79,7 +82,7 @@ Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
   PiStorm: lines +13%, bold +65%), and RGBA buffers, which Picasso96 writes
   about three times faster on WinUAE.
 - New `harfbuzz.library` (HarfBuzz 15.1.0 text shaping as a shared library,
-  `hblib/`), not yet part of the AAText archive.
+  `hblib/`), in its own archive `harfbuzz_lib.lha`.
 
 ## Download and installation
 
@@ -202,9 +205,9 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
   kurar, ama `.otag`'a bir karakter setinin kod sayfasını yazar (Türkçe ve
   diğer harfler `ENV:ftcodepage` olmadan çalışır) ve font dosyasını disk adı
   olmadan gösterir. Kurulu fontları da onarır: taşınmış dosya, kod sayfası
-  yok, motor `aatext` (2.0'dan önce kurulan fontlar) -> `freetype2`. Seçilen
+  yok, motor `aatext` (2.15'ten önce kurulan fontlar) -> `freetype2`. Seçilen
   font, kurulmadan önce birkaç boyutta önizlenir. Pencere ve Shell, Türkçe ve
-  İngilizce; `freetype2.library` 2.0 kullanır (pakette var: AAText'in FreeType
+  İngilizce; `freetype2.library` 2.15 kullanır (pakette var: AAText'in FreeType
   2.15.0 kütüphanesi, önceki adı `aatext.library`; freetype2.library 1.x'in
   yerine geçer, kurulum programı eskisini `LIBS:freetype2.library.bak` olarak
   saklar).
@@ -213,10 +216,11 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
 
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
 
-**0.45'ten sonraki değişiklikler (henüz yayınlanmadı):**
+**0.46'daki değişiklikler:** FreeType 2.15.0 üzerine kurulu; yeni
+harfbuzz.library (ayrı arşiv) HarfBuzz 15.1.0'a dayanır.
 
 - **`aatext.library` artık kullanılmıyor.** AAText'in FreeType kütüphanesi
-  artık `freetype2.library` 2.0 (FreeType 2.15.0). Fonksiyon sırası ve `.otag`
+  artık `freetype2.library` 2.15 (FreeType 2.15.0). Fonksiyon sırası ve `.otag`
   etiketleri `freetype2.library` 1.x ile aynı; FTManager ile kurulmuş fontlar
   ve 1.x için yazılmış programlar çalışmaya devam eder. Daha önce
   AATextManager ile kurulmuş fontların (`aatext` motoru) motorunu
@@ -233,7 +237,7 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
   satırlar +%13, kalın yazı +%65) ve Picasso96'nın WinUAE'de yaklaşık üç kat
   hızlı yazdığı RGBA tamponlar.
 - Yeni `harfbuzz.library` (HarfBuzz 15.1.0 yazı şekillendirme, paylaşımlı
-  kütüphane olarak, `hblib/`); henüz AAText arşivinde değil.
+  kütüphane olarak, `hblib/`), kendi arşivinde: `harfbuzz_lib.lha`.
 
 **Kurulum:** Arşivi açıp `Install-AAText`'e çift tıklayın (OS 3.2 Installer):
 her şeyi kurar, AAText'i `S:User-Startup`'a ekler ve yeniden kaldırabilir.

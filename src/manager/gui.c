@@ -247,7 +247,7 @@ static LONG Charset(void)
     return (LONG)GetGad(GID_CHARSET, CHOOSER_Selected);
 }
 
-/* the engine of installed fonts: AAText's freetype2.library (2.0+) */
+/* the engine of installed fonts: AAText's freetype2.library (2.15+) */
 static const char *Engine(void)
 {
     return "freetype2";

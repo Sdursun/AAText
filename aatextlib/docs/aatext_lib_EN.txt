@@ -1,5 +1,7 @@
-freetype2.library 2.0
-=====================
+freetype2.library 2.15
+======================
+
+(The library version follows the FreeType version it is built on.)
 
 The library of AAText: FreeType 2.15.0 as an AmigaOS 3 shared library,
 and an outline font engine for diskfont.library.
@@ -31,7 +33,7 @@ Earlier names
 -------------
 
 Versions 1.0-1.2 were called aatext.library, with the engine name
-"aatext". Fonts installed with AATextManager before 2.0 have
+"aatext". Fonts installed with AATextManager before 2.15 have
 OT_Engine "aatext" in their .otag file and need LIBS:aatext.library
 until AATextManager's Repair tab changes them to "freetype2" (or:
 AATextManager REPAIR APPLY). After that LIBS:aatext.library can be
@@ -95,7 +97,7 @@ For Turkish (ISO-8859-9), AAText includes ftcodepage.latin5:
   OT_Spec6_FaceNum     face in a .ttc/.otc collection
   OT_Spec9_Hinter      0 the font's own hinting (default),
                        1 FreeType autohinter, 2 none,
-                       3 light autohinting (2.0 and aatext.library)
+                       3 light autohinting (2.15 and aatext.library)
 
 See Developer/include/libraries/aatext.h for the values.
 

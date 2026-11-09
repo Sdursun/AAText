@@ -1,6 +1,6 @@
-# freetype2.library 2.0 – AAText'in kütüphanesi
+# freetype2.library 2.15 – AAText'in kütüphanesi
 
-AAText için ayrı bir paylaşımlı kütüphane geliştirildi: **freetype2.library 2.0**
+AAText için ayrı bir paylaşımlı kütüphane geliştirildi: **freetype2.library 2.15**
 (FreeType 2.15.0). Kaynağı bu deponun `aatextlib/` klasöründe
 (`src/`, derleme `build/`, Aminet paketi `dist/`; AAText'in `make dist`'i
 kütüphaneyi oradan derleyip pakete alır). Bu dosya, kütüphanenin AAText geliştirmesinde nasıl
@@ -20,7 +20,7 @@ betiği eskisini `LIBS:freetype2.library.bak` olarak saklar.
 Ad geçmişi: kütüphane önce `freetype2.library 2.14` olarak yazıldı,
 9.10.2026'da test dönemi için `aatext.library` (1.0–1.2, motor `"aatext"`)
 yapıldı; 8.11.2026'da kullanıcının kararıyla yeniden `freetype2.library`
-oldu (2.0). 2.0'dan önce `"aatext"` motoruyla kurulan fontları
+oldu (2.15). 2.15'ten önce `"aatext"` motoruyla kurulan fontları
 AATextManager'ın Onarım'ı `"freetype2"` yapar; o zamana kadar
 `LIBS:aatext.library` kalır. Başlık adları (`proto/aatext.h`, `AATextBase`)
 değişmedi.
@@ -106,7 +106,7 @@ AATextBase = OpenLibrary("aatext.library", 1);
 ## 4. diskfont motoru (`OT_Engine "freetype2"`)
 
 `.otag` etiketleri FTManager / freetype2.library 1.x ile aynı; FTManager'ın
-kurduğu fontlar 2.0 ile değişmeden çalışır (WinUAE'de denendi). Font boyları 1.3 ile aynı formülle hesaplanır.
+kurduğu fontlar 2.15 ile değişmeden çalışır (WinUAE'de denendi). Font boyları 1.3 ile aynı formülle hesaplanır.
 freetype2.library 1.3'e göre farklar:
 
 - **1 bit glifler siyah-beyaz için hint'leniyor** (`FT_LOAD_TARGET_MONO`):

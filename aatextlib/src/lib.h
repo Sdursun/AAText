@@ -10,8 +10,8 @@
 
 #define LIB_NAME     "freetype2.library"
 #define LIB_VERSION  2
-#define LIB_REVISION 0
-#define LIB_DATE     "08.11.2026"
+#define LIB_REVISION 15         /* 2.15: FreeType 2.15.0 */
+#define LIB_DATE     "09.11.2026"
 #define LIB_FTVER    "FreeType 2.15.0"
 
 struct FT2Base
