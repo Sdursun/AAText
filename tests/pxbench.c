@@ -54,7 +54,10 @@ int main(void)
     {
         { "RGB",  RECTFMT_RGB,  3 },
         { "ARGB", RECTFMT_ARGB, 4 },
-        { "RGBA", RECTFMT_RGBA, 4 }
+        { "RGBA", RECTFMT_RGBA, 4 },
+        /* the screen's own format, no conversion; 4 bytes covers 15 to
+           32 bit screens. RECTFMT_RAW = 5 as in the CGX v41 headers. */
+        { "RAW",  5,            4 }
     };
     LONG args[3] = { 0, 0, 0 };
     struct RDArgs *rda;
@@ -101,6 +104,8 @@ int main(void)
         ULONG n, mod = w * fmts[f].bpp;
         LONG x = win->BorderLeft + 10, y = win->BorderTop + 10;
         double t0, t1, rd, wr;
+        ULONG got = cgx_ReadPixelArray(CyberGfxBase, buf, 0, 0, mod,
+                                       win->RPort, x, y, w, h, fmts[f].fmt);
 
         for (n = 0, t0 = t1 = Now(freq); t1 - t0 < secs; n++)
         {
@@ -118,7 +123,8 @@ int main(void)
                 t1 = Now(freq);
         }
         wr = (Now(freq) - t0) * 1e6 / n;
-        printf("%-6s %9.1f %10.1f\n", fmts[f].name, rd, wr);
+        printf("%-6s %9.1f %10.1f   (%lu pixels read)\n", fmts[f].name, rd,
+               wr, (unsigned long)got);
     }
 
     /*
@@ -175,6 +181,27 @@ int main(void)
             rd = (Now(freq) - t0) * 1e6 / n;
             printf("direct read: lock+unlock %.1f us, lock+copy+unlock "
                    "%.1f us\n", lk, rd);
+            /* is RAW really the screen's bytes? compare with the copy */
+            if (bpp == 4)
+            {
+                UBYTE *raw = AllocVec(w * h * 4, MEMF_ANY | MEMF_CLEAR);
+
+                if (raw)
+                {
+                    ULONG i, diff = 0;
+
+                    cgx_ReadPixelArray(CyberGfxBase, raw, 0, 0, w * 4,
+                                       win->RPort, win->BorderLeft + 10,
+                                       win->BorderTop + 10, w, h, 5);
+                    for (i = 0; i < w * h * 4; i++)
+                        diff += raw[i] != buf[i];
+                    printf("RAW vs direct copy: %lu bytes differ "
+                           "(first pixel %02x %02x %02x %02x)\n",
+                           (unsigned long)diff, raw[0], raw[1], raw[2],
+                           raw[3]);
+                    FreeVec(raw);
+                }
+            }
         }
     }
 out:
