@@ -68,7 +68,8 @@ building) and Examples/ with the source of the tools. With gcc:
   AATextBase = OpenLibrary("freetype2.library", 2);
   FT_Init_FreeType(&library);   /* and so on: the normal FreeType API */
 
-  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o ft2color Examples/ft2color.c
+  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude \
+      -o ft2color Examples/ft2color.c
 
 FreeType functions take their arguments on the stack (C order), not in
 registers; the inline header does this for you. Each task should use its

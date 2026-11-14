@@ -45,8 +45,8 @@ Features
   fonts (moved file, no code page, engine aatext -> freetype2). Needs
   freetype2.library 2.15 (included: FreeType 2.15.0, called
   aatext.library before; it replaces freetype2.library 1.x, which the
-  installer keeps as LIBS:freetype2.library.bak); "Check for updates" downloads a newer
-  release to RAM: (needs TCP/IP and AmiSSL 5)
+  installer keeps as LIBS:freetype2.library.bak); "Check for updates"
+  downloads a newer release to RAM: (needs TCP/IP and AmiSSL 5)
 - "Safe" metrics by default: letters keep the cells of the system's
   bitmap font, so no window layout changes
 - Optional real metrics mode ("real on"): the TrueType font's own

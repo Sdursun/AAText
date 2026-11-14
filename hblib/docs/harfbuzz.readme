@@ -50,7 +50,8 @@ harfbuzz_SDK.txt (calling convention, Unicode text, memory, stack,
 tasks) and Examples/ with the source of the tools. Examples/hbshape.c
 is a complete program:
 
-  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o hbshape Examples/hbshape.c
+  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude \
+      -o hbshape Examples/hbshape.c
 
 Tools
   hbshape   glyphs and positions of a line of text
