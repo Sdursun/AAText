@@ -79,7 +79,17 @@ struct AAFace
     BOOL    hascodepage;
     BOOL    envpage;            /* .otag without one: ENV:ftcodepage */
     UWORD   codepage[256];      /* from the .otag: character -> Unicode */
+    /*
+     * Detected fonts: the faces of the same family for bold, italic and
+     * bold italic text (AA_STYLE_...), NULL where the family has none.
+     * Looked for by the helper on the first styled Text() (stylestate),
+     * loaded only when used.
+     */
+    struct AAFace *style[3];
+    volatile UBYTE stylestate;  /* STYLE_... */
 };
+
+enum { STYLE_UNKNOWN = 0, STYLE_QUEUED, STYLE_DONE };
 
 enum { NAME_PENDING = 1, NAME_READY, NAME_NONE };
 
@@ -166,6 +176,7 @@ static UBYTE aa_Charset;
 static BOOL aa_AutoDetect;
 static BOOL aa_AutoReal;
 static BOOL aa_Kerning = TRUE;        /* fixed while AAText runs, like real */
+static BOOL aa_RealStyles = TRUE;     /* see aa_StyledFont() */
 
 /*
  * aa_FindFont() runs for every Text() call, also for fonts AAText leaves
@@ -651,12 +662,15 @@ static BOOL LoadFace(struct AAFace *f, BOOL report)
 }
 
 /*
- * Find or load a TrueType face. ot (may be NULL) supplies the code page.
- * Takes the glyph lock only around FreeType, never around file I/O.
- * AAText's own process only.
+ * The face entry for path/facenum; load: loaded (NULL if that fails),
+ * else only the entry, loaded when Text() first uses it (as a file freed
+ * over the budget). ot (may be NULL) supplies the code page. Takes the
+ * glyph lock only around FreeType, never around file I/O. AAText's own
+ * process only.
  */
-static struct AAFace *GetFace(const char *path, LONG facenum,
-                              const struct AAOTagInfo *ot, BOOL report)
+static struct AAFace *FaceEntry(const char *path, LONG facenum,
+                                const struct AAOTagInfo *ot, BOOL load,
+                                BOOL report)
 {
     struct AAFace *f;
     LONG i;
@@ -666,6 +680,8 @@ static struct AAFace *GetFace(const char *path, LONG facenum,
         f = FACE(i);
         if (f->facenum == facenum && StrEq(f->path, path))
         {
+            if (!load)
+                return f->state != FACE_BROKEN ? f : NULL;
             if (f->state == FACE_UNLOADED)
                 LoadFace(f, report);
             return f->state == FACE_LOADED ? f : NULL;
@@ -685,8 +701,12 @@ static struct AAFace *GetFace(const char *path, LONG facenum,
     f->facenum = facenum;
     f->face = NULL;
     f->data = NULL;
-    f->state = FACE_BROKEN;
+    f->state = load ? FACE_BROKEN : FACE_UNLOADED;
     f->reload = FALSE;
+    f->size = 0;
+    f->lastuse = 0;
+    f->style[0] = f->style[1] = f->style[2] = NULL;
+    f->stylestate = STYLE_UNKNOWN;
     /* the semaphore: aa_GlyphsReconfigure() may replace the ENV table */
     ObtainSemaphore(&aa_GlyphSem);
     f->hascodepage = ot && ot->hascodepage;
@@ -698,7 +718,20 @@ static struct AAFace *GetFace(const char *path, LONG facenum,
     ReleaseSemaphore(&aa_GlyphSem);
     aa_NumFaces++;          /* failed loads are remembered too */
 
+    if (!load)
+        return f;           /* loaded when Text() first asks for it */
     return LoadFace(f, report) ? f : NULL;
+}
+
+/*
+ * Find or load a TrueType face. ot (may be NULL) supplies the code page.
+ * Takes the glyph lock only around FreeType, never around file I/O.
+ * AAText's own process only.
+ */
+static struct AAFace *GetFace(const char *path, LONG facenum,
+                              const struct AAOTagInfo *ot, BOOL report)
+{
+    return FaceEntry(path, facenum, ot, TRUE, report);
 }
 
 /*
@@ -731,9 +764,13 @@ static struct AAFont *Usable(struct AAFont *font, BOOL *final)
     return NULL;
 }
 
-/* Append a font entry. Caller holds aa_GlyphSem or is still in init. */
-static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
-                              BOOL real, struct AAFace *face, BOOL mapped)
+/*
+ * Append a font entry; base, style: see AAFont. Caller holds aa_GlyphSem
+ * or is still in init.
+ */
+static struct AAFont *AddFontEx(const char *name, UWORD ysize, UWORD px,
+                                BOOL real, struct AAFace *face, BOOL mapped,
+                                struct AAFont *base, UBYTE style)
 {
     struct AAFont *f;
 
@@ -754,9 +791,19 @@ static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
     f->adv = f->inkl = f->inkr = NULL;
     f->kern = NULL;
     f->yoffset = 0;
+    f->sub = 1;
+    f->base = base;
+    f->style = style;
+    f->styled[0] = f->styled[1] = f->styled[2] = NULL;
     aa_NumFonts++;          /* publish after the entry is complete */
     aa_FontGen++;
     return f;
+}
+
+static struct AAFont *AddFont(const char *name, UWORD ysize, UWORD px,
+                              BOOL real, struct AAFace *face, BOOL mapped)
+{
+    return AddFontEx(name, ysize, px, real, face, mapped, NULL, 0);
 }
 
 /* Coverage -> gamma corrected coverage. Uses floating point: call it
@@ -784,6 +831,7 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     aa_AutoDetect = prefs->autodetect;
     aa_AutoReal = prefs->autoreal;
     aa_Kerning = prefs->kerning;
+    aa_RealStyles = prefs->realstyles;
     aa_Hinting = prefs->hinting;
     aa_AntiAlias = prefs->antialias;
     aa_Subpixel = prefs->subpixel;
@@ -898,6 +946,7 @@ void aa_GlyphsReconfigure(const struct AAPrefs *prefs)
     }
     aa_Charset = prefs->charset;
     aa_AutoDetect = prefs->autodetect;
+    aa_RealStyles = prefs->realstyles;
     aa_CacheLimit = prefs->cachekb * 1024;
     aa_FaceLimit = prefs->fontmemkb * 1024;
     aa_FontGen++;
@@ -1191,6 +1240,265 @@ static struct AAFace *ResolveName(struct AAName *n, BOOL report)
     return face;
 }
 
+/*
+ * Looking for a family's bold and italic files: .otag files in the same
+ * directory whose name starts like the plain font's (cheap to list, and
+ * every installer names a family's files alike: Arial, ArialBold,
+ * arialbd, DejaVuSans-Bold, ...), with the same OT_Family. Weight and
+ * slant from OT_StemWeight and OT_SlantStyle (diskfonttag.h: OTS_Medium
+ * 128, OTS_Bold 184; slant 0 upright).
+ */
+#define STYLE_PREFIX    3       /* characters of the name compared */
+#define OTS_MEDIUM      128
+#define OTS_BOLD        184
+
+static ULONG WeightOf(ULONG w)
+{
+    return w == AA_OTAG_NONE ? OTS_MEDIUM : w;
+}
+
+/* What a .otag of the family is good for: AA_STYLE_... or -1; *score:
+   lower is closer to what that style asks for. */
+static LONG StyleOf(const struct AAOTagInfo *plain,
+                    const struct AAOTagInfo *ot, ULONG *score)
+{
+    ULONG w0 = WeightOf(plain->weight), w = WeightOf(ot->weight);
+    BOOL italic = ot->slant != AA_OTAG_NONE && ot->slant != 0;
+    BOOL bold = w >= w0 + 32;
+
+    if (!ot->family || !StrIEq(ot->family, plain->family))
+        return -1;
+    /* Condensed Bold is no bold for the normal width */
+    if (ot->width != plain->width &&
+        (ot->width == AA_OTAG_NONE || plain->width == AA_OTAG_NONE ||
+         ot->width + 16 < plain->width || ot->width > plain->width + 16))
+        return -1;
+    if (bold)
+    {
+        *score = w > OTS_BOLD ? w - OTS_BOLD : OTS_BOLD - w;
+        return italic ? AA_STYLE_BOLDITALIC : AA_STYLE_BOLD;
+    }
+    if (italic && w + 24 >= w0 && w <= w0 + 24)
+    {
+        *score = w > w0 ? w - w0 : w0 - w;
+        return AA_STYLE_ITALIC;
+    }
+    return -1;
+}
+
+/* Is name a .otag file that starts like plain (not plain itself)? */
+static BOOL StyleCandidate(const char *name, const char *plain)
+{
+    LONG len = StrLen(name), i;
+
+    if (len < 6 || !StrIEq(name + len - 5, ".otag") || StrIEq(name, plain))
+        return FALSE;
+    for (i = 0; i < STYLE_PREFIX; i++)
+        if (!plain[i] || ToLower(name[i]) != ToLower(plain[i]))
+            return FALSE;
+    return TRUE;
+}
+
+/* Read a .otag; *bufp to be freed with FreeVec(). */
+static BOOL ReadOTag(const char *path, struct AAOTagInfo *ot, UBYTE **bufp)
+{
+    ULONG size;
+
+    *bufp = ReadFile(path, AA_MAX_OTAG, &size);
+    if (!*bufp)
+        return FALSE;
+    if (aa_ParseOTag(*bufp, size, ot))
+        return TRUE;
+    FreeVec(*bufp);
+    *bufp = NULL;
+    return FALSE;
+}
+
+/*
+ * Find the bold, italic and bold italic faces of face's family (see
+ * above) and set face->style[]; the files are not loaded yet. Helper
+ * process only.
+ */
+static void ResolveStyles(struct AAFace *face, BOOL report)
+{
+    struct StyleWork
+    {
+        struct AAOTagInfo plain, ot;
+        struct FileInfoBlock fib;
+        char   dir[AA_PATH_LEN];
+        char   path[AA_PATH_LEN];
+        char   best[3][AA_PATH_LEN];
+        ULONG  score[3];
+    } *w;
+    struct AAFace *found[3] = { NULL, NULL, NULL };
+    struct AAName *n = NULL;
+    UBYTE *plainbuf = NULL, *buf;
+    const char *file;
+    LONG i, dirlen = 0;
+    BPTR lock;
+
+    for (i = 0; i < aa_NumNames && !n; i++)
+        if (NAME(i)->state == NAME_READY && NAME(i)->face == face)
+            n = NAME(i);
+    /* FileInfoBlock must be longword aligned: AllocVec() is */
+    w = AllocVec(sizeof(*w), MEMF_ANY);
+    if (!n || !w || !ReadOTag(n->otag, &w->plain, &plainbuf) ||
+        !w->plain.family)
+        goto done;
+    /* a bold or italic face itself gets no other faces */
+    if (WeightOf(w->plain.weight) >= OTS_BOLD - 16 ||
+        (w->plain.slant != AA_OTAG_NONE && w->plain.slant != 0))
+        goto done;
+
+    /* the .otag's directory and its file name */
+    for (i = 0; n->otag[i]; i++)
+        if (n->otag[i] == ':' || n->otag[i] == '/')
+            dirlen = i + 1;
+    CopyMem(n->otag, w->dir, dirlen);
+    w->dir[dirlen] = 0;
+    file = n->otag + dirlen;
+    for (i = 0; i < 3; i++)
+    {
+        w->best[i][0] = 0;
+        w->score[i] = 0xFFFFFFFFUL;
+    }
+
+    lock = Lock((CONST_STRPTR)(dirlen ? w->dir : ""), ACCESS_READ);
+    if (lock && Examine(lock, &w->fib))
+    {
+        while (ExNext(lock, &w->fib))
+        {
+            const char *name = (const char *)w->fib.fib_FileName;
+            ULONG score = 0;
+            LONG st;
+
+            if (w->fib.fib_DirEntryType >= 0 || !StyleCandidate(name, file) ||
+                dirlen + StrLen(name) >= AA_PATH_LEN)
+                continue;
+            CopyMem(w->dir, w->path, dirlen);
+            StrCopy(w->path + dirlen, name, AA_PATH_LEN - dirlen);
+            if (!ReadOTag(w->path, &w->ot, &buf))
+                continue;
+            st = StyleOf(&w->plain, &w->ot, &score);
+            if (st >= 0 && score < w->score[st])
+            {
+                w->score[st] = score;
+                StrCopy(w->best[st], w->path, AA_PATH_LEN);
+            }
+            FreeVec(buf);
+        }
+    }
+    if (lock)
+        UnLock(lock);
+
+    /* entries for the best files; loaded when Text() uses them */
+    for (i = 0; i < 3; i++)
+    {
+        BPTR fl;
+
+        if (!w->best[i][0] || !ReadOTag(w->best[i], &w->ot, &buf))
+            continue;
+        fl = aa_LockFontFile(w->ot.fontfile, w->path);
+        if (fl)
+        {
+            UnLock(fl);
+            found[i] = FaceEntry(w->path, w->ot.facenum, &w->ot, FALSE,
+                                 report);
+        }
+        D(("AAText: %s %s: %s -> %s\n", (ULONG)n->name,
+           (ULONG)(i == AA_STYLE_BOLD ? "bold" :
+                   i == AA_STYLE_ITALIC ? "italic" : "bold italic"),
+           (ULONG)w->best[i], (ULONG)(found[i] ? w->path : "not found")));
+        FreeVec(buf);
+    }
+
+done:
+    ObtainSemaphore(&aa_GlyphSem);
+    for (i = 0; i < 3; i++)
+        face->style[i] = found[i];
+    face->stylestate = STYLE_DONE;
+    aa_FontGen++;
+    ReleaseSemaphore(&aa_GlyphSem);
+    if (plainbuf)
+        FreeVec(plainbuf);
+    if (w)
+        FreeVec(w);
+}
+
+/* see glyphs.h */
+struct AAFont *aa_StyledFont(struct AAFont *font, struct TextFont *tf,
+                             UBYTE algostyle, UBYTE *rest)
+{
+    struct AAFace *face = font->face;
+    struct AAFont *sf;
+    UBYTE provided;
+    LONG want, idx, round;
+    BOOL final;
+
+    *rest = algostyle;
+    if (!aa_RealStyles || font->mapped || font->base ||
+        !(algostyle & (FSF_BOLD | FSF_ITALIC)) ||
+        (tf->tf_Style & (FSF_BOLD | FSF_ITALIC)))   /* styled already */
+        return font;
+
+    /* the family's files known? (asked for once, by the helper) */
+    for (round = 0; face->stylestate != STYLE_DONE; round++)
+    {
+        if (face->stylestate == STYLE_UNKNOWN)
+        {
+            face->stylestate = STYLE_QUEUED;
+            if (aa_HelperTask)
+                Signal(aa_HelperTask, aa_HelperSig);
+        }
+        if (round >= AA_WAIT_ROUNDS || !WaitHelper())
+            return font;
+    }
+
+    want = (algostyle & FSF_BOLD) ? ((algostyle & FSF_ITALIC) ?
+                                     AA_STYLE_BOLDITALIC : AA_STYLE_BOLD)
+                                  : AA_STYLE_ITALIC;
+    idx = want;
+    provided = want == AA_STYLE_BOLD ? FSF_BOLD :
+               want == AA_STYLE_ITALIC ? FSF_ITALIC : FSF_BOLD | FSF_ITALIC;
+    /* bold italic without such a file: bold (sheared) or italic (smeared) */
+    if (!face->style[idx] && want == AA_STYLE_BOLDITALIC)
+    {
+        idx = face->style[AA_STYLE_BOLD] ? AA_STYLE_BOLD : AA_STYLE_ITALIC;
+        provided = idx == AA_STYLE_BOLD ? FSF_BOLD : FSF_ITALIC;
+    }
+    if (!face->style[idx])
+        return font;
+
+    sf = font->styled[idx];
+    if (!sf || sf->retired || sf->face != face->style[idx])
+    {
+        ObtainSemaphore(&aa_GlyphSem);
+        sf = font->styled[idx];
+        if (!sf || sf->retired || sf->face != face->style[idx])
+        {
+            sf = AddFontEx(font->name, font->ysize, 0, font->real,
+                           face->style[idx], FALSE, font, provided);
+            if (sf)
+                font->styled[idx] = sf;
+        }
+        ReleaseSemaphore(&aa_GlyphSem);
+        if (!sf)
+            return font;
+    }
+
+    /* its file loaded? else the helper loads it, as for a new font */
+    for (round = 0; ; round++)
+    {
+        final = TRUE;
+        if (Usable(sf, &final))
+            break;
+        if (final || round >= AA_WAIT_ROUNDS || !WaitHelper())
+            return font;
+    }
+    *rest = algostyle & ~provided;
+    return sf;
+}
+
 void aa_RetryMissingFonts(void)
 {
     LONG i;
@@ -1199,6 +1507,10 @@ void aa_RetryMissingFonts(void)
     for (i = 0; i < aa_NumNames; i++)
         if (NAME(i)->state == NAME_NONE)
             NAME(i)->state = NAME_PENDING;
+    /* a bold or italic file may have been installed too */
+    for (i = 0; i < aa_NumFaces; i++)
+        if (FACE(i)->stylestate == STYLE_DONE)
+            FACE(i)->stylestate = STYLE_UNKNOWN;
     aa_FontGen++;
     ReleaseSemaphore(&aa_GlyphSem);
 }
@@ -1217,6 +1529,15 @@ LONG aa_ResolvePending(BOOL report)
         n->state = n->face ? NAME_READY : NAME_NONE;
         aa_FontGen++;
         done++;
+    }
+    /* families of fonts drawn bold or italic (aa_StyledFont()) */
+    for (i = 0; i < aa_NumFaces; i++)
+    {
+        if (FACE(i)->stylestate == STYLE_QUEUED)
+        {
+            ResolveStyles(FACE(i), report);
+            done++;
+        }
     }
     /* files freed over the budget that Text() wants again */
     for (i = 0; i < aa_NumFaces; i++)
@@ -1346,7 +1667,8 @@ static struct AAFont *FindFontUncached(struct TextFont *tf,
     {
         struct AAFont *f = FONT(i);
 
-        if (!f->retired && f->ysize == tf->tf_YSize && StrIEq(f->name, base))
+        if (!f->retired && !f->base && f->ysize == tf->tf_YSize &&
+            StrIEq(f->name, base))
             return Usable(f, final);
     }
 
@@ -1370,8 +1692,8 @@ static struct AAFont *FindFontUncached(struct TextFont *tf,
     ObtainSemaphore(&aa_GlyphSem);
     for (n = 0; n < aa_NumFonts; n++)
     {
-        if (!FONT(n)->retired && FONT(n)->ysize == tf->tf_YSize &&
-            StrIEq(FONT(n)->name, base))
+        if (!FONT(n)->retired && !FONT(n)->base &&
+            FONT(n)->ysize == tf->tf_YSize && StrIEq(FONT(n)->name, base))
         {
             font = FONT(n);
             break;
@@ -1445,7 +1767,7 @@ static struct AAFont *RetiredLike(const struct AAMapping *m,
     {
         struct AAFont *f = FONT(i);
 
-        if (f->retired && f->mapped && f->face == face &&
+        if (f->retired && f->mapped && !f->base && f->face == face &&
             f->ysize == m->ysize && f->pixelsize == m->pixelsize &&
             f->real == real && !f->failed && StrIEq(f->name, m->fontname))
             return f;
@@ -2239,7 +2561,9 @@ static LONG PrepareOnStack(APTR arg)
      * match the capital height and the text keeps the size of the
      * original font.
      */
-    if (font->pixelsize)
+    if (font->base)                 /* bold/italic file: the plain size */
+        px = font->base->pxused;
+    else if (font->pixelsize)
         px = font->pixelsize;
     else if (aa_UseReal(font, r->tf) && capheight > 0)
         px = CapPixelSize(face, capheight);
@@ -2338,7 +2662,7 @@ static LONG PrepareOnStack(APTR arg)
            cell, or they are cut off (Č, Ě, İ, Å). Not with real metrics:
            the widths above were measured at px (and the size matches
            the capital height there already). */
-        if (!font->pixelsize && !aa_UseReal(font, r->tf))
+        if (!font->pixelsize && !font->base && !aa_UseReal(font, r->tf))
         {
             LONG fit = FitAccents(font, face, tf->tf_Baseline + off + 1, px);
 
@@ -2385,6 +2709,9 @@ BOOL aa_PrepareFont(struct AAFont *font, struct TextFont *tf)
     if (font->failed)
         return FALSE;
     if (!font->face->face)      /* file freed: loaded again on request */
+        return FALSE;
+    /* a bold/italic file is set up at its plain font's size */
+    if (font->base && !aa_PrepareFont(font->base, tf))
         return FALSE;
 
     r.font = font;

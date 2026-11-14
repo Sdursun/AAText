@@ -169,7 +169,8 @@ while you try it out.
   Cancel  returns AAText to the settings it had before
 
   Appearance  antialiasing on/off, subpixel, LCD filter, gamma,
-              hinting, real character widths, kerning, preview
+              hinting, real character widths, kerning, bold and
+              italic from the font's own files, preview
   Programs    the programs AAText leaves alone (blacklist): type a
               name, choose the program file with "Choose...", or pick
               one from "Add a running program...". The program need
@@ -360,6 +361,24 @@ It is a plain text file with one setting per line; lines starting with
                     not kerned. Applies within one piece of text drawn at
                     once. Like "real", it changes when AAText restarts.
 
+  realstyles on     Bold and italic text (programs ask for it with
+                    SetSoftStyle(): menus of some programs, editors,
+                    browsers) is drawn with the family's own bold,
+                    italic and bold italic files when they are
+                    installed (default on): "Verdana" bold uses
+                    verdanab.ttf instead of smearing the normal
+                    letters. Without such a file, or with "off", the
+                    letters are made bold and slanted as before. Bold
+                    italic without its own file: the bold file
+                    slanted, or the italic file made bold. Detected
+                    fonts only (not explicit mappings); the files are
+                    found through their .otag files in the same
+                    directory, by the family name (OT_Family) the
+                    installer wrote. With real metrics, bold text then
+                    has the bold file's widths; in safe metrics mode
+                    the letters stay in the bitmap font's cells.
+                    Changes at once.
+
   hinting normal    How letters are fitted to the pixel grid:
                     none   - no hinting: smoothest, closest to the
                              font's design
@@ -536,6 +555,9 @@ History
       same way. The three positions of each letter are kept in the
       glyph cache, drawing is about as fast as before.
       The LCD filter default is now "default" (was "light").
+      Bold and italic text with the font family's own files ("realstyles
+      on", default; AATextPrefs: Appearance): Verdana bold is drawn with
+      verdanab.ttf instead of smeared Verdana letters.
 
 0.46  Built on FreeType 2.15.0 (was 2.14.3). aatext.library is no
       longer used: AAText's FreeType library is freetype2.library 2.15

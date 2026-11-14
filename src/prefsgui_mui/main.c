@@ -65,6 +65,7 @@ enum
     GID_PICKFILE, GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_FONTMEM,
     GID_CHARSET, GID_MANAGER, GID_MAPLIST, GID_MAPADD, GID_MAPCHANGE,
     GID_MAPREMOVE, GID_MAPPX, GID_SAVE, GID_USE, GID_CANCEL,
+    GID_REALSTYLES,
     GID_COUNT
 };
 
@@ -448,6 +449,7 @@ static void ReadGadgets(void)
     pc.cur.offscreen = Get(obj[GID_OFFSCREEN], MUIA_Selected) != 0;
     pc.cur.aga = Get(obj[GID_AGA], MUIA_Selected) != 0;
     pc.cur.antialias = Get(obj[GID_ANTIALIAS], MUIA_Selected) != 0;
+    pc.cur.realstyles = Get(obj[GID_REALSTYLES], MUIA_Selected) != 0;
     v = Get(obj[GID_SUBPIXEL], MUIA_Cycle_Active);
     pc.cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
     v = Get(obj[GID_LCDFILTER], MUIA_Cycle_Active);
@@ -691,7 +693,7 @@ static LONG CurrentPage(void)
 /* Register page of a gadget (0-3), -1 for those outside the pages. */
 static LONG PageOf(LONG gid)
 {
-    if (gid >= GID_GAMMA && gid <= GID_LCDFILTER)
+    if ((gid >= GID_GAMMA && gid <= GID_LCDFILTER) || gid == GID_REALSTYLES)
         return 0;
     if (gid >= GID_PROGNAME && gid <= GID_PICKFILE)
         return 1;
@@ -987,6 +989,7 @@ static Object *AppearancePage(void)
                          HintIndex(pc.cur.hinting)),
         End,
         Child, MkCheck(MSG_ANTIALIAS, GID_ANTIALIAS, pc.cur.antialias),
+        Child, MkCheck(MSG_REALSTYLES, GID_REALSTYLES, pc.cur.realstyles),
         Child, MkCheck(MSG_REAL, GID_REAL, pc.cur.autoreal),
         Child, MkCheck(MSG_KERNING, GID_KERNING, pc.cur.kerning),
         Child, InfoText(GetString(MSG_REAL_NOTE)),
@@ -1234,6 +1237,8 @@ static BOOL OpenWin(const char *pubname)
     Notify(obj[GID_CHARSET], MUIA_Cycle_Active, MUIV_EveryTime, GID_CHARSET);
     for (i = GID_REAL; i <= GID_ANTIALIAS; i++)
         Notify(obj[i], MUIA_Selected, MUIV_EveryTime, i);
+    Notify(obj[GID_REALSTYLES], MUIA_Selected, MUIV_EveryTime,
+           GID_REALSTYLES);
     for (i = GID_AUTO; i <= GID_AGA; i++)
         Notify(obj[i], MUIA_Selected, MUIV_EveryTime, i);
     Notify(obj[GID_PROGNAME], MUIA_String_Acknowledge, MUIV_EveryTime,
@@ -1277,6 +1282,7 @@ static BOOL Action(ULONG id)
         case GID_OFFSCREEN:
         case GID_AGA:
         case GID_ANTIALIAS:
+        case GID_REALSTYLES:
         case GID_SUBPIXEL:
         case GID_LCDFILTER:
         case GID_CACHE:
@@ -1378,6 +1384,7 @@ static void ShowPrefs(void)
     nnset(obj[GID_OFFSCREEN], MUIA_Selected, pc.cur.offscreen);
     nnset(obj[GID_AGA], MUIA_Selected, pc.cur.aga);
     nnset(obj[GID_ANTIALIAS], MUIA_Selected, pc.cur.antialias);
+    nnset(obj[GID_REALSTYLES], MUIA_Selected, pc.cur.realstyles);
     nnset(obj[GID_SUBPIXEL], MUIA_Cycle_Active, pc.cur.subpixel);
     nnset(obj[GID_LCDFILTER], MUIA_Cycle_Active, pc.cur.lcdfilter);
     nnset(obj[GID_CACHE], MUIA_String_Integer, pc.cur.cachekb);

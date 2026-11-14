@@ -103,7 +103,7 @@ enum
     GID_PICKFILE, GID_KERNING, GID_ANTIALIAS, GID_SUBPIXEL, GID_LCDFILTER,
     GID_MANAGER,
     GID_MAPLIST, GID_MAPADD, GID_MAPCHANGE, GID_MAPREMOVE, GID_MAPPX,
-    GID_MAPPREVIEW,
+    GID_MAPPREVIEW, GID_REALSTYLES,
     GID_COUNT
 };
 
@@ -193,7 +193,8 @@ static void CloseLibs(void)
 static LONG PageOf(LONG gid)
 {
     if ((gid >= GID_GAMMA && gid <= GID_FONTINFO) || gid == GID_KERNING ||
-        gid == GID_ANTIALIAS || gid == GID_SUBPIXEL || gid == GID_LCDFILTER)
+        gid == GID_ANTIALIAS || gid == GID_SUBPIXEL || gid == GID_LCDFILTER ||
+        gid == GID_REALSTYLES)
         return 0;
     if ((gid >= GID_BLACKLIST && gid <= GID_RUNNING) || gid == GID_PICKFILE)
         return 1;
@@ -238,7 +239,8 @@ static void SetGad2(LONG gid, Tag tag1, ULONG data1, Tag tag2, ULONG data2)
     }
     SetGadgetAttrsA(gads[gid], win, NULL, tags);
     if (gid == GID_REAL || gid == GID_KERNING || gid == GID_AUTO ||
-        gid == GID_OFFSCREEN || gid == GID_AGA || gid == GID_ANTIALIAS)
+        gid == GID_OFFSCREEN || gid == GID_AGA || gid == GID_ANTIALIAS ||
+        gid == GID_REALSTYLES)
     {
         /* checkbox.gadget does not redraw itself on GA_Selected; erase
            first, or its (antialiased) label is drawn over itself */
@@ -395,6 +397,8 @@ static void ReadGadgets(void)
         pc.cur.aga = v != 0;
     if (GetAttr(GA_Selected, (Object *)gads[GID_ANTIALIAS], &v))
         pc.cur.antialias = v != 0;
+    if (GetAttr(GA_Selected, (Object *)gads[GID_REALSTYLES], &v))
+        pc.cur.realstyles = v != 0;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_SUBPIXEL], &v))
         pc.cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_LCDFILTER], &v))
@@ -1225,6 +1229,13 @@ static Object *AppearancePage(void)
             GA_Selected, pc.cur.antialias,
         End,
         CHILD_WeightedHeight, 0,
+        LAYOUT_AddChild, gads[GID_REALSTYLES] = (struct Gadget *)CheckBoxObject,
+            GA_ID, GID_REALSTYLES,
+            GA_RelVerify, TRUE,
+            GA_Text, (ULONG)GetString(MSG_REALSTYLES),
+            GA_Selected, pc.cur.realstyles,
+        End,
+        CHILD_WeightedHeight, 0,
 
         LAYOUT_AddChild, gads[GID_SUBPIXEL] = (struct Gadget *)ChooserObject,
             GA_ID, GID_SUBPIXEL,
@@ -1459,6 +1470,7 @@ static BOOL Action(ULONG id)
         case GID_OFFSCREEN:
         case GID_AGA:
         case GID_ANTIALIAS:
+        case GID_REALSTYLES:
         case GID_SUBPIXEL:
         case GID_LCDFILTER:
         case GID_CACHE:
@@ -1575,6 +1587,7 @@ static void ShowPrefs(void)
     SetGad(GID_OFFSCREEN, GA_Selected, pc.cur.offscreen);
     SetGad(GID_AGA, GA_Selected, pc.cur.aga);
     SetGad(GID_ANTIALIAS, GA_Selected, pc.cur.antialias);
+    SetGad(GID_REALSTYLES, GA_Selected, pc.cur.realstyles);
     SetGad(GID_SUBPIXEL, CHOOSER_Selected, pc.cur.subpixel);
     SetGad(GID_LCDFILTER, CHOOSER_Selected, pc.cur.lcdfilter);
     SetGad(GID_CACHE, INTEGER_Number, pc.cur.cachekb);

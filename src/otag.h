@@ -18,12 +18,25 @@
 #define OT_Spec1_FontFile   (OT_Level1 | OT_Indirect | 0x101)
 #define OT_Spec2_CodePage   (OT_Level1 | OT_Indirect | 0x102)
 #define OT_Spec6_FaceNum    (OT_Level1 | 0x106)
+#ifndef OT_Family
+#define OT_Family           (OT_Level1 | OT_Indirect | 0x03)
+#define OT_StemWeight       (OT_Level1 | 0x15)
+#define OT_SlantStyle       (OT_Level1 | 0x16)
+#define OT_HorizStyle       (OT_Level1 | 0x17)
+#endif
+
+/* "not given" for weight, slant and width below */
+#define AA_OTAG_NONE        0xFFFFFFFFUL
 
 struct AAOTagInfo
 {
     const char *fontfile;       /* points into the buffer, or NULL */
     const char *engine;         /* points into the buffer, or NULL */
     LONG  facenum;
+    const char *family;         /* OT_Family, points into the buffer, or NULL */
+    ULONG weight;               /* OT_StemWeight (OTS_Bold 184), or NONE */
+    ULONG slant;                /* OT_SlantStyle (0 upright), or NONE */
+    ULONG width;                /* OT_HorizStyle, or NONE */
     BOOL  hascodepage;
     UWORD codepage[256];        /* character code -> Unicode */
 };

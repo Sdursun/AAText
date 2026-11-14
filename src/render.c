@@ -889,8 +889,9 @@ static void LineRGB(UBYTE *buf, LONG w, LONG y, LONG x0, LONG x1,
  * lock held; calls no graphics functions.
  */
 static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
-                       struct AAFont *font, CONST_STRPTR s, LONG count,
-                       LONG ox, const UBYTE *fg, const struct AABlend *bt)
+                       struct AAFont *font, UBYTE style, CONST_STRPTR s,
+                       LONG count, LONG ox, const UBYTE *fg,
+                       const struct AABlend *bt)
 {
     struct TextFont *tf = rp->Font;
     WORD *kern = (WORD *)tf->tf_CharKern;
@@ -898,10 +899,12 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
     LONG defidx = tf->tf_HiChar - tf->tf_LoChar + 1;  /* "not in font" glyph */
     LONG pen = ox;
     LONG baseline = tf->tf_Baseline + font->yoffset;   /* measured, see glyphs.h */
-    UBYTE style = rp->AlgoStyle;
     LONG italicbase = (style & FSF_ITALIC) ? baseline : -1;
     LONG smear = (style & FSF_BOLD) ? (tf->tf_BoldSmear ? tf->tf_BoldSmear : 1)
                                     : 0;
+    /* a bold file's letters fill the cell and the smear it would get */
+    LONG extra = (font->style & FSF_BOLD) ?
+                 (tf->tf_BoldSmear ? tf->tf_BoldSmear : 1) : 0;
 
     while (count--)
     {
@@ -922,7 +925,7 @@ static void DrawString(UBYTE *buf, LONG w, LONG h, struct RastPort *rp,
         if (g && g->width)
         {
             /* centre the TrueType advance in the original cell */
-            LONG gx = pen + g->left + (cell - g->advance) / 2;
+            LONG gx = pen + g->left + (cell + extra - g->advance) / 2;
             LONG gy = baseline + 1 - g->top;  /* see AAGlyph.top */
 
             BlendGlyph(buf, w, h, g, gx, gy, fg, bt, italicbase);
@@ -1031,12 +1034,11 @@ static void LineBits(UBYTE *tmpl, LONG bpr, LONG w, LONG y, LONG x0, LONG x1)
  * below the baseline. Glyph lock held; no graphics calls.
  */
 static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
-                     struct RastPort *rp, struct AAFont *font,
+                     struct RastPort *rp, struct AAFont *font, UBYTE style,
                      CONST_STRPTR s, LONG count, LONG ox, const UBYTE *fg,
                      const struct AABlend *bt)
 {
     struct TextFont *tf = rp->Font;
-    UBYTE style = rp->AlgoStyle;
     LONG baseline = tf->tf_Baseline + font->yoffset;   /* measured, see glyphs.h */
     LONG italicbase = (style & FSF_ITALIC) ? baseline : -1;
     LONG smear = (style & FSF_BOLD) ? (tf->tf_BoldSmear ? tf->tf_BoldSmear : 1)
@@ -1170,7 +1172,7 @@ static void CheckWidth(struct RastPort *rp, CONST_STRPTR s, LONG count,
 #endif
 
 static void FillMetricsCtx(struct AAMetricsCtx *m, struct RastPort *rp,
-                           struct AAFont *font)
+                           struct AAFont *font, UBYTE style)
 {
     struct TextFont *tf = rp->Font;
 
@@ -1179,7 +1181,36 @@ static void FillMetricsCtx(struct AAMetricsCtx *m, struct RastPort *rp,
     m->baseline = tf->tf_Baseline;
     m->boldsmear = tf->tf_BoldSmear;
     m->txspacing = rp->TxSpacing;
-    m->algostyle = rp->AlgoStyle;
+    m->algostyle = style;
+}
+
+/*
+ * The entry to draw and measure with for rp's styles, prepared: the
+ * family's bold/italic file if there is one (aa_StyledFont()), else font.
+ * *style gets the styles left to do algorithmically. NULL if font itself
+ * cannot be set up. Text() and the measuring hooks both use this, so
+ * they agree. Glyph lock not held.
+ */
+static struct AAFont *PreparedFont(struct AAFont *font, struct RastPort *rp,
+                                   UBYTE *style)
+{
+    struct TextFont *tf = rp->Font;
+    struct AAFont *sf = aa_StyledFont(font, tf, rp->AlgoStyle, style);
+    BOOL ok;
+
+    if (sf->prepared)
+        return sf;
+    aa_LockGlyphs();
+    ok = aa_PrepareFont(sf, tf);
+    if (!ok && sf != font)
+    {
+        /* the bold/italic file failed: algorithmic styles after all */
+        sf = font;
+        *style = rp->AlgoStyle;
+        ok = aa_PrepareFont(font, tf);
+    }
+    aa_UnlockGlyphs();
+    return ok ? sf : NULL;
 }
 
 /*
@@ -1193,6 +1224,7 @@ BOOL aa_RealMetrics(struct RastPort *rp, struct Task *me,
 {
     struct TextFont *tf = rp->Font;
     struct AAFont *font;
+    UBYTE style;
 
     if (aa_Mode != AA_MODE_TEXT || !tf)
         return FALSE;
@@ -1202,17 +1234,10 @@ BOOL aa_RealMetrics(struct RastPort *rp, struct Task *me,
     font = aa_FindFont(tf);
     if (!font || !aa_UseReal(font, tf))
         return FALSE;
-    if (!font->prepared)
-    {
-        BOOL ok;
-
-        aa_LockGlyphs();
-        ok = aa_PrepareFont(font, tf);
-        aa_UnlockGlyphs();
-        if (!ok)
-            return FALSE;
-    }
-    FillMetricsCtx(m, rp, font);
+    font = PreparedFont(font, rp, &style);
+    if (!font)
+        return FALSE;
+    FillMetricsCtx(m, rp, font, style);
     return TRUE;
 }
 
@@ -1601,7 +1626,7 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
     struct TextExtent te;
     struct ViewPort *vp;
     LONG x, y, w, h, ox, sx = 0, sy = 0;
-    BOOL ok;
+    UBYTE style;
 #ifdef DEBUG
     ULONG ts0 = 0, ts1 = 0, ts2 = 0, ts3 = 0, ts4 = 0;
 #endif
@@ -1610,14 +1635,13 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
     if (!rp->BitMap)
         FAIL(R_NOBITMAP);
 
-    aa_LockGlyphs();
-    ok = aa_PrepareFont(font, tf);
-    aa_UnlockGlyphs();
-    if (!ok)
+    /* bold/italic: the family's file, as aa_RealMetrics() picks it */
+    font = PreparedFont(font, rp, &style);
+    if (!font)
         FAIL(R_FONTFAIL);
 
     /* Draw box = text extent, exactly what TextExtent() reports. */
-    FillMetricsCtx(&m, rp, font);
+    FillMetricsCtx(&m, rp, font, style);
     aa_MExtent(&m, string, count, &te);
     ox = -te.te_Extent.MinX;
     x = rp->cp_x + te.te_Extent.MinX;
@@ -1667,8 +1691,8 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
             {
                 aa_LockGlyphs();
                 if (aa_PrepareFont(font, tf))
-                    DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox,
-                             fg, BlendFor(fg));
+                    DrawReal(buf, NULL, 0, w, h, rp, font, style, string,
+                             count, ox, fg, BlendFor(fg));
                 aa_UnlockGlyphs();
             }
             if (!(rp->DrawMode & JAM2))
@@ -1722,8 +1746,8 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
             aa_LockGlyphs();
             aa_GrayCoverage = TRUE;
             if (aa_PrepareFont(font, tf))
-                DrawReal(buf, NULL, 0, w, h, rp, font, string, count, ox,
-                         white, BlendFor(white));
+                DrawReal(buf, NULL, 0, w, h, rp, font, style, string,
+                         count, ox, white, BlendFor(white));
             aa_GrayCoverage = FALSE;
             aa_UnlockGlyphs();
             done = PaletteCompose(rp, vp, buf + (sy * w + sx) * AA_BPP, w * AA_BPP,
@@ -1749,8 +1773,8 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
 
         aa_LockGlyphs();
         if (aa_PrepareFont(font, tf))
-            DrawReal(NULL, tmpl, bpr, w, h, rp, font, string, count, ox, NULL,
-                     NULL);
+            DrawReal(NULL, tmpl, bpr, w, h, rp, font, style, string,
+                     count, ox, NULL, NULL);
         aa_UnlockGlyphs();
 
         BltTemplate((PLANEPTR)tmpl, 0, bpr, rp, x, y, w, h);
@@ -1774,6 +1798,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     LONG sx = 0, sy = 0;           /* cropped columns and rows */
     LONG x, y, w, h, slot = -1;
     LONG adv, left, right;         /* cells, style overhang */
+    UBYTE style = rp->AlgoStyle;   /* left to do algorithmically */
     BOOL same = FALSE;
     ULONG key;
 #ifdef DEBUG
@@ -1848,16 +1873,9 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         return TRUE;
     }
 
-    if (font)
-    {
-        BOOL ok;
-
-        aa_LockGlyphs();
-        ok = aa_PrepareFont(font, tf);
-        aa_UnlockGlyphs();
-        if (!ok)
-            FAIL(R_FONTFAIL);
-    }
+    /* bold/italic: the family's file if there is one, in the same box */
+    if (font && !(font = PreparedFont(font, rp, &style)))
+        FAIL(R_FONTFAIL);
 
     buf = GetBuffer(w * h * AA_BPP);
     if (!buf)
@@ -1875,8 +1893,8 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
             aa_LockGlyphs();
             aa_GrayCoverage = TRUE;
             if (aa_PrepareFont(font, tf))
-                DrawString(buf, w, h, rp, font, string, count, left, white,
-                           BlendFor(white));
+                DrawString(buf, w, h, rp, font, style, string, count, left,
+                           white, BlendFor(white));
             aa_GrayCoverage = FALSE;
             aa_UnlockGlyphs();
         }
@@ -1920,7 +1938,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
         aa_LockGlyphs();
         /* again: new settings may have reset the font since */
         if (aa_PrepareFont(font, tf))
-            DrawString(buf, w, h, rp, font, string, count, left, fg,
+            DrawString(buf, w, h, rp, font, style, string, count, left, fg,
                        BlendFor(fg));
         aa_UnlockGlyphs();
     }

@@ -65,6 +65,9 @@ struct AAPrefs
                                        their .otag files (default on) */
     BOOL  autoreal;                 /* real metrics for detected fonts */
     BOOL  kerning;                  /* pair kerning in real metrics mode */
+    BOOL  realstyles;               /* bold/italic text with the family's
+                                       own bold/italic TrueType files when
+                                       installed, default on */
     BOOL  aga;                      /* antialiasing on palette (AGA)
                                        screens, default off */
     BOOL  antialias;                /* off: TrueType glyphs drawn sharp

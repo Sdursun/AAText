@@ -91,7 +91,22 @@ struct AAFont
      * without a lock.
      */
     struct AAKern *kern;
+    /*
+     * Bold/italic text with the family's own faces (aa_StyledFont()):
+     * such an entry has the name and size of its plain font (base) and a
+     * face of the family; style is what that face provides (FSF_BOLD,
+     * FSF_ITALIC). Never found by name, only through its base's styled[]
+     * (AA_STYLE_...). Plain entries: base NULL, style 0.
+     */
+    struct AAFont *base;
+    UBYTE  style;
+    struct AAFont *styled[3];
 };
+
+/* Indexes of AAFont.styled[]: the styles asked for */
+#define AA_STYLE_BOLD       0
+#define AA_STYLE_ITALIC     1
+#define AA_STYLE_BOLDITALIC 2
 
 #define AA_MAX_KERN 32768       /* kerning pairs per font and size */
 
@@ -201,6 +216,18 @@ void aa_GlyphsStatus(LONG *numfonts, LONG *numfaces, ULONG *facebytes,
  * a detected font gets an entry for each size on first use.
  */
 struct AAFont *aa_FindFont(struct TextFont *tf);
+
+/*
+ * The entry to draw and measure font with when algostyle (rp->AlgoStyle)
+ * asks for bold and/or italic: one using the family's own bold, italic
+ * or bold italic file if it is installed ("realstyles on", detected
+ * fonts only), else font itself. *rest gets the styles still to be done
+ * algorithmically (underline always; italic when only a bold face
+ * exists, ...). May wait for the helper to find and load the file, like
+ * aa_FindFont(). Glyph lock not held.
+ */
+struct AAFont *aa_StyledFont(struct AAFont *font, struct TextFont *tf,
+                             UBYTE algostyle, UBYTE *rest);
 
 /*
  * Automatic detection runs file I/O in AAText's own process: Text() may

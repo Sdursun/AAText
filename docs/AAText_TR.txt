@@ -178,7 +178,8 @@ satırında görürsünüz.
   İptal     AAText'i önceki ayarlarına döndürür
 
   Görünüm     yumuşatma açık/kapalı, alt piksel, LCD filtresi, gamma,
-              hinting, gerçek harf genişlikleri, kerning, önizleme
+              hinting, gerçek harf genişlikleri, kerning, fontun
+              kendi kalın/eğik dosyaları, önizleme
   Programlar  AAText'in dokunmayacağı programlar (kara liste): adı
               yazın, program dosyasını "Seç..." ile seçin ya da
               "Çalışan bir program ekle..." listesinden alın. Programın
@@ -372,6 +373,23 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                     parçasının içinde uygulanır. "real" gibi, AAText
                     yeniden başlatılınca değişir.
 
+  realstyles on     Kalın ve eğik yazı (programlar SetSoftStyle() ile
+                    ister: bazı programların menüleri, editörler,
+                    tarayıcılar) font ailesinin kendi kalın, eğik ve
+                    kalın eğik dosyaları kuruluysa onlarla çizilir
+                    (varsayılan açık): "Verdana" kalın, normal harfler
+                    kalınlaştırılmak yerine verdanab.ttf ile çizilir.
+                    Böyle bir dosya yoksa ya da "off" ile harfler eskisi
+                    gibi kalınlaştırılır ve eğilir. Kendi dosyası
+                    olmayan kalın eğik: kalın dosya eğilir ya da eğik
+                    dosya kalınlaştırılır. Sadece otomatik algılanan
+                    fontlar (açık eşlemeler değil); dosyalar aynı
+                    dizindeki .otag dosyalarından, kurulum programının
+                    yazdığı aile adıyla (OT_Family) bulunur. Gerçek ölçü
+                    modunda kalın yazı kalın dosyanın genişliklerini
+                    alır; güvenli modda harfler bitmap fontun
+                    hücrelerinde kalır. Hemen geçerli olur.
+
   hinting normal    Harflerin piksel ızgarasına nasıl oturtulacağı:
                     none   - hinting yok: en yumuşak, fontun
                              tasarımına en sadık
@@ -554,6 +572,10 @@ Geçmiş
       şekilde ölçer. Her harfin üç konumu glif önbelleğinde tutulur,
       çizim hızı neredeyse aynı kalır.
       LCD filtresinin varsayılanı artık "default" (önceden "light").
+      Kalın ve eğik yazı font ailesinin kendi dosyalarıyla
+      ("realstyles on", varsayılan; AATextPrefs: Görünüm): Verdana
+      kalın, kalınlaştırılmış Verdana harfleri yerine verdanab.ttf ile
+      çizilir.
 
 0.46  FreeType 2.15.0 üzerine kuruldu (önceden 2.14.3). aatext.library
       artık kullanılmıyor: AAText'in FreeType kütüphanesi yeniden

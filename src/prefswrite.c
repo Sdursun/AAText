@@ -18,7 +18,7 @@
 
 static const char *const managed[] =
 {
-    "gamma", "hinting", "real", "kerning", "cache", "fontmem", "offscreen", "aga", "antialias", "subpixel", "lcdfilter", "auto",
+    "gamma", "hinting", "real", "kerning", "realstyles", "cache", "fontmem", "offscreen", "aga", "antialias", "subpixel", "lcdfilter", "auto",
     "charset", "blacklist", NULL
 };
 
@@ -172,6 +172,8 @@ BOOL aa_WritePrefs(const struct AAPrefs *prefs, const char *path,
     sprintf(line, "real %s\n", prefs->autoreal ? "on" : "off");
     ok &= Put(out, line);
     sprintf(line, "kerning %s\n", prefs->kerning ? "on" : "off");
+    ok &= Put(out, line);
+    sprintf(line, "realstyles %s\n", prefs->realstyles ? "on" : "off");
     ok &= Put(out, line);
     sprintf(line, "cache %ld\n", (long)prefs->cachekb);
     ok &= Put(out, line);

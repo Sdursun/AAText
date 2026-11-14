@@ -63,6 +63,8 @@ BOOL aa_ParseOTag(const UBYTE *buf, ULONG len, struct AAOTagInfo *info)
     info->fontfile = NULL;
     info->engine = NULL;
     info->facenum = 0;
+    info->family = NULL;
+    info->weight = info->slant = info->width = AA_OTAG_NONE;
     info->hascodepage = FALSE;
 
     if (len < 8 || GetLong(buf) != OT_FileIdent)
@@ -88,6 +90,22 @@ BOOL aa_ParseOTag(const UBYTE *buf, ULONG len, struct AAOTagInfo *info)
 
             case OT_Spec6_FaceNum:
                 info->facenum = (LONG)data;
+                break;
+
+            case OT_Family:
+                info->family = StringAt(buf, len, data);
+                break;
+
+            case OT_StemWeight:
+                info->weight = data;
+                break;
+
+            case OT_SlantStyle:
+                info->slant = data;
+                break;
+
+            case OT_HorizStyle:
+                info->width = data;
                 break;
 
             case OT_Spec2_CodePage:

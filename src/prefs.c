@@ -14,6 +14,7 @@
  *   auto on | off            (detect TrueType fonts via .otag, default on)
  *   real on | off            (real metrics for detected fonts, default off)
  *   kerning on | off         (pair kerning in real metrics mode, default on)
+ *   realstyles on | off      (bold/italic from the family's own files, on)
  *   aga on | off             (antialiasing on palette screens, default off)
  *   antialias on | off       (off: TrueType text drawn sharp, default on)
  *   subpixel off | rgb | bgr (LCD antialiasing on RTG screens, default off)
@@ -229,11 +230,12 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
         return;
     }
     if (StrIEq(tok[0], "auto") || StrIEq(tok[0], "real") ||
-        StrIEq(tok[0], "kerning"))
+        StrIEq(tok[0], "kerning") || StrIEq(tok[0], "realstyles"))
     {
         BOOL *flag = StrIEq(tok[0], "auto") ? &prefs->autodetect :
                      StrIEq(tok[0], "real") ? &prefs->autoreal :
-                                              &prefs->kerning;
+                     StrIEq(tok[0], "kerning") ? &prefs->kerning :
+                                                 &prefs->realstyles;
 
         if (n == 2 && StrIEq(tok[1], "on"))
             *flag = TRUE;
@@ -388,6 +390,7 @@ void aa_DefaultPrefs(struct AAPrefs *prefs)
     prefs->autodetect = TRUE;
     prefs->autoreal = FALSE;
     prefs->kerning = TRUE;
+    prefs->realstyles = TRUE;
     prefs->aga = FALSE;
     prefs->antialias = TRUE;
     prefs->subpixel = AA_SUBPIXEL_OFF;

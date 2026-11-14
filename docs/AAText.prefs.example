@@ -24,6 +24,13 @@
 # AAText is restarted.
 #kerning off
 
+# Bold and italic text (programs that ask for it with SetSoftStyle())
+# with the font family's own bold, italic and bold italic files when
+# they are installed (default on), else made bold and slanted from the
+# normal letters. Only for detected fonts (.otag); the files are found
+# by their .otag (same OT_Family, in the same directory).
+#realstyles off
+
 # Gamma for the antialiasing edge (0.5 - 4.0, default 0.8).
 # Lower values make text thinner and crisper, higher values bolder.
 #gamma 0.8

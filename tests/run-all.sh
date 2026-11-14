@@ -48,6 +48,8 @@ run otagrw-ftm      tests/data/empty.prefs otagrw tests/data/verdanaregular.otag
 run otagrw-cff      tests/data/empty.prefs otagrw tests/data/sourcesans3regular.otag
 run otagrw-ttf      tests/data/empty.prefs otagrw tests/data/arial.otag
 run auto            tests/data/empty.prefs auto AutoTest.font
+run styles          tests/data/empty.prefs styles
+run styles-off      tests/nostyles.prefs styles off
 run charsets        tests/charset.prefs charsets
 run fontinfo        tests/data/empty.prefs fontinfo third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf 0 dejavusansbook
 run fontinfo-bi     tests/data/empty.prefs fontinfo third_party/dejavu-fonts-ttf-2.37/ttf/DejaVuSansMono-BoldOblique.ttf 0 dejavusansmonoboldoblique

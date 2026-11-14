@@ -116,7 +116,8 @@
     S(MSG_LCDFILTER,       148, "LCD filter") \
     S(MSG_LF_LIGHT,        149, "Light - sharper") \
     S(MSG_LF_DEFAULT,      150, "Default - fewer coloured fringes") \
-    S(MSG_LF_NONE,         151, "None - sharpest, most colour")
+    S(MSG_LF_NONE,         151, "None - sharpest, most colour") \
+    S(MSG_REALSTYLES,      152, "Bold and italic from the font's own files")
 
 
 #define S(id, n, s) id = n,

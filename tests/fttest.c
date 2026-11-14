@@ -878,6 +878,86 @@ int main(int argc, char **argv)
         return bad ? 10 : 0;
     }
 
+    /*
+     * "styles": bold/italic text with the family's own files (realstyles).
+     * FONTS:StyleTest*.otag is a DejaVuSans family; a condensed bold of the
+     * family and a bold of another family starting alike must not be
+     * taken. argv[3] "off": the prefs switch it off, nothing found.
+     */
+    if (strcmp(argv[2], "styles") == 0)
+    {
+        static const struct { UBYTE style; const char *file; UBYTE rest; }
+        want[] =
+        {
+            { FSF_BOLD, "DejaVuSans-Bold.ttf", 0 },
+            { FSF_ITALIC, "DejaVuSans-Oblique.ttf", 0 },
+            { FSF_BOLD | FSF_ITALIC, "DejaVuSans-BoldOblique.ttf", 0 },
+            { FSF_BOLD | FSF_UNDERLINED, "DejaVuSans-Bold.ttf",
+              FSF_UNDERLINED },
+            { FSF_UNDERLINED, NULL, FSF_UNDERLINED },
+        };
+        BOOL off = argc > 3 && strcmp(argv[3], "off") == 0, bad = FALSE;
+        struct AAFont *af;
+        LONG k;
+
+        memset(&tf, 0, sizeof(tf));
+        tf.tf_Message.mn_Node.ln_Name = (char *)"StyleTest.font";
+        tf.tf_YSize = 16;
+        tf.tf_XSize = 8;
+        tf.tf_Baseline = 12;
+        tf.tf_Flags = FPF_PROPORTIONAL;
+        tf.tf_LoChar = 32;
+        tf.tf_HiChar = 255;
+
+        aa_FindFont(&tf);
+        aa_ResolvePending(TRUE);
+        af = aa_FindFont(&tf);
+        if (!af)
+        {
+            printf("StyleTest not detected\nFAIL\n");
+            return 10;
+        }
+        for (k = 0; k < (LONG)(sizeof(want) / sizeof(want[0])); k++)
+        {
+            struct AAFont *sf = af;
+            UBYTE rest = 0;
+            const char *file, *expect = off ? NULL : want[k].file;
+            LONG round, len;
+            BOOL ok;
+
+            /* no helper process here: resolve and load by hand, as the
+               helper does while Text() waits */
+            for (round = 0; round < 4; round++)
+            {
+                sf = aa_StyledFont(af, &tf, want[k].style, &rest);
+                if (sf != af)
+                    break;
+                aa_ResolvePending(TRUE);
+            }
+            file = sf != af ? aa_FontFile(sf) : NULL;
+            len = file ? (LONG)strlen(file) : 0;
+            ok = expect ? file && len >= (LONG)strlen(expect) &&
+                          !strcmp(file + len - strlen(expect), expect) &&
+                          rest == want[k].rest
+                        : !file && rest == want[k].style;
+            if (ok && file)
+            {
+                /* the plain font's pixel size */
+                aa_LockGlyphs();
+                ok = aa_PrepareFont(sf, &tf) && sf->pxused == af->pxused &&
+                     sf->base == af && aa_FindFont(&tf) == af;
+                aa_UnlockGlyphs();
+            }
+            printf("style %02x: %s, rest %02x -> %s\n", want[k].style,
+                   file ? file : "(plain font)", rest, ok ? "ok" : "FAIL");
+            if (!ok)
+                bad = TRUE;
+        }
+        aa_GlyphsCleanup();
+        printf("%s\n", bad ? "FAIL" : "OK");
+        return bad ? 10 : 0;
+    }
+
     /* "auto": detect a font via FONTS:<name>.otag like Text() would */
     if (strcmp(argv[2], "auto") == 0 && argc > 3)
     {
