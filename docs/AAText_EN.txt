@@ -546,7 +546,7 @@ Please include the output of the debug version:
 History
 -------
 
-0.47  (not released yet)
+0.47  (14.11.2026)
       Real metrics mode with subpixel on: letters are placed at thirds
       of a pixel, so the spaces between them are even and lines are as
       wide as the font says (before, every letter's width was rounded

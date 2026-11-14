@@ -1,0 +1,198 @@
+freetype2.library 2.15 - for programmers
+========================================
+
+freetype2.library gives AmigaOS 3 programs the whole FreeType 2.15.0
+API (165 functions) as a shared library, and an outline font engine for
+diskfont.library. This document is for programs that call FreeType
+directly. Users find installation and settings in freetype2.txt.
+
+
+Contents of Developer/
+----------------------
+
+  include/              proto, inline, clib, fd and libraries headers
+                        and the FreeType 2.15.0 headers (ft2build.h,
+                        freetype/)
+  freetype2.funcs       all functions in library order, with LVOs
+  Examples/ft2color.c   colour emoji from a COLR font, in a window
+  Examples/ft2info.c    versions, font names, text as ASCII art
+  Examples/ft2bullet.c  the font engine as diskfont.library drives it
+  Examples/ft2dfont.c   a font through diskfont.library, Text() and its
+                        glyph bitmaps
+  freetype2_SDK.txt     this document
+
+The programs built from the examples are in Tools/.
+
+
+A first program
+---------------
+
+  #include <proto/exec.h>
+  #include <proto/aatext.h>
+
+  struct Library *AATextBase;
+
+  int main(void)
+  {
+      FT_Library lib;
+      FT_Face face;
+
+      AATextBase = OpenLibrary("freetype2.library", 2);
+      if (!AATextBase)
+          return 20;
+      if (!FT_Init_FreeType(&lib))
+      {
+          if (!FT_New_Face(lib, "FONTS:_ttf/verdana.ttf", 0, &face))
+          {
+              FT_Set_Pixel_Sizes(face, 0, 16);
+              if (!FT_Load_Char(face, 'A', FT_LOAD_RENDER))
+              {
+                  /* face->glyph->bitmap: 8-bit coverage,
+                     face->glyph->bitmap_left/_top: its position */
+              }
+              FT_Done_Face(face);
+          }
+          FT_Done_FreeType(lib);
+      }
+      CloseLibrary(AATextBase);
+      return 0;
+  }
+
+Build it with gcc (bebbo's amiga-gcc), from this drawer:
+
+  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o first first.c
+
+No link library is needed: <proto/aatext.h> includes the inline calls.
+Every example in Examples/ builds the same way, e.g.
+
+  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o ft2color Examples/ft2color.c
+
+
+Rules
+-----
+
+- Library name and version: OpenLibrary("freetype2.library", 2). Version
+  1.x is the old FreeType 2.1 library of FTManager; it has the first 94
+  functions only. The header names are those of the earlier
+  aatext.library: proto/aatext.h, AATextBase, libraries/aatext.h
+  (AATEXTLIBNAME is "freetype2.library").
+- Calling convention: the FreeType functions take their arguments on the
+  stack in C order, like a link library; the library base in A6 is not
+  used by them. The inline header calls them through the library vector,
+  so the code looks like normal FreeType code. The engine functions
+  (OpenEngine, CloseEngine, SetInfoA, ObtainInfoA, ReleaseInfoA) take
+  theirs in A0/A1 as in bullet.library.
+- Function order: that of freetype2.library 1.3 from LVO -90 on, then 71
+  newer functions. A program for 1.x runs unchanged; check for version 2
+  before using the newer ones. Twelve reserved slots return
+  FT_Err_Unimplemented_Feature.
+- Tasks: FreeType's own rule applies. An FT_Library and everything made
+  from it (faces, sizes, glyphs, caches) belong to one task at a time.
+  Give every task its own FT_Library; then tasks need no locking.
+- Memory: each FT_Library has its own exec memory pool (any memory, not
+  chip RAM). FT_Done_FreeType frees all of it, also what a program forgot
+  to free.
+- Stack: FreeType's autohinter, its CFF and Type 1 code need more stack
+  than many programs have. Give a program that calls FreeType at least
+  32 KB of stack (the font engine switches to its own 48 KB stack by
+  itself; the FreeType API does not).
+- Files: FT_New_Face takes an AmigaDOS path. The file stays open while
+  the face is open and is read in parts; FT_New_Memory_Face works too.
+- Settings: FT_Init_FreeType reads the environment variable
+  FREETYPE_PROPERTIES (see freetype2.txt).
+
+
+What is built in
+----------------
+
+Font formats: TrueType (.ttf, .ttc), OpenType/CFF (.otf, .otc), CFF2 and
+variable fonts, WOFF, Type 1 (.pfb, .pfa), CID, Type 42, PFR, Windows FNT,
+PCF and BDF (also gzip or LZW compressed).
+
+Renderers: smooth (8-bit antialiasing, also LCD with FT_RENDER_MODE_LCD
+and FT_Library_SetLcdFilter), mono, SDF; hinting with the TrueType
+bytecode interpreter, the autohinter (also "light"), the CFF and Type 1
+hinters. FTC cache subsystem (ftcache.h), stroker, glyph and outline
+functions, FT_Bitmap_* conversions, color palettes and layers.
+
+Not built in: PNG (so no CBDT/sbix colour bitmap fonts), Brotli (WOFF2),
+bzip2, an SVG renderer.
+
+
+Colour glyphs (emoji)
+---------------------
+
+COLR fonts work: their glyphs are layers of normal outlines, each with a
+colour from the font's palette. Ask for a colour glyph with
+FT_LOAD_COLOR:
+
+  if (FT_HAS_COLOR(face) &&
+      !FT_Load_Char(face, 0x1F600, FT_LOAD_COLOR | FT_LOAD_RENDER) &&
+      face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA)
+  {
+      /* bitmap.buffer: 4 bytes a pixel in B, G, R, A order,
+         premultiplied alpha; bitmap.pitch bytes a row */
+  }
+
+Blend premultiplied pixels into the background like this, per channel:
+
+  out = src + dst * (255 - alpha) / 255
+
+Glyphs without colour layers (letters, digits) come back as ordinary
+8-bit gray maps (FT_PIXEL_MODE_GRAY) to draw in a pen colour.
+Examples/ft2color.c does all of this and blends into a window on an RTG
+screen with cybergraphics.library ReadPixelArray()/WritePixelArray().
+
+What works and what does not:
+
+  COLR version 0 (Twemoji Mozilla, Segoe UI    works, rendered by
+  Emoji, most COLR emoji fonts)                FT_LOAD_COLOR
+  COLR version 1 (gradients; Noto Color        only through the paint
+  Emoji COLRv1)                                API (FT_Get_Color_Glyph_
+                                               Paint and others): the
+                                               program draws the paints
+  CBDT/CBLC, sbix (PNG bitmaps: Noto Color     no (PNG not built in);
+  Emoji, Apple Color Emoji)                    FT_Load_Char fails
+  OpenType SVG                                 no (no SVG renderer)
+
+FT_Palette_Data_Get and FT_Palette_Select choose another palette when a
+font has several (dark mode, for example).
+
+Speed, measured with Tools/ft2color on WinUAE (OS 3.2.3, JIT):
+
+  Twemoji Mozilla 16 px     about 1.2 ms a glyph
+  Twemoji Mozilla 48 px     about 1.6 ms a glyph
+  Verdana 16 px (gray)      about 1.7 ms a glyph, for comparison
+  Segoe UI Emoji 48 px      5-31 ms a glyph (many layers)
+
+So a COLR emoji costs about as much as a hinted letter. Keep rendered
+glyphs (FTC cache or your own) instead of rendering them again for each
+line. Not yet measured on a real 68020/68030.
+
+Emoji made of several characters (flags from two regional indicator
+letters, skin tones, families joined with ZWJ) need text shaping: the
+font's GSUB table turns the sequence into one glyph. FreeType does not
+shape; harfbuzz.library (Aminet util/libs/harfbuzz.lha) does, then draw
+the glyph indexes it returns with FT_Load_Glyph.
+
+
+The font engine
+---------------
+
+diskfont.library opens fonts whose .otag file says OT_Engine
+"freetype2" through this library's bullet.library interface
+(OpenEngine, SetInfoA, ObtainInfoA, ReleaseInfoA, CloseEngine). Programs
+can use it the same way; Examples/ft2bullet.c shows the tags. The .otag
+tags it understands are listed in freetype2.txt and
+include/libraries/aatext.h.
+
+
+License
+-------
+
+FreeType: FreeType License (FTL.txt). A program that uses the library
+does not contain FreeType code, but if you ship freetype2.library with
+your program, include FTL.txt and the credit "Portions of this software
+are copyright (C) 2026 The FreeType Project (www.freetype.org). All
+rights reserved." The library around FreeType and the examples: MIT
+License (LICENSE.txt), Copyright (c) 2026 Serkan Dursun.

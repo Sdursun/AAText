@@ -60,6 +60,23 @@ and MUI programs — everything that draws text through `graphics.library`.
 
 Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 
+## Changes in 0.47
+
+- **Subpixel positioning.** In real metrics mode with subpixel (ClearType)
+  on, letters are placed at thirds of a pixel: even spacing, and lines are
+  as wide as the font says. `TextLength()`, `TextExtent()` and `TextFit()`
+  measure the same way.
+- **Real bold and italic.** Bold and italic text is drawn with the font
+  family's own files (Verdana bold with `verdanab.ttf`) instead of smeared
+  or slanted letters (`realstyles on`, the default; AATextPrefs: Appearance).
+- The LCD filter default is now `default` (was `light`).
+- **The libraries in their own archives** (also on Aminet, `util/libs`):
+  - `freetype2.lha`: `freetype2.library` 2.15 with an SDK document, examples
+    and `ft2color`, which draws colour emoji from COLR fonts (e.g. Twemoji
+    Mozilla).
+  - `harfbuzz.lha`: `harfbuzz.library` 15.1 with an SDK document, examples
+    and tools.
+
 ## Changes in 0.46
 
 Built on FreeType 2.15.0; the new harfbuzz.library (separate archive) on
@@ -82,7 +99,7 @@ HarfBuzz 15.1.0.
   PiStorm: lines +13%, bold +65%), and RGBA buffers, which Picasso96 writes
   about three times faster on WinUAE.
 - New `harfbuzz.library` (HarfBuzz 15.1.0 text shaping as a shared library,
-  `hblib/`), in its own archive `harfbuzz_lib.lha`.
+  `hblib/`), in its own archive (now `harfbuzz.lha`).
 
 ## Download and installation
 
@@ -237,7 +254,7 @@ harfbuzz.library (ayrı arşiv) HarfBuzz 15.1.0'a dayanır.
   satırlar +%13, kalın yazı +%65) ve Picasso96'nın WinUAE'de yaklaşık üç kat
   hızlı yazdığı RGBA tamponlar.
 - Yeni `harfbuzz.library` (HarfBuzz 15.1.0 yazı şekillendirme, paylaşımlı
-  kütüphane olarak, `hblib/`), kendi arşivinde: `harfbuzz_lib.lha`.
+  kütüphane olarak, `hblib/`), kendi arşivinde: `harfbuzz.lha`.
 
 **Kurulum:** Arşivi açıp `Install-AAText`'e çift tıklayın (OS 3.2 Installer):
 her şeyi kurar, AAText'i `S:User-Startup`'a ekler ve yeniden kaldırabilir.

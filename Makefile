@@ -176,7 +176,7 @@ $(BUILDDIR)/lcdtest-ct: tests/lcdtest.c $(CT_LIB) $(BUILDDIR)/cgx.o
 # ISO-8859-9, the usual Turkish character set on the Amiga)
 DISTDIR := build/dist
 # freetype2.library 2.x comes from its package, built in aatextlib/
-AATEXTLIB_PKG ?= aatextlib/dist/aatext_lib
+AATEXTLIB_PKG ?= aatextlib/dist/freetype2
 
 .PHONY: dist
 dist:

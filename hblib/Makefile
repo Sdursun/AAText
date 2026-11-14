@@ -4,7 +4,7 @@
 #   make CPU=68060    build/68060/ (the library only: make CPU=68060 lib)
 #   make DEBUG=1      debug build: serial kprintf output, stack measuring
 #   make headers      regenerate src/gen/ and include/ from src/harfbuzz.funcs
-#   make dist         Aminet archive dist/harfbuzz_lib.lha (checks that the
+#   make dist         Aminet archive dist/harfbuzz.lha (checks that the
 #                     example builds with the archive's files alone)
 #
 # Build in the amiga-gcc container, from the repository root:
@@ -117,7 +117,8 @@ clean:
 # <proto/harfbuzz.h> pulls in (asked from the compiler with -M). Then the
 # example is built once more with nothing but the archive's files.
 
-DISTDIR := dist/harfbuzz_lib
+PKG     := harfbuzz
+DISTDIR := dist/$(PKG)
 DEV     := $(DISTDIR)/Developer
 
 dist:
@@ -125,7 +126,7 @@ dist:
 	$(MAKE) CPU=68060 DEBUG=0 lib
 	$(MAKE) CPU=68020 DEBUG=1 lib
 	rm -rf dist
-	mkdir -p $(DISTDIR)/Libs $(DEV)/include $(DEV)/examples $(DISTDIR)/Tests
+	mkdir -p $(DISTDIR)/Libs $(DEV)/include $(DEV)/Examples $(DISTDIR)/Tools
 	cp build/68020/harfbuzz.library $(DISTDIR)/Libs/harfbuzz.library
 	cp build/68060/harfbuzz.library $(DISTDIR)/Libs/harfbuzz.library.060
 	cp build/68020-debug/harfbuzz.library $(DISTDIR)/Libs/harfbuzz.library.debug
@@ -136,22 +137,23 @@ dist:
 	cp $$(cat build/hb-headers.txt) $(DEV)/include/
 	cp src/harfbuzz.funcs $(DEV)/
 	cp examples/hbshape.c tests/hbinfo.c tests/hbbench.c tests/hbfuzz.c \
-		$(DEV)/examples/
+		$(DEV)/Examples/
+	cp docs/harfbuzz_SDK.txt $(DEV)/
 	cp build/68020/hbshape build/68020/hbbench build/68020/hbfuzz \
-		$(DISTDIR)/Tests/
-	cp build/68020/hbinfo_lib $(DISTDIR)/Tests/hbinfo
-	cp docs/harfbuzz_lib.readme docs/harfbuzz_lib_EN.txt $(DISTDIR)/
-	iconv -f UTF-8 -t ISO-8859-9 docs/harfbuzz_lib_TR.txt \
-		> $(DISTDIR)/harfbuzz_lib_TR.txt
+		$(DISTDIR)/Tools/
+	cp build/68020/hbinfo_lib $(DISTDIR)/Tools/hbinfo
+	cp docs/harfbuzz.readme docs/harfbuzz.txt $(DISTDIR)/
 	cp LICENSE $(DISTDIR)/LICENSE.txt
 	iconv -f UTF-8 -t ISO-8859-1 $(HB_DIR)/COPYING \
 		> $(DISTDIR)/LICENSE.harfbuzz.txt
 	cp $(HB_DIR)/src/ms-use/COPYING $(DISTDIR)/LICENSE.ms-use.txt
 	# acceptance: the example builds from the archive's files alone
 	cd $(DEV) && $(CC) -m68020 -O2 -noixemul -Wall -Iinclude \
-		-o ../../check-hbshape examples/hbshape.c
+		-o ../../check-hbshape Examples/hbshape.c
 	rm -f dist/check-hbshape
+	chmod 644 $$(find $(DISTDIR) -type f)
+	chmod 755 $(DISTDIR)/Libs/* $(DISTDIR)/Tools/*
 	cd dist && lha ao5 --system-kanji-code=utf8 --archive-kanji-code=latin1 \
-		harfbuzz_lib.lha harfbuzz_lib
-	cp docs/harfbuzz_lib.readme dist/harfbuzz_lib.readme
+		$(PKG).lha $(PKG)
+	cp docs/harfbuzz.readme dist/harfbuzz.readme
 	@ls -l dist

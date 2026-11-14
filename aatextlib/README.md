@@ -10,8 +10,8 @@ FreeType 2.1, Aminet `util/libs/freetype2_lib`) yerine geçer: fonksiyon sıras�
 > yeniden adlandırıldı (test dönemi); 8.11.2026'da kullanıcının kararıyla
 > yeniden `freetype2.library` oldu, sürüm 2.15 (FreeType 2.15.0'a göre). 2.11.2026'dan beri AAText
 > deposunun `aatextlib/` klasöründe (önceden ayrı bir `freetype2` klasörüydü).
-> Paket ve başlık adları (`aatext_lib.lha`, `proto/aatext.h`, `AATextBase`)
-> değişmedi.
+> Başlık adları (`proto/aatext.h`, `AATextBase`) değişmedi; Aminet paketi
+> 0.47'den beri `freetype2.lha`.
 
 ## Klasörler
 
@@ -25,7 +25,7 @@ FreeType 2.1, Aminet `util/libs/freetype2_lib`) yerine geçer: fonksiyon sıras�
 | `tools/genfuncs.py` | `aatext.funcs` → fonksiyon tablosu ve başlıklar |
 | `docs/` | Aminet readme, kullanıcı belgeleri (EN, TR) |
 | `build/<cpu>/` | derlenmiş kütüphane ve testler; `build/lvo.txt` LVO haritası |
-| `dist/` | Aminet paketi (`aatext_lib.lha`, `aatext_lib.readme`) |
+| `dist/` | Aminet paketi (`freetype2.lha`, `freetype2.readme`) |
 | `../third_party/freetype-2.15.0/` | değiştirilmemiş FreeType kaynağı (AAText ile ortak, `tools/fetch-freetype.sh`) |
 | `ttengine-7.2/` | referans: ttengine.library 7.2 kaynağı (derlemede kullanılmaz) |
 | `reference/old-freetype2.library/` | eski freetype2.library 1.3 ikilisi ve örnek `.otag`/`.font` dosyaları (karşılaştırma için) |
@@ -52,7 +52,7 @@ Docker ile (`ghcr.io/rondoval/amiga-build-container`, bebbo gcc + NDK 3.2):
 .\build.ps1 DEBUG=1      # build/68020-debug, kprintf seri porta
 .\build.ps1 test         # build/68020/tests/ft2info, ft2bullet, ft2dfont
 .\build.ps1 headers      # aatext.funcs değişince başlıkları üret
-.\build.ps1 dist         # dist/aatext_lib.lha
+.\build.ps1 dist         # dist/freetype2.lha
 ```
 
 ## Mimari kararlar

@@ -1,64 +1,28 @@
-harfbuzz.library 15.1
-=====================
+harfbuzz.library 15.1 - for programmers
+=======================================
 
-(The library version follows the HarfBuzz version it is built on.)
-
-HarfBuzz 15.1.0, the OpenType text shaping engine, as a shared library
-for AmigaOS 3.1 or newer on a 68020 or better.
-
-A program gives HarfBuzz a font and a line of text (Unicode); HarfBuzz
-answers which glyphs to draw and where: kerning from the GPOS table,
-ligatures (fi, ffl), accents placed on their letters, contextual forms,
-right-to-left text (Arabic, Hebrew) and the complex scripts of India
-and South-East Asia. Drawing the glyphs is left to the program (with
-FreeType, freetype2.library, or anything else); harfbuzz.library does
-not need FreeType.
-
-harfbuzz.library is part of AAText (util/wb/AAText), but it is a
-library for any program.
+harfbuzz.library gives AmigaOS 3.1+ programs 126 functions of the
+HarfBuzz 15.1.0 API. Users find installation and the tools in
+harfbuzz.txt.
 
 
-Installation
-------------
+Contents of Developer/
+----------------------
 
-  Copy Libs/harfbuzz.library LIBS:
+  include/              proto, inline and fd headers and the HarfBuzz
+                        headers <proto/harfbuzz.h> needs
+  harfbuzz.funcs        all functions in library order, with LVOs
+  Examples/hbshape.c    a complete program: glyphs and positions of a line
+  Examples/hbinfo.c     shapes test strings, prints font units
+  Examples/hbbench.c    shaping speed
+  Examples/hbfuzz.c     malformed fonts against the library
+  harfbuzz_SDK.txt      this document
 
-For a 68060 use Libs/harfbuzz.library.060 instead (copy it as
-LIBS:harfbuzz.library). Libs/harfbuzz.library.debug prints messages to
-the serial port, for bug reports.
-
-The library is about 500 KB; when it is open it needs that much memory,
-plus what the fonts and texts in use need.
-
-
-What is in it, what is not
---------------------------
-
-HarfBuzz is built with HB_MINI: OpenType shaping only. In:
-
-- OpenType shaping (GSUB, GPOS, GDEF) of every script HarfBuzz knows,
-  including the Universal Shaping Engine.
-- TrueType (.ttf), OpenType/CFF (.otf), collections (.ttc/.otc) and
-  variable fonts (hb_font_set_variations).
-- Glyph advances, extents and names from the font's own tables
-  (hb_ot_font_set_funcs is the default).
-
-Not in (HB_MINI leaves out what old or Apple fonts need):
-
-- the 'kern' table: fonts without GPOS kerning get no kerning (read the
-  'kern' table yourself, e.g. with FT_Get_Kerning of freetype2.library);
-- placing accents on fonts that have no GPOS mark positioning (the
-  "fallback" positioning), old cmap subtables of some very old fonts;
-- Apple AAT tables (morx, kerx), Graphite;
-- subsetting, drawing and painting glyphs, reading font files by name
-  (read the file into memory and use hb_blob_create), HarfBuzz's own
-  threads (see "Tasks").
-
-126 functions; Developer/harfbuzz.funcs lists them in library order.
+The programs built from the examples are in Tools/.
 
 
-For programmers
----------------
+Using the library
+-----------------
 
 Developer/include has the library headers (proto, inline, fd) and the
 HarfBuzz 15.1.0 headers they need (hb.h, hb-ot.h, ...). With gcc:
@@ -96,13 +60,13 @@ HarfBuzz 15.1.0 headers they need (hb.h, hb-ot.h, ...). With gcc:
       CloseLibrary(HarfBuzzBase);
   }
 
-Developer/examples/hbshape.c is a complete program (font file, text from
+Examples/hbshape.c is a complete program (font file, text from
 the Shell, glyphs and positions printed); build it with
 
-  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o hbshape examples/hbshape.c
+  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o hbshape Examples/hbshape.c
 
 in the Developer directory. hbinfo.c (build with -DUSE_LIBRARY),
-hbbench.c and hbfuzz.c are the test programs of Tests/ (link hbbench
+hbbench.c and hbfuzz.c are the source of Tools/ (link hbbench
 and hbinfo with -lm).
 
 - Calling: every function takes its arguments on the stack in C order,
@@ -133,22 +97,18 @@ HarfBuzz calls may call the library again. Callbacks run on the
 calling task (and possibly on the temporary stack).
 
 
-Test programs
--------------
 
-  Tests/hbshape FONTS:_ttf/DejaVuSans.ttf "AVATAR office" SIZE 16
-      the example: glyphs and positions of a line of text
+Emoji and other sequences
+-------------------------
 
-  Tests/hbinfo FONT FONTS:_ttf/DejaVuSans.ttf
-      shapes Latin, Turkish, combining accents and Arabic and prints the
-      result in font units (the same as HarfBuzz on a PC)
-
-  Tests/hbbench FONT FONTS:_ttf/DejaVuSans.ttf SECS 3
-      lines and characters shaped per second
-
-  Tests/hbfuzz PACK <file>
-      feeds a pack of malformed fonts to the library (HarfBuzz's fuzzing
-      fonts, see the AAText source: hblib/tests/mkpack.py)
+Some emoji are several characters: flags (two regional indicator
+letters), skin tones, families joined with ZWJ. A colour font's GSUB
+table maps such a sequence to one glyph, and shaping applies it, so
+draw the glyph indexes HarfBuzz returns, not the characters. With
+freetype2.library (Aminet util/libs/freetype2.lha):
+FT_Load_Glyph(face, info[i].codepoint, FT_LOAD_COLOR | FT_LOAD_RENDER)
+gives the colour glyph of a COLR font. Not yet tested with emoji fonts
+on the Amiga.
 
 
 License
@@ -156,8 +116,5 @@ License
 
 HarfBuzz: "Old MIT" license (LICENSE.harfbuzz.txt); its Universal
 Shaping Engine tables: MIT, Copyright (c) Microsoft Corporation
-(LICENSE.ms-use.txt).
-
-The library around it: MIT License (LICENSE.txt),
-Copyright (c) 2026 Serkan Dursun. Source: https://github.com/Sdursun/AAText
-(hblib/).
+(LICENSE.ms-use.txt). The library around it and the examples: MIT
+License (LICENSE.txt), Copyright (c) 2026 Serkan Dursun.

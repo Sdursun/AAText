@@ -13,7 +13,10 @@
  * each glyph took. CODES are Unicode values in hex, because the Shell
  * cannot pass emoji as text.
  *
- * Build: make test (needs ../src/cgx.s of AAText for ReadPixelArray).
+ * Build (gcc, from the Developer drawer of the archive):
+ *   m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o ft2color Examples/ft2color.c
+ * No CyberGraphX headers are needed: the two cybergraphics.library calls
+ * are made through the small assembler wrappers below.
  */
 
 #include <exec/types.h>
@@ -32,7 +35,46 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../src/cgx.h"
+/* cybergraphics.library: the two calls and constants this program uses
+   (values from the CyberGraphX developer kit) */
+#define RECTFMT_RGBA 1UL
+
+ULONG cgx_ReadPixelArray(struct Library *base, APTR dst, ULONG dstx,
+                         ULONG dsty, ULONG dstmod, struct RastPort *rp,
+                         ULONG srcx, ULONG srcy, ULONG width, ULONG height,
+                         ULONG fmt);
+ULONG cgx_WritePixelArray(struct Library *base, APTR src, ULONG srcx,
+                          ULONG srcy, ULONG srcmod, struct RastPort *rp,
+                          ULONG dstx, ULONG dsty, ULONG width, ULONG height,
+                          ULONG fmt);
+
+/* stack arguments (C order, base first) -> A0 D0 D1 D2 A1 D3 D4 D5 D6 D7;
+   ReadPixelArray is at LVO -120, WritePixelArray at -126 */
+__asm__(
+    "        .text\n"
+    "        .even\n"
+    "        .globl  _cgx_ReadPixelArray\n"
+    "_cgx_ReadPixelArray:\n"
+    "        movem.l %d2-%d7/%a6,-(%sp)\n"
+    "        move.l  32(%sp),%a6\n"
+    "        move.l  36(%sp),%a0\n"
+    "        movem.l 40(%sp),%d0-%d2\n"
+    "        move.l  52(%sp),%a1\n"
+    "        movem.l 56(%sp),%d3-%d7\n"
+    "        jsr     -120(%a6)\n"
+    "        movem.l (%sp)+,%d2-%d7/%a6\n"
+    "        rts\n"
+    "        .globl  _cgx_WritePixelArray\n"
+    "_cgx_WritePixelArray:\n"
+    "        movem.l %d2-%d7/%a6,-(%sp)\n"
+    "        move.l  32(%sp),%a6\n"
+    "        move.l  36(%sp),%a0\n"
+    "        movem.l 40(%sp),%d0-%d2\n"
+    "        move.l  52(%sp),%a1\n"
+    "        movem.l 56(%sp),%d3-%d7\n"
+    "        jsr     -126(%a6)\n"
+    "        movem.l (%sp)+,%d2-%d7/%a6\n"
+    "        rts\n");
 
 struct Library *AATextBase;
 struct Library *CyberGfxBase;

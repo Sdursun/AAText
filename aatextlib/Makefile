@@ -108,13 +108,16 @@ test: $(TESTS)
 $(BUILDDIR)/tests/%: tests/%.c $(GEN_HDRS) | $(BUILDDIR)/tests
 	$(CC) $(ARCHFLAGS) -O2 -Wall -Iinclude -I$(FT_DIR)/include -o $@ $<
 
-# ReadPixelArray()/WritePixelArray() through AAText's cgx.s
-$(BUILDDIR)/tests/ft2color: tests/ft2color.c ../src/cgx.s $(GEN_HDRS) | $(BUILDDIR)/tests
-	$(CC) $(ARCHFLAGS) -O2 -Wall -Iinclude -I$(FT_DIR)/include -o $@ $< ../src/cgx.s
-
 # ---- Aminet archive ----------------------------------------------------
+#
+# dist/freetype2.lha and dist/freetype2.readme:
+#   freetype2/Libs        the library (68020, 68060, debug)
+#   freetype2/Tools       ft2color (colour emoji), ft2info, ft2bullet, ft2dfont
+#   freetype2/Developer   headers, SDK documents, Examples (the tools' source)
 
-DISTDIR := dist/aatext_lib
+PKG     := freetype2
+DISTDIR := dist/$(PKG)
+DEV     := $(DISTDIR)/Developer
 
 dist:
 	$(MAKE) CPU=68020 DEBUG=0
@@ -122,21 +125,29 @@ dist:
 	$(MAKE) CPU=68020 DEBUG=1
 	$(MAKE) CPU=68020 DEBUG=0 test
 	rm -rf dist
-	mkdir -p $(DISTDIR)/Libs $(DISTDIR)/Developer $(DISTDIR)/Tests
+	mkdir -p $(DISTDIR)/Libs $(DISTDIR)/Tools $(DEV)/Examples
 	cp build/68020/freetype2.library $(DISTDIR)/Libs/freetype2.library
 	cp build/68060/freetype2.library $(DISTDIR)/Libs/freetype2.library.060
 	cp build/68020-debug/freetype2.library $(DISTDIR)/Libs/freetype2.library.debug
-	cp -r include $(DISTDIR)/Developer/include
-	cp -r $(FT_DIR)/include/ft2build.h $(FT_DIR)/include/freetype $(DISTDIR)/Developer/include/
-	rm -rf $(DISTDIR)/Developer/include/freetype/internal
-	cp src/aatext.funcs tests/*.c $(DISTDIR)/Developer/
-	cp build/68020/tests/* $(DISTDIR)/Tests/
-	cp docs/aatext_lib.readme $(DISTDIR)/aatext_lib.readme
-	cp docs/aatext_lib_EN.txt $(DISTDIR)/
-	iconv -f UTF-8 -t ISO-8859-9 docs/aatext_lib_TR.txt > $(DISTDIR)/aatext_lib_TR.txt
+	cp -r include $(DEV)/include
+	cp -r $(FT_DIR)/include/ft2build.h $(FT_DIR)/include/freetype $(DEV)/include/
+	rm -rf $(DEV)/include/freetype/internal
+	cp src/aatext.funcs $(DEV)/freetype2.funcs
+	cp tests/*.c $(DEV)/Examples/
+	cp docs/freetype2_SDK.txt $(DEV)/
+	cp build/68020/tests/* $(DISTDIR)/Tools/
+	cp docs/freetype2.readme $(DISTDIR)/
+	cp docs/freetype2.txt $(DISTDIR)/
 	cp $(FT_DIR)/docs/FTL.TXT $(DISTDIR)/FTL.txt
 	cp LICENSE $(DISTDIR)/LICENSE.txt
+	# acceptance: every example builds from the archive's files alone
+	cd $(DEV) && for f in Examples/*.c; do \
+		$(CC) -m68020 -O2 -noixemul -Wall -Iinclude -o ../../check-ex $$f || exit 1; \
+	done
+	rm -f dist/check-ex
+	chmod 644 $$(find $(DISTDIR) -type f)
+	chmod 755 $(DISTDIR)/Libs/* $(DISTDIR)/Tools/*
 	cd dist && lha ao5 --system-kanji-code=utf8 --archive-kanji-code=latin1 \
-		aatext_lib.lha aatext_lib
-	cp docs/aatext_lib.readme dist/aatext_lib.readme
+		$(PKG).lha $(PKG)
+	cp docs/freetype2.readme dist/freetype2.readme
 	@ls -l dist

@@ -563,7 +563,7 @@ Lütfen debug sürümünün çıktısını ekleyin:
 Geçmiş
 ------
 
-0.47  (henüz yayınlanmadı)
+0.47  (14.11.2026)
       Gerçek ölçü modunda alt piksel açıkken harfler piksel üçte
       birlerine yerleştirilir: harf aralıkları eşit olur, satırlar
       fontun söylediği genişlikte çıkar (önceden her harfin genişliği

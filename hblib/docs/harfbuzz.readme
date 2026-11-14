@@ -1,6 +1,6 @@
 Short:        HarfBuzz 15.1.0 text shaping library
 Author:       Serkan Dursun
-Uploader:     Serkan Dursun <EMAIL>
+Uploader:     Serkan Dursun <blasterreal@gmail.com>
 Type:         util/libs
 Version:      15.1
 Architecture: m68k-amigaos >= 3.1.0
@@ -45,13 +45,19 @@ Installation
 LIBS:harfbuzz.library; the .debug build prints to the serial port.)
 
 For programmers
-Developer/include: proto, inline and fd headers and the HarfBuzz
-headers. Developer/examples/hbshape.c is a complete example:
+Developer/ has the headers (proto, inline, fd and the HarfBuzz headers),
+harfbuzz_SDK.txt (calling convention, Unicode text, memory, stack,
+tasks) and Examples/ with the source of the tools. Examples/hbshape.c
+is a complete program:
 
-  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o hbshape examples/hbshape.c
+  m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o hbshape Examples/hbshape.c
 
-Tests/: hbshape, hbinfo, hbbench, hbfuzz. Details in
-harfbuzz_lib_EN.txt (Turkish: harfbuzz_lib_TR.txt).
+Tools
+  hbshape   glyphs and positions of a line of text
+  hbinfo    shapes test strings, prints the result in font units
+  hbbench   lines and characters shaped per second
+  hbfuzz    feeds malformed fonts to the library
+Details in harfbuzz.txt.
 
 License: HarfBuzz "Old MIT" (LICENSE.harfbuzz.txt), its Universal
 Shaping Engine data MIT, Microsoft (LICENSE.ms-use.txt); the library

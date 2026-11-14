@@ -1,0 +1,96 @@
+harfbuzz.library 15.1
+=====================
+
+(The library version follows the HarfBuzz version it is built on.)
+
+HarfBuzz 15.1.0, the OpenType text shaping engine, as a shared library
+for AmigaOS 3.1 or newer on a 68020 or better.
+
+A program gives HarfBuzz a font and a line of text (Unicode); HarfBuzz
+answers which glyphs to draw and where: kerning from the GPOS table,
+ligatures (fi, ffl), accents placed on their letters, contextual forms,
+right-to-left text (Arabic, Hebrew) and the complex scripts of India
+and South-East Asia. Drawing the glyphs is left to the program (with
+FreeType, freetype2.library, or anything else); harfbuzz.library does
+not need FreeType.
+
+harfbuzz.library is part of AAText (util/wb/AAText), but it is a
+library for any program.
+
+
+Installation
+------------
+
+  Copy Libs/harfbuzz.library LIBS:
+
+For a 68060 use Libs/harfbuzz.library.060 instead (copy it as
+LIBS:harfbuzz.library). Libs/harfbuzz.library.debug prints messages to
+the serial port, for bug reports.
+
+The library is about 500 KB; when it is open it needs that much memory,
+plus what the fonts and texts in use need.
+
+
+What is in it, what is not
+--------------------------
+
+HarfBuzz is built with HB_MINI: OpenType shaping only. In:
+
+- OpenType shaping (GSUB, GPOS, GDEF) of every script HarfBuzz knows,
+  including the Universal Shaping Engine.
+- TrueType (.ttf), OpenType/CFF (.otf), collections (.ttc/.otc) and
+  variable fonts (hb_font_set_variations).
+- Glyph advances, extents and names from the font's own tables
+  (hb_ot_font_set_funcs is the default).
+
+Not in (HB_MINI leaves out what old or Apple fonts need):
+
+- the 'kern' table: fonts without GPOS kerning get no kerning (read the
+  'kern' table yourself, e.g. with FT_Get_Kerning of freetype2.library);
+- placing accents on fonts that have no GPOS mark positioning (the
+  "fallback" positioning), old cmap subtables of some very old fonts;
+- Apple AAT tables (morx, kerx), Graphite;
+- subsetting, drawing and painting glyphs, reading font files by name
+  (read the file into memory and use hb_blob_create), HarfBuzz's own
+  threads (see "Tasks").
+
+126 functions; Developer/harfbuzz.funcs lists them in library order.
+
+
+For programmers
+---------------
+
+Developer/harfbuzz_SDK.txt describes the API rules (calling convention,
+Unicode text, memory, stack, tasks) with an example; Developer/include
+has the headers and Developer/Examples the source of the tools.
+
+
+Tools
+-----
+
+  Tools/hbshape FONTS:_ttf/DejaVuSans.ttf "AVATAR office" SIZE 16
+      the example: glyphs and positions of a line of text
+
+  Tools/hbinfo FONT FONTS:_ttf/DejaVuSans.ttf
+      shapes Latin, Turkish, combining accents and Arabic and prints the
+      result in font units (the same as HarfBuzz on a PC)
+
+  Tools/hbbench FONT FONTS:_ttf/DejaVuSans.ttf SECS 3
+      lines and characters shaped per second
+
+  Tools/hbfuzz PACK <file>
+      feeds a pack of malformed fonts to the library (HarfBuzz's fuzzing
+      fonts, see the AAText source: hblib/tests/mkpack.py)
+
+
+License
+-------
+
+HarfBuzz: "Old MIT" license (LICENSE.harfbuzz.txt); its Universal
+Shaping Engine tables: MIT, Copyright (c) Microsoft Corporation
+(LICENSE.ms-use.txt).
+
+The library around it: MIT License (LICENSE.txt),
+Copyright (c) 2026 Serkan Dursun. Source: https://github.com/Sdursun/AAText
+(hblib/).
+

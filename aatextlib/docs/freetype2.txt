@@ -124,69 +124,48 @@ engine call and runs FreeType on its own 48 KB stack when less than
 themselves at least 32 KB of stack.
 
 
+Colour emoji
+------------
+
+Programs that use FreeType directly can draw colour emoji from COLR
+fonts, e.g. Twemoji Mozilla (https://github.com/mozilla/twemoji-colr,
+open license) or Segoe UI Emoji. Fonts with PNG emoji (Noto Color Emoji
+CBDT, Apple Color Emoji) are not supported. Tools/ft2color shows them:
+
+  Tools/ft2color FONT Twemoji.Mozilla.ttf SIZE 48
+
+AAText and other programs that draw with Text() cannot show emoji:
+Text() takes 8-bit characters.
+
+
 For programmers
 ---------------
 
-Developer/include has proto, inline, clib, fd and libraries headers and
-the FreeType 2.15.0 headers. With gcc:
-
-  #include <proto/aatext.h>
-
-  struct Library *AATextBase;
-
-  AATextBase = OpenLibrary("freetype2.library", 2);
-  if (AATextBase)
-  {
-      FT_Library lib;
-      FT_Face face;
-
-      if (!FT_Init_FreeType(&lib))
-      {
-          if (!FT_New_Face(lib, "FONTS:_ttf/verdana.ttf", 0, &face))
-          {
-              FT_Set_Pixel_Sizes(face, 0, 16);
-              FT_Load_Char(face, 'A', FT_LOAD_RENDER);
-              /* face->glyph->bitmap holds the glyph */
-              FT_Done_Face(face);
-          }
-          FT_Done_FreeType(lib);
-      }
-      CloseLibrary(AATextBase);
-  }
-
-- The FreeType functions take their arguments on the stack in C order;
-  the library base in A6 is not used. <inline/aatext.h> calls them
-  through the library vector. The engine functions (OpenEngine,
-  CloseEngine, SetInfoA, ObtainInfoA, ReleaseInfoA) take theirs in A0/A1
-  as in bullet.library.
-- The function order is that of freetype2.library 1.3 (FreeType API from
-  LVO -90 on), with 71 newer functions after it; a program for 1.x runs
-  unchanged and can check for version 2 to use the newer ones. Twelve reserved slots
-  return FT_Err_Unimplemented_Feature.
-- FreeType's rule applies: an FT_Library and everything made from it
-  belongs to one task at a time. Give every task its own FT_Library.
-- Memory for each FT_Library comes from its own exec pool; FT_Done_FreeType
-  frees all of it.
-- The header names stay those of 1.0-1.2 (proto/aatext.h, AATextBase,
-  libraries/aatext.h with AATEXTLIBNAME "freetype2.library").
-- Developer/aatext.funcs lists the functions in library order;
-  Developer/ft2info.c, ft2bullet.c and ft2dfont.c are examples.
+Developer/freetype2_SDK.txt describes the API, the rules (calling
+convention, tasks, memory, stack), colour glyphs and how to build the
+examples in Developer/Examples. Developer/include has the headers.
 
 
-Test programs
--------------
+Tools
+-----
 
-  Tests/ft2info FONT FONTS:_ttf/verdana.ttf SIZE 20 TEXT "Hello"
+  Tools/ft2color FONT <font file> [SIZE 48] [CODES 1F600,2764,...] [WAIT 10]
+      colour glyphs of a COLR font (emoji) in a window on an RTG screen,
+      with the time each glyph takes to render
+
+  Tools/ft2info FONT FONTS:_ttf/verdana.ttf SIZE 20 TEXT "Hello"
       library and FreeType version, font names, text as ASCII art
 
-  Tests/ft2bullet FONTS:verdanaregular.otag SIZE 13 ART WIDTHS
+  Tools/ft2bullet FONTS:verdanaregular.otag SIZE 13 ART WIDTHS
       the engine as diskfont uses it: glyph maps, widths, kerning
       (AA for 8-bit glyph maps, FONT <file> instead of a .otag file;
       the .otag may name any engine, the test uses freetype2.library)
 
-  Tests/ft2dfont FONT myfont.font SIZES 11 13 16 24
+  Tools/ft2dfont FONT myfont.font SIZES 11 13 16 24
       opens the font through diskfont.library and draws it in a window,
       once with Text() and once from the font's own glyph bitmaps
+
+Their source is in Developer/Examples.
 
 
 License

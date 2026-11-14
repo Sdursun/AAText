@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text, AmigaOS 3.x
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <blasterreal@gmail.com>
 Type:         util/wb
-Version:      0.46
+Version:      0.47
 Architecture: m68k-amigaos >= 3.1.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
@@ -67,6 +67,12 @@ tested yet; the ReAction GUIs need 3.2, use the MUI ones there.
 Please report your results: https://github.com/Sdursun/AAText/issues
 
 Changes since 0.34
+- 0.47: real metrics mode with subpixel on places letters at thirds of
+  a pixel (even spacing, lines as wide as the font says); bold and
+  italic text from the family's own font files (realstyles, on by
+  default); the LCD filter default is now "default". The libraries are
+  also on their own: freetype2.lha (with a colour emoji tool) and
+  harfbuzz.lha in util/libs.
 - 0.46: FreeType 2.15.0; aatext.library is no longer used, AAText's
   library is freetype2.library 2.15 (Install-AAText keeps an older
   freetype2.library as LIBS:freetype2.library.bak); GPOS kerning;
