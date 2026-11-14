@@ -17,7 +17,7 @@
  *   aga on | off             (antialiasing on palette screens, default off)
  *   antialias on | off       (off: TrueType text drawn sharp, default on)
  *   subpixel off | rgb | bgr (LCD antialiasing on RTG screens, default off)
- *   lcdfilter light | default | none (FreeType's LCD filter, default light)
+ *   lcdfilter light | default | none (FreeType's LCD filter, default default)
  */
 
 #include <exec/types.h>
@@ -391,7 +391,7 @@ void aa_DefaultPrefs(struct AAPrefs *prefs)
     prefs->aga = FALSE;
     prefs->antialias = TRUE;
     prefs->subpixel = AA_SUBPIXEL_OFF;
-    prefs->lcdfilter = AA_LCDFILTER_LIGHT;
+    prefs->lcdfilter = AA_LCDFILTER_DEFAULT;
     prefs->cachekb = AA_DEFAULT_CACHE_KB;
     prefs->fontmemkb = AA_DEFAULT_FONTMEM_KB;
     prefs->numblack = 0;

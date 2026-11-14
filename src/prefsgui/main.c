@@ -398,7 +398,7 @@ static void ReadGadgets(void)
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_SUBPIXEL], &v))
         pc.cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_LCDFILTER], &v))
-        pc.cur.lcdfilter = v <= AA_LCDFILTER_NONE ? v : AA_LCDFILTER_LIGHT;
+        pc.cur.lcdfilter = v <= AA_LCDFILTER_NONE ? v : AA_LCDFILTER_DEFAULT;
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
         pc.cur.cachekb = v;
     /* 0: no limit; otherwise at least 1 MB, as the prefs file allows */

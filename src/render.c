@@ -1041,7 +1041,9 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
     LONG italicbase = (style & FSF_ITALIC) ? baseline : -1;
     LONG smear = (style & FSF_BOLD) ? (tf->tf_BoldSmear ? tf->tf_BoldSmear : 1)
                                     : 0;
-    LONG pen = ox, i, twice;
+    /* the pen in 1/S pixel, S as the font's tables (see AAFont.sub) */
+    LONG S = font->sub ? font->sub : 1;
+    LONG pen = ox * S, i, twice;
 
     for (i = 0; i < count; i++)
     {
@@ -1062,14 +1064,19 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
 
         if (g && g->width)
         {
-            LONG gx = pen + g->left;
+            /* glyph origin in 1/S pixel: whole pixels and the rest */
+            LONG gs = pen + g->left * S;
+            LONG gx = aa_SubFloor(gs, S);
             LONG gy = baseline + 1 - g->top;  /* see AAGlyph.top */
 
             if (rgb)
             {
-                BlendGlyph(rgb, w, h, g, gx, gy, fg, bt, italicbase);
+                const struct AAGlyph *sg =
+                    aa_GetShiftedGlyph(g, gs - gx * S);
+
+                BlendGlyph(rgb, w, h, sg, gx, gy, fg, bt, italicbase);
                 if (twice)
-                    BlendGlyph(rgb, w, h, g, gx + twice, gy, fg, bt,
+                    BlendGlyph(rgb, w, h, sg, gx + twice, gy, fg, bt,
                                italicbase);
             }
             else
@@ -1080,7 +1087,7 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
                                  italicbase);
             }
         }
-        pen += font->adv[c] + rp->TxSpacing;
+        pen += font->adv[c] + rp->TxSpacing * S;
     }
 
     if (style & FSF_UNDERLINED)
@@ -1088,9 +1095,9 @@ static void DrawReal(UBYTE *rgb, UBYTE *tmpl, LONG bpr, LONG w, LONG h,
         LONG uy = baseline + 1 < h ? baseline + 1 : baseline;
 
         if (rgb)
-            LineRGB(rgb, w, uy, ox, pen, fg);
+            LineRGB(rgb, w, uy, ox, aa_SubRound(pen, S), fg);
         else
-            LineBits(tmpl, bpr, w, uy, ox, pen);
+            LineBits(tmpl, bpr, w, uy, ox, aa_SubRound(pen, S));
     }
 }
 

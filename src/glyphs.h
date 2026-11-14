@@ -20,7 +20,8 @@ struct AAGlyph
     struct AAGlyph *next;       /* hash chain */
     struct AAFont  *font;
     UWORD  code;                /* Amiga character code; bold glyphs:
-                                   code | smear << 8 */
+                                   code | smear << 8; LCD glyphs shifted
+                                   by k subpixels: | k << 13 */
     WORD   left;                /* bitmap offset from pen position */
     /*
      * FreeType's bitmap_top: rows above the baseline *line*, so the
@@ -77,6 +78,13 @@ struct AAFont
     WORD  *inkl;
     WORD  *inkr;
     /*
+     * Units per pixel of adv, inkl, inkr and kern: 1, or 3 with subpixel
+     * (LCD) antialiasing, where letters are placed at thirds of a pixel
+     * and only the results of the measuring functions are rounded to
+     * whole pixels (see metrics.c). Set with the tables.
+     */
+    UBYTE  sub;
+    /*
      * Pair kerning in real metrics mode, from the 'kern' feature of the
      * font's GPOS table, else from its 'kern' table; NULL without
      * kerning. Same rules as adv: filled by aa_PrepareFont(), read
@@ -96,10 +104,28 @@ struct AAKern
 {
     UWORD first[257];           /* pairs of left code c: first[c]..first[c+1] */
     UWORD cap;
-    struct { UBYTE right; BYTE px; } pair[1];   /* [cap], sorted by right */
+    struct { UBYTE right; BYTE px; } pair[1];   /* [cap], sorted by right;
+                                                   px in 1/font->sub px */
 };
 
-/* Kerning between character codes a and b, in pixels. */
+/* Units of 1/s pixel to pixels: rounded down, up, to the nearest
+   (halves up); right for negative values too. s is 1 or 3. */
+static inline LONG aa_SubFloor(LONG v, LONG s)
+{
+    return v >= 0 ? v / s : -((-v + s - 1) / s);
+}
+
+static inline LONG aa_SubCeil(LONG v, LONG s)
+{
+    return -aa_SubFloor(-v, s);
+}
+
+static inline LONG aa_SubRound(LONG v, LONG s)
+{
+    return aa_SubFloor(2 * v + s, 2 * s);
+}
+
+/* Kerning between character codes a and b, in pixels / font->sub. */
 static inline LONG aa_KernPair(const struct AAFont *font, UBYTE a, UBYTE b)
 {
     const struct AAKern *k = font->kern;
@@ -237,6 +263,8 @@ BOOL aa_PrepareFont(struct AAFont *font, struct TextFont *tf);
 struct AAGlyph *aa_GetGlyph(struct AAFont *font, UBYTE code);
 /* the glyph made bold with smear pixels, see glyphs.c; NULL: blend twice */
 struct AAGlyph *aa_GetBoldGlyph(struct AAFont *font, UBYTE code, LONG smear);
+/* an LCD glyph k (0-2) subpixels further right, cached, see glyphs.c */
+struct AAGlyph *aa_GetShiftedGlyph(struct AAGlyph *g, LONG k);
 
 /* Current cache size, for tests and statistics (lock held). */
 void aa_GetCacheStats(ULONG *bytes, ULONG *count);

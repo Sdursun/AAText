@@ -201,7 +201,7 @@ static UBYTE aa_Hinting;
 static BOOL aa_AntiAlias = TRUE;
 /* subpixel: LCD glyphs (3 values a pixel), only with antialiasing */
 static UBYTE aa_Subpixel = AA_SUBPIXEL_OFF;
-static UBYTE aa_LcdFilter = AA_LCDFILTER_LIGHT;
+static UBYTE aa_LcdFilter = AA_LCDFILTER_DEFAULT;
 static FT_Int32 aa_MonoFlags = FT_LOAD_TARGET_MONO | FT_LOAD_FORCE_AUTOHINT |
                                FT_LOAD_NO_BITMAP;
 
@@ -1813,9 +1813,12 @@ static void RowsInstall(struct AAFont *font, struct KernRows *r)
     font->kern = k;
 }
 
+/* Units per pixel of the kerning being built (AAFont.sub). */
+static LONG aa_KernSub = 1;
+
 static LONG KernPx(LONG units, FT_Fixed scale)
 {
-    LONG px = (FT_MulFix(units, scale) + 32) >> 6;
+    LONG px = (FT_MulFix(units, scale) * aa_KernSub + 32) >> 6;
 
     return px < -128 ? -128 : px > 127 ? 127 : px;
 }
@@ -2273,7 +2276,15 @@ static LONG PrepareOnStack(APTR arg)
             font->inkr = font->adv + 512;
         }
         UWORD gidx[256];
+        /*
+         * Subpixel glyphs: tables in thirds of a pixel, from the
+         * unrounded (linear) advances, so letters keep the spacing of
+         * the design and are placed at thirds of a pixel. Otherwise
+         * whole pixels, from the hinted advances.
+         */
+        LONG s = aa_AntiAlias && aa_Subpixel != AA_SUBPIXEL_OFF ? 3 : 1;
 
+        font->sub = s;
         for (c = 0; c < 256; c++)
         {
             FT_UInt gi = FT_Get_Char_Index(face, ToUnicode(font->face, c));
@@ -2285,13 +2296,27 @@ static LONG PrepareOnStack(APTR arg)
                 font->adv[c] = font->inkl[c] = font->inkr[c] = 0;
                 continue;
             }
-            font->adv[c] = (face->glyph->advance.x + 32) >> 6;
-            font->inkl[c] = gm->horiBearingX >> 6;
-            font->inkr[c] = (gm->horiBearingX + gm->width + 63) >> 6;
+            if (s == 1)
+            {
+                font->adv[c] = (face->glyph->advance.x + 32) >> 6;
+                font->inkl[c] = gm->horiBearingX >> 6;
+                font->inkr[c] = (gm->horiBearingX + gm->width + 63) >> 6;
+            }
+            else
+            {
+                /* linearHoriAdvance: 16.16 pixels */
+                font->adv[c] = (face->glyph->linearHoriAdvance * s +
+                                0x8000) >> 16;
+                font->inkl[c] = (gm->horiBearingX * s) >> 6;
+                font->inkr[c] = ((gm->horiBearingX + gm->width) * s + 63)
+                                >> 6;
+            }
         }
         /* not FT_HAS_KERNING(): that only means a 'kern' table */
+        aa_KernSub = s;
         if (aa_Kerning && FT_IS_SFNT(face))
             BuildKerning(font, face, gidx);
+        aa_KernSub = 1;
     }
 
     /*
@@ -2633,6 +2658,80 @@ struct AAGlyph *aa_GetBoldGlyph(struct AAFont *font, UBYTE code, LONG smear)
            aa_LRU.mlh_TailPred != (struct MinNode *)b)
         EvictOldest();
     return b;
+}
+
+/*
+ * An LCD glyph (plain or bold) moved right by k subpixels, k 1 or 2,
+ * one pixel wider. Since every subpixel is a value of its own, this is
+ * the glyph rendered k thirds of a pixel further right (the LCD filter
+ * does not depend on the position). Kept in the cache under
+ * g->code | k << 13 (bold smear uses bits 8-12), so text drawn at
+ * thirds of a pixel costs no more than text at whole pixels once the
+ * three phases are cached. g itself if k is 0, g is no LCD glyph, or
+ * there is no memory. Glyph lock held; g may be evicted by this call.
+ */
+struct AAGlyph *aa_GetShiftedGlyph(struct AAGlyph *g, LONG k)
+{
+    ULONG h, size;
+    UWORD key;
+    struct AAGlyph *d;
+    LONG gw, nw, y;
+
+    if (k <= 0 || k > 2 || !g->lcd || !g->width || !g->rows)
+        return g;
+    key = g->code | (k << 13);
+    h = HashOf(g->font, (UBYTE)g->code);
+    for (d = aa_Hash[h]; d; d = d->next)
+    {
+        if (d->font == g->font && d->code == key)
+        {
+            if ((struct MinNode *)d != aa_LRU.mlh_Head)
+            {
+                struct MinNode *n = &d->lru;
+
+                n->mln_Pred->mln_Succ = n->mln_Succ;
+                n->mln_Succ->mln_Pred = n->mln_Pred;
+                n->mln_Succ = aa_LRU.mlh_Head;
+                n->mln_Pred = (struct MinNode *)&aa_LRU.mlh_Head;
+                aa_LRU.mlh_Head->mln_Pred = n;
+                aa_LRU.mlh_Head = n;
+            }
+            return d;
+        }
+    }
+
+    gw = g->width;
+    nw = gw + 1;
+    size = sizeof(*d) + nw * g->rows * 3;
+    if (!(d = AllocMem(size, MEMF_ANY)))
+        return g;
+    *d = *g;
+    d->code = key;
+    d->width = nw;
+    d->allocsize = size;
+    for (y = 0; y < g->rows; y++)
+    {
+        const UBYTE *src = g->data + y * gw * 3;
+        UBYTE *dst = d->data + y * nw * 3;
+        LONG i;
+
+        for (i = 0; i < k; i++)
+            *dst++ = 0;
+        for (i = 0; i < gw * 3; i++)
+            *dst++ = *src++;
+        for (i = k; i < 3; i++)
+            *dst++ = 0;
+    }
+
+    d->next = aa_Hash[h];
+    aa_Hash[h] = d;
+    AddHead((struct List *)&aa_LRU, (struct Node *)&d->lru);
+    aa_CacheBytes += size;
+    aa_CacheCount++;
+    while (aa_CacheBytes > aa_CacheLimit &&
+           aa_LRU.mlh_TailPred != (struct MinNode *)d)
+        EvictOldest();
+    return d;
 }
 
 void aa_GetCacheStats(ULONG *bytes, ULONG *count)

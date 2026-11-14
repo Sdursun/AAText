@@ -1031,8 +1031,10 @@ int main(int argc, char **argv)
 
     /*
      * "lcd" (prefs with "subpixel rgb"): glyphs carry three values a
-     * pixel that differ at the edges; the advances are those of gray
-     * antialiasing; "bgr" stores the same values with R and B swapped.
+     * pixel that differ at the edges; real metrics tables are in thirds
+     * of a pixel (font->sub 3), unrounded advances within a pixel of the
+     * gray ones (whole pixels, sub 1); "bgr" stores the same values with
+     * R and B swapped.
      */
     if (strcmp(argv[2], "lcd") == 0)
     {
@@ -1048,6 +1050,8 @@ int main(int argc, char **argv)
         }
         for (c = 0; c < 256; c++)
             adv[c] = font->real ? font->adv[c] : 0;
+        if (font->real && font->sub != 3)
+            bad++;
         for (c = 33; c < 127; c++)
         {
             LONG k;
@@ -1091,7 +1095,8 @@ int main(int argc, char **argv)
         }
         printf("bgr: %s\n", bad ? "FAIL" : "R and B swapped -> OK");
 
-        /* gray again: same advances, no LCD glyphs */
+        /* gray again: no LCD glyphs, whole pixel advances close to the
+           unrounded thirds */
         prefs.subpixel = AA_SUBPIXEL_OFF;
         aa_UnlockGlyphs();
         aa_GlyphsReconfigure(&prefs);
@@ -1101,10 +1106,17 @@ int main(int argc, char **argv)
         g = aa_GetGlyph(font, 'H');
         if (!g || g->lcd)
             bad++;
+        if (font->real && font->sub != 1)
+            bad++;
         for (c = 0; font->real && c < 256; c++)
-            if (adv[c] != font->adv[c])
+        {
+            LONG d = aa_SubRound(adv[c], 3) - font->adv[c];
+
+            if (d < -1 || d > 1)
                 bad++;
-        printf("gray again: %s\n", bad ? "FAIL" : "advances the same -> OK");
+        }
+        printf("gray again: %s\n", bad ? "FAIL" :
+               "advances within a pixel -> OK");
         aa_UnlockGlyphs();
         aa_GlyphsCleanup();
         return (bad || !colour) ? 10 : 0;
@@ -1218,12 +1230,16 @@ int main(int argc, char **argv)
             printf("metrics: mapping is not \"real\"\n");
             return 10;
         }
-        /* drawing advance (glyph cache) == measuring advance (table) */
+        /* drawing advance (glyph cache) == measuring advance (table); in
+           thirds of a pixel (subpixel) the table is the unrounded
+           advance, within a pixel of the rendered one */
         for (c = 32; c < 256; c++)
         {
             struct AAGlyph *g = aa_GetGlyph(font, (UBYTE)c);
+            LONG S = font->sub ? font->sub : 1;
+            LONG d = g ? aa_SubRound(font->adv[c], S) - g->advance : 99;
 
-            if (!g || g->advance != font->adv[c])
+            if (S == 1 ? d != 0 : (d < -1 || d > 1))
                 bad++;
         }
         printf("advance table vs rendered glyphs: %d mismatches -> %s\n",
@@ -1240,6 +1256,8 @@ int main(int argc, char **argv)
         for (k = 0; k < len; k++)
             sum += font->adv[text[k]] +
                    (k > 0 ? aa_KernPair(font, text[k - 1], text[k]) : 0);
+        /* the sum in table units, rounded to pixels once */
+        sum = aa_SubRound(sum, font->sub ? font->sub : 1);
         aa_MExtent(&m, text, len, &te);
         printf("length %ld, sum %ld, extent w=%d h=%d x %d..%d y %d..%d -> %s\n",
                (long)aa_MLength(&m, text, len), (long)sum, te.te_Width,
@@ -1300,7 +1318,8 @@ int main(int argc, char **argv)
             {
                 const UBYTE *p = (const UBYTE *)pairs[i];
                 LONG kp = aa_KernPair(font, p[0], p[1]);
-                LONG want = font->adv[p[0]] + font->adv[p[1]] + kp;
+                LONG want = aa_SubRound(font->adv[p[0]] + font->adv[p[1]] +
+                                        kp, font->sub ? font->sub : 1);
                 LONG l = aa_MLength(&m, p, 2);
                 ULONG nf, nb;
                 struct TextExtent pe, ff, bf;

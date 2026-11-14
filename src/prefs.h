@@ -70,7 +70,7 @@ struct AAPrefs
     BOOL  antialias;                /* off: TrueType glyphs drawn sharp
                                        (one colour), default on */
     UBYTE subpixel;                 /* AA_SUBPIXEL_..., default off */
-    UBYTE lcdfilter;                /* AA_LCDFILTER_..., default light */
+    UBYTE lcdfilter;                /* AA_LCDFILTER_..., default "default" */
     ULONG cachekb;                  /* glyph cache size in KB */
     ULONG fontmemkb;                /* loaded font files in KB, 0: any */
     char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];

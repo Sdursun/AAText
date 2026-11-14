@@ -401,11 +401,15 @@ It is a plain text file with one setting per line; lines starting with
                     subpixel on, letters are hinted for subpixels:
                     fonts without hints of their own keep their exact
                     horizontal shapes instead of stems moved to whole
-                    pixels (in real metrics mode their widths can
-                    change by a pixel when subpixel is switched).
+                    pixels. In real metrics mode letters are also
+                    placed at thirds of a pixel, so the spaces between
+                    them are even and a line is as wide as the
+                    TrueType font says (before, each letter's width
+                    was rounded to whole pixels); line widths can
+                    change by a few pixels when subpixel is switched.
 
-  lcdfilter light   How much the subpixel colours are smoothed (light,
-                    default or none; default light):
+  lcdfilter default How much the subpixel colours are smoothed (light,
+                    default or none; default: default):
                     light   - sharper, slightly more coloured edges
                     default - FreeType's choice: a little softer,
                               fewer coloured fringes
@@ -522,6 +526,16 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.47  (not released yet)
+      Real metrics mode with subpixel on: letters are placed at thirds
+      of a pixel, so the spaces between them are even and lines are as
+      wide as the font says (before, every letter's width was rounded
+      to whole pixels: up to several pixels per line too wide or too
+      narrow). TextLength(), TextExtent() and TextFit() measure the
+      same way. The three positions of each letter are kept in the
+      glyph cache, drawing is about as fast as before.
+      The LCD filter default is now "default" (was "light").
 
 0.46  Built on FreeType 2.15.0 (was 2.14.3). aatext.library is no
       longer used: AAText's FreeType library is freetype2.library 2.15

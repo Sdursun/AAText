@@ -451,7 +451,7 @@ static void ReadGadgets(void)
     v = Get(obj[GID_SUBPIXEL], MUIA_Cycle_Active);
     pc.cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
     v = Get(obj[GID_LCDFILTER], MUIA_Cycle_Active);
-    pc.cur.lcdfilter = v <= AA_LCDFILTER_NONE ? v : AA_LCDFILTER_LIGHT;
+    pc.cur.lcdfilter = v <= AA_LCDFILTER_NONE ? v : AA_LCDFILTER_DEFAULT;
     /* the same limits as the prefs file */
     v = Get(obj[GID_CACHE], MUIA_String_Integer);
     pc.cur.cachekb = v < 32 ? 32 : v > 16384 ? 16384 : v;

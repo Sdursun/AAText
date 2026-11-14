@@ -416,12 +416,16 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                     gri kalır. Alt piksel açıkken harfler alt
                     piksellere göre hint'lenir: kendi hinting bilgisi
                     olmayan fontların yatay biçimleri, gövde çizgileri
-                    tam piksele kaydırılmadan korunur (gerçek ölçü
-                    modunda alt piksel açılıp kapanınca genişlikleri
-                    bir piksel değişebilir).
+                    tam piksele kaydırılmadan korunur. Gerçek ölçü
+                    modunda harfler ayrıca piksel üçte birlerine
+                    yerleştirilir: aralıklar eşit olur ve satır
+                    TrueType fontun söylediği genişlikte çıkar
+                    (önceden her harfin genişliği tam piksele
+                    yuvarlanıyordu); alt piksel açılıp kapanınca satır
+                    genişlikleri birkaç piksel değişebilir.
 
-  lcdfilter light   Alt piksel renklerinin ne kadar yumuşatılacağı
-                    (light, default veya none; varsayılan light):
+  lcdfilter default Alt piksel renklerinin ne kadar yumuşatılacağı
+                    (light, default veya none; varsayılan default):
                     light   - daha keskin, kenarlarda biraz daha renk
                     default - FreeType'ın seçimi: biraz daha yumuşak,
                               daha az renk saçağı
@@ -540,6 +544,16 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.47  (henüz yayınlanmadı)
+      Gerçek ölçü modunda alt piksel açıkken harfler piksel üçte
+      birlerine yerleştirilir: harf aralıkları eşit olur, satırlar
+      fontun söylediği genişlikte çıkar (önceden her harfin genişliği
+      tam piksele yuvarlanıyordu; satır başına birkaç piksel fazla ya
+      da eksik). TextLength(), TextExtent() ve TextFit() de aynı
+      şekilde ölçer. Her harfin üç konumu glif önbelleğinde tutulur,
+      çizim hızı neredeyse aynı kalır.
+      LCD filtresinin varsayılanı artık "default" (önceden "light").
 
 0.46  FreeType 2.15.0 üzerine kuruldu (önceden 2.14.3). aatext.library
       artık kullanılmıyor: AAText'in FreeType kütüphanesi yeniden

@@ -29,6 +29,7 @@ run baseline        tests/test.prefs baseline
 run capsize         tests/capsize.prefs capsize
 run metrics         tests/real.prefs metrics
 run metrics-nokern  tests/realnokern.prefs metrics
+run metrics-lcd     tests/reallcd.prefs metrics
 run mono            tests/mono.prefs mono
 run lcd             tests/lcd.prefs lcd
 run otag            tests/test.prefs otag tests/data/arial.otag
