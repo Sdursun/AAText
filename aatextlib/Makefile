@@ -100,12 +100,17 @@ clean:
 
 # ---- test programs (run on the Amiga) ----------------------------------
 
-TESTS := $(BUILDDIR)/tests/ft2info $(BUILDDIR)/tests/ft2bullet $(BUILDDIR)/tests/ft2dfont
+TESTS := $(BUILDDIR)/tests/ft2info $(BUILDDIR)/tests/ft2bullet $(BUILDDIR)/tests/ft2dfont \
+         $(BUILDDIR)/tests/ft2color
 
 test: $(TESTS)
 
 $(BUILDDIR)/tests/%: tests/%.c $(GEN_HDRS) | $(BUILDDIR)/tests
 	$(CC) $(ARCHFLAGS) -O2 -Wall -Iinclude -I$(FT_DIR)/include -o $@ $<
+
+# ReadPixelArray()/WritePixelArray() through AAText's cgx.s
+$(BUILDDIR)/tests/ft2color: tests/ft2color.c ../src/cgx.s $(GEN_HDRS) | $(BUILDDIR)/tests
+	$(CC) $(ARCHFLAGS) -O2 -Wall -Iinclude -I$(FT_DIR)/include -o $@ $< ../src/cgx.s
 
 # ---- Aminet archive ----------------------------------------------------
 
