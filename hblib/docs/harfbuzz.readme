@@ -3,6 +3,7 @@ Author:       Serkan Dursun
 Uploader:     Serkan Dursun <blasterreal@gmail.com>
 Type:         util/libs
 Version:      15.1
+Replaces:     util/libs/harfbuzz.lha
 Architecture: m68k-amigaos >= 3.1.0
 Distribution: Aminet
 Requires:     68020+, AmigaOS 3.1+

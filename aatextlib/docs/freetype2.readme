@@ -3,6 +3,7 @@ Author:       Serkan Dursun
 Uploader:     Serkan Dursun <blasterreal@gmail.com>
 Type:         util/libs
 Version:      2.15
+Replaces:     util/libs/freetype2.lha
 Architecture: m68k-amigaos >= 3.0.0
 Distribution: Aminet
 Requires:     68020+, AmigaOS 3.0+

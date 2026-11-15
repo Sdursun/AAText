@@ -3,6 +3,7 @@ Author:       Serkan Dursun
 Uploader:     Serkan Dursun <blasterreal@gmail.com>
 Type:         util/wb
 Version:      0.47
+Replaces:     util/wb/AAText.lha
 Architecture: m68k-amigaos >= 3.1.0
 Distribution: Aminet
 Requires:     68030+ or PiStorm advised (68020 works), RTG, TTF/OTF fonts
