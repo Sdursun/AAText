@@ -62,10 +62,10 @@ Developer/ has the headers (proto, inline, clib, fd, libraries and the
 FreeType 2.15.0 headers), freetype2_SDK.txt (API rules, colour glyphs,
 building) and Examples/ with the source of the tools. With gcc:
 
-  #include <proto/aatext.h>
-  struct Library *AATextBase;
+  #include <proto/freetype2.h>
+  struct Library *FreeType2Base;
   ...
-  AATextBase = OpenLibrary("freetype2.library", 2);
+  FreeType2Base = OpenLibrary("freetype2.library", 2);
   FT_Init_FreeType(&library);   /* and so on: the normal FreeType API */
 
   m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude \

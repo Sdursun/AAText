@@ -44,8 +44,8 @@
  * proto file turns every FreeType call into a call through the library
  * vector; it must follow the FreeType headers.
  */
-#include <proto/aatext.h>
-struct Library *AATextBase;
+#include <proto/freetype2.h>
+struct Library *FreeType2Base;
 #endif
 
 /* src/ft/aa_ftsystem.c (internal FreeType API, not in public headers) */
@@ -844,11 +844,11 @@ LONG aa_GlyphsInit(const struct AAPrefs *prefs, BOOL report)
     MakeGammaLUT(prefs->gamma100, aa_GammaLUT);
 
 #ifdef AA_USE_AATEXTLIB
-    AATextBase = OpenLibrary((CONST_STRPTR)AATEXTLIBNAME, AATEXTLIBVERSION);
-    if (!AATextBase)
+    FreeType2Base = OpenLibrary((CONST_STRPTR)FREETYPE2LIBNAME, FREETYPE2LIBVERSION);
+    if (!FreeType2Base)
     {
         ReportError(report, "AAText: this version needs %s %ld or newer "
-                    "(LIBS:)\n", (LONG)AATEXTLIBNAME, AATEXTLIBVERSION);
+                    "(LIBS:)\n", (LONG)FREETYPE2LIBNAME, FREETYPE2LIBVERSION);
         return 0;
     }
 #endif
@@ -1037,9 +1037,9 @@ void aa_GlyphsCleanup(void)
         FreeVec(aa_Stack);
     aa_Stack = NULL;
 #ifdef AA_USE_AATEXTLIB
-    if (AATextBase)
-        CloseLibrary(AATextBase);
-    AATextBase = NULL;
+    if (FreeType2Base)
+        CloseLibrary(FreeType2Base);
+    FreeType2Base = NULL;
 #endif
 }
 

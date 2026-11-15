@@ -20,7 +20,7 @@
 #include <diskfont/oterrors.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
-#include <proto/aatext.h>
+#include <proto/freetype2.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -29,7 +29,7 @@
 #define OT_GlyphMap8Bit (OT_Level0 | OT_Indirect | 0x1a)
 #endif
 
-struct Library *AATextBase;
+struct Library *FreeType2Base;
 
 static const char Template[] = "OTAG,FONT/K,SIZE/K/N,TEXT/K,AA/S,ART/S,WIDTHS/S,BOLD/S,LIB/K";
 enum { A_OTAG, A_FONT, A_SIZE, A_TEXT, A_AA, A_ART, A_WIDTHS, A_BOLD, A_LIB, A_COUNT };
@@ -131,16 +131,16 @@ int main(void)
         return RETURN_FAIL;
     }
 
-    AATextBase = OpenLibrary((STRPTR)libname, 0);
-    if (!AATextBase)
+    FreeType2Base = OpenLibrary((STRPTR)libname, 0);
+    if (!FreeType2Base)
     {
         printf("cannot open %s\n", libname);
         FreeVec(otag);
         FreeArgs(rda);
         return RETURN_FAIL;
     }
-    printf("%s %d.%d\n", AATextBase->lib_Node.ln_Name,
-           AATextBase->lib_Version, AATextBase->lib_Revision);
+    printf("%s %d.%d\n", FreeType2Base->lib_Node.ln_Name,
+           FreeType2Base->lib_Version, FreeType2Base->lib_Revision);
 
     ge = OpenEngine();
     if (!ge)
@@ -255,7 +255,7 @@ int main(void)
 
     CloseEngine(ge);
 done:
-    CloseLibrary(AATextBase);
+    CloseLibrary(FreeType2Base);
     FreeVec(otag);
     FreeArgs(rda);
     return rc;

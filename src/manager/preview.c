@@ -17,7 +17,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include <proto/aatext.h>
+#include <proto/freetype2.h>
 
 #include "preview.h"
 #include "../cgx.h"

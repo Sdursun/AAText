@@ -1,6 +1,6 @@
 Developer headers of freetype2.library 2.x (AAText's FreeType library,
 called aatext.library in 1.0-1.2), copied from aatextlib/include
-(generated from aatextlib/src/aatext.funcs). Used only by the
+(generated from aatextlib/src/freetype2.funcs). Used only by the
 USE_AATEXTLIB=1 build of AAText. The FreeType headers themselves come
 from third_party/freetype-2.15.0.
 

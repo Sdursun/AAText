@@ -4,8 +4,8 @@
 * The FreeType functions (from FT_Init_FreeType on) take their
 * arguments on the stack in C order, not in registers. They are
 * marked private here so that fd tools do not make register calls
-* for them; use <proto/aatext.h> (C) instead.
-##base _AATextBase
+* for them; use <proto/freetype2.h> (C) instead.
+##base _FreeType2Base
 ##bias 30
 ##public
 OpenEngine()()

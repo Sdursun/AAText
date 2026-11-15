@@ -1,11 +1,11 @@
-#ifndef LIBRARIES_AATEXT_H
-#define LIBRARIES_AATEXT_H
+#ifndef LIBRARIES_FREETYPE2_H
+#define LIBRARIES_FREETYPE2_H
 
 /*
  * freetype2.library 2.15 - definitions for programs and font installers.
  *
  * AAText's freetype2.library: FreeType 2.15.0 as a shared library (see
- * <proto/aatext.h>) and a bullet.library-compatible outline engine for
+ * <proto/freetype2.h>) and a bullet.library-compatible outline engine for
  * diskfont.library (OT_Engine "freetype2" in a .otag file). It replaces
  * freetype2.library 1.x (FTManager, Aminet util/libs/freetype2_lib): the
  * functions keep their offsets, the .otag tags are the same.
@@ -22,11 +22,11 @@
 #include <diskfont/diskfonttag.h>
 #endif
 
-#define AATEXTLIBNAME     "freetype2.library"
-#define AATEXTLIBVERSION  2     /* AAText's; 1.x is the old library */
+#define FREETYPE2LIBNAME     "freetype2.library"
+#define FREETYPE2LIBVERSION  2     /* AAText's; 1.x is the old library */
 
 /* OT_Engine value (OTE_AAText_Old: before 2.15) */
-#define OTE_AAText        "freetype2"
+#define OTE_FreeType2        "freetype2"
 #define OTE_AAText_Old    "aatext"
 
 /* ---- engine specific .otag tags (as written by FTManager) ------------ */

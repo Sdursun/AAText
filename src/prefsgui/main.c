@@ -92,7 +92,7 @@ struct Library *WindowBase, *LayoutBase, *ClickTabBase, *ChooserBase,
                *SpaceBase, *ListBrowserBase, *StringBase, *IntegerBase,
                *AslBase;
 /* FreeType for the mapping preview (optional: no preview without it) */
-struct Library *AATextBase;
+struct Library *FreeType2Base;
 
 enum
 {
@@ -681,7 +681,7 @@ static void MapPreview(void)
 {
     LONG sel = MapSelected();
 
-    if (!win || !AATextBase)
+    if (!win || !FreeType2Base)
         return;
     if (!pvready && !(pvready = pv_Init()))
         return;
@@ -945,7 +945,7 @@ static Object *MappingsPage(void)
             LAYOUT_AddChild, gads[GID_MAPPREVIEW] =
                              (struct Gadget *)SpaceObject,
                 GA_ID, GID_MAPPREVIEW,
-                SPACE_MinHeight, AATextBase ? pv_NeededHeight() : lineh,
+                SPACE_MinHeight, FreeType2Base ? pv_NeededHeight() : lineh,
                 SPACE_RenderHook, (ULONG)&mappreviewhook,
             End,
         End,
@@ -1761,7 +1761,7 @@ int main(int argc, char **argv)
 
     if (!OpenLibs())
         goto out;
-    AATextBase = OpenLibrary((CONST_STRPTR)"freetype2.library", 2);
+    FreeType2Base = OpenLibrary((CONST_STRPTR)"freetype2.library", 2);
     InitStrings(language[0] ? language : NULL);
 
     pc_Init();
@@ -1849,9 +1849,9 @@ out:
     FreeLists();
     if (pvready)
         pv_Cleanup();
-    if (AATextBase)
-        CloseLibrary(AATextBase);
-    AATextBase = NULL;
+    if (FreeType2Base)
+        CloseLibrary(FreeType2Base);
+    FreeType2Base = NULL;
     if (previewfont)
         CloseFont(previewfont);
     if (scr)

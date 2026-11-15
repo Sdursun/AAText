@@ -55,7 +55,7 @@ struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 struct Library *UtilityBase, *DiskfontBase, *AslBase, *MUIMasterBase;
 /* FreeType for the mapping preview (optional: no preview without it) */
-struct Library *AATextBase;
+struct Library *FreeType2Base;
 
 /* return IDs of the objects; menu items from MENU_BASE */
 enum
@@ -268,7 +268,7 @@ static ULONG BoxAskMinMax(struct IClass *cl, Object *o,
     if (d->kind == BOX_SCREEN)
         h = lineh * 2 + 16;
     else
-        h = AATextBase ? pv_NeededHeight() : lineh;
+        h = FreeType2Base ? pv_NeededHeight() : lineh;
     msg->MinMaxInfo->MinWidth += 200;
     msg->MinMaxInfo->DefWidth += 360;
     msg->MinMaxInfo->MaxWidth += MUI_MAXMAX;
@@ -745,7 +745,7 @@ static void MapPreview(void)
     struct Window *w = IWin();
     LONG sel = MapSelected();
 
-    if (!w || !AATextBase)
+    if (!w || !FreeType2Base)
         return;
     if (!pvready && !(pvready = pv_Init()))
         return;
@@ -1534,7 +1534,7 @@ int main(int argc, char **argv)
 
     if (!OpenLibs())
         goto out;
-    AATextBase = OpenLibrary((CONST_STRPTR)"freetype2.library", 2);
+    FreeType2Base = OpenLibrary((CONST_STRPTR)"freetype2.library", 2);
     InitStrings(language[0] ? language : NULL);
     pc_Init();
     pc_Query();
@@ -1591,9 +1591,9 @@ out:
         MUI_DeleteCustomClass(boxclass);
     if (pvready)
         pv_Cleanup();
-    if (AATextBase)
-        CloseLibrary(AATextBase);
-    AATextBase = NULL;
+    if (FreeType2Base)
+        CloseLibrary(FreeType2Base);
+    FreeType2Base = NULL;
     if (previewfont)
         CloseFont(previewfont);
     FreeStrings();

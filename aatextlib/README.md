@@ -10,19 +10,19 @@ FreeType 2.1, Aminet `util/libs/freetype2_lib`) yerine geçer: fonksiyon sıras�
 > yeniden adlandırıldı (test dönemi); 8.11.2026'da kullanıcının kararıyla
 > yeniden `freetype2.library` oldu, sürüm 2.15 (FreeType 2.15.0'a göre). 2.11.2026'dan beri AAText
 > deposunun `aatextlib/` klasöründe (önceden ayrı bir `freetype2` klasörüydü).
-> Başlık adları (`proto/aatext.h`, `AATextBase`) değişmedi; Aminet paketi
-> 0.47'den beri `freetype2.lha`.
+> 0.47'den beri başlık adları AROS'taki freetype2.library ile aynı
+> (`proto/freetype2.h`, `FreeType2Base`); Aminet paketi `freetype2.lha`.
 
 ## Klasörler
 
 | Klasör | İçerik |
 |---|---|
 | `src/` | kütüphanenin kaynağı |
-| `src/aatext.funcs` | **LVO sırasının tek kaynağı** |
+| `src/freetype2.funcs` | **LVO sırasının tek kaynağı** |
 | `src/gen/` | `functable.inc` (üretilir, elle değiştirme) |
-| `include/` | istemci başlıkları: `proto`, `inline`, `clib`, `fd` (üretilir), `libraries/aatext.h` |
+| `include/` | istemci başlıkları: `proto`, `inline`, `clib`, `fd` (üretilir), `libraries/freetype2.h` |
 | `tests/` | `ft2info` (FreeType API), `ft2bullet` (bullet API, diskfont gibi), `ft2dfont` (diskfont üzerinden pencereye çizim) |
-| `tools/genfuncs.py` | `aatext.funcs` → fonksiyon tablosu ve başlıklar |
+| `tools/genfuncs.py` | `freetype2.funcs` → fonksiyon tablosu ve başlıklar |
 | `docs/` | Aminet readme, kullanıcı belgeleri (EN, TR) |
 | `build/<cpu>/` | derlenmiş kütüphane ve testler; `build/lvo.txt` LVO haritası |
 | `dist/` | Aminet paketi (`freetype2.lha`, `freetype2.readme`) |
@@ -51,13 +51,13 @@ Docker ile (`ghcr.io/rondoval/amiga-build-container`, bebbo gcc + NDK 3.2):
 .\build.ps1 CPU=68060    # build/68060/freetype2.library
 .\build.ps1 DEBUG=1      # build/68020-debug, kprintf seri porta
 .\build.ps1 test         # build/68020/tests/ft2info, ft2bullet, ft2dfont
-.\build.ps1 headers      # aatext.funcs değişince başlıkları üret
+.\build.ps1 headers      # freetype2.funcs değişince başlıkları üret
 .\build.ps1 dist         # dist/freetype2.lha
 ```
 
 ## Mimari kararlar
 
-- **Ad.** `freetype2.library` 2.15, motor adı `freetype2`, taban `AATextBase`.
+- **Ad.** `freetype2.library` 2.15, motor adı `freetype2`, taban `FreeType2Base`.
   1.x'in yerine kurulur (kurulum betiği eskisini `LIBS:freetype2.library.bak`
   olarak saklar); FTManager fontları (`OT_Engine "freetype2"`) yeni motoru
   değişmeden kullanır. 2.15'ten önce AATextManager ile kurulmuş fontların

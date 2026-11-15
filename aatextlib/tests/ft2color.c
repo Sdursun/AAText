@@ -29,7 +29,7 @@
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 #include <proto/timer.h>
-#include <proto/aatext.h>
+#include <proto/freetype2.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,7 +76,7 @@ __asm__(
     "        movem.l (%sp)+,%d2-%d7/%a6\n"
     "        rts\n");
 
-struct Library *AATextBase;
+struct Library *FreeType2Base;
 struct Library *CyberGfxBase;
 struct Device *TimerBase;
 
@@ -189,9 +189,9 @@ int main(void)
     wait = args[A_WAIT] ? *(LONG *)args[A_WAIT] : 10;
     p = args[A_CODES] ? (const char *)args[A_CODES] : DefaultCodes;
 
-    AATextBase = OpenLibrary((STRPTR)libname, 0);
+    FreeType2Base = OpenLibrary((STRPTR)libname, 0);
     CyberGfxBase = OpenLibrary((STRPTR)"cybergraphics.library", 40);
-    if (!AATextBase || !CyberGfxBase ||
+    if (!FreeType2Base || !CyberGfxBase ||
         OpenDevice((STRPTR)"timer.device", UNIT_ECLOCK,
                    (struct IORequest *)&tr, 0))
     {
@@ -206,8 +206,8 @@ int main(void)
 
         freq = ReadEClock(&e);
     }
-    printf("%s %d.%d\n", AATextBase->lib_Node.ln_Name,
-           AATextBase->lib_Version, AATextBase->lib_Revision);
+    printf("%s %d.%d\n", FreeType2Base->lib_Node.ln_Name,
+           FreeType2Base->lib_Version, FreeType2Base->lib_Revision);
 
     if (FT_Init_FreeType(&lib))
     {
@@ -323,8 +323,8 @@ out:
 out_libs:
     if (CyberGfxBase)
         CloseLibrary(CyberGfxBase);
-    if (AATextBase)
-        CloseLibrary(AATextBase);
+    if (FreeType2Base)
+        CloseLibrary(FreeType2Base);
     FreeArgs(rda);
     return rc;
 }

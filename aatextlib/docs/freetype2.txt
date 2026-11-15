@@ -99,7 +99,7 @@ For Turkish (ISO-8859-9), AAText includes ftcodepage.latin5:
                        1 FreeType autohinter, 2 none,
                        3 light autohinting (2.15 and aatext.library)
 
-See Developer/include/libraries/aatext.h for the values.
+See Developer/include/libraries/freetype2.h for the values.
 
 
 FreeType settings

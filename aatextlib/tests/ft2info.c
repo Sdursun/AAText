@@ -11,12 +11,12 @@
 #include <dos/dos.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
-#include <proto/aatext.h>
+#include <proto/freetype2.h>
 
 #include <stdio.h>
 #include <string.h>
 
-struct Library *AATextBase;
+struct Library *FreeType2Base;
 
 static const char Template[] = "FONT/K,SIZE/K/N,TEXT/K,LIB/K";
 enum { A_FONT, A_SIZE, A_TEXT, A_LIB, A_COUNT };
@@ -113,16 +113,16 @@ int main(void)
     if (args[A_LIB])
         libname = (const char *)args[A_LIB];
 
-    AATextBase = OpenLibrary((STRPTR)libname, 0);
-    if (!AATextBase)
+    FreeType2Base = OpenLibrary((STRPTR)libname, 0);
+    if (!FreeType2Base)
     {
         printf("cannot open %s\n", libname);
         FreeArgs(rda);
         return RETURN_FAIL;
     }
-    printf("library:  %s %d.%d\n", AATextBase->lib_Node.ln_Name,
-           AATextBase->lib_Version, AATextBase->lib_Revision);
-    printf("id:       %s", (char *)AATextBase->lib_IdString);
+    printf("library:  %s %d.%d\n", FreeType2Base->lib_Node.ln_Name,
+           FreeType2Base->lib_Version, FreeType2Base->lib_Revision);
+    printf("id:       %s", (char *)FreeType2Base->lib_IdString);
 
     if (FT_Init_FreeType(&lib))
     {
@@ -162,7 +162,7 @@ int main(void)
         FT_Done_FreeType(lib);
     }
 
-    CloseLibrary(AATextBase);
+    CloseLibrary(FreeType2Base);
     FreeArgs(rda);
     return rc;
 }

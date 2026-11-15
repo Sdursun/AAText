@@ -4,7 +4,7 @@
 #   make DEBUG=1    debug build with serial kprintf output
 #   make CPU=68060  build for 68060
 #   make USE_AATEXTLIB=1   FreeType from freetype2.library 2.x instead of built in
-#                   (build/<cpu>-lib/AAText; headers in include/aatextlib)
+#                   (build/<cpu>-lib/AAText; headers in include/freetype2lib)
 #
 # Normally invoked inside Docker via build.ps1.
 # FreeType sources are fetched with tools/fetch-freetype.sh.
@@ -46,7 +46,7 @@ endif
 # FreeType in the program, or from freetype2.library 2.x: then only AAText's
 # memory functions (aa_ftsystem.c) are linked, the rest is in the library
 ifeq ($(USE_AATEXTLIB),1)
-CFLAGS  += -DAA_USE_AATEXTLIB -Iinclude/aatextlib
+CFLAGS  += -DAA_USE_AATEXTLIB -Iinclude/freetype2lib
 FT_LINK  = $(BUILDDIR)/ft/aa_ftsystem.o
 else
 FT_LINK  = $(FT_LIB)
@@ -263,7 +263,7 @@ $(BUILDDIR)/gui/%.o: src/%.c src/*.h src/prefsgui/*.h
 # the mapping preview: AATextManager's, FreeType from freetype2.library 2.x
 $(BUILDDIR)/gui/manager/preview.o: src/manager/preview.c src/manager/preview.h
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/aatextlib -Wno-pointer-sign -c -o $@ $<
+	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/freetype2lib -Wno-pointer-sign -c -o $@ $<
 
 $(BUILDDIR)/gui/cgx.o: src/cgx.s
 	@mkdir -p $(dir $@)
@@ -331,7 +331,7 @@ endif
 
 $(BUILDDIR)/mgr/%.o: src/%.c src/*.h src/manager/*.h
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/aatextlib -Wno-pointer-sign -c -o $@ $<
+	$(CC) $(CFLAGS) -DAA_USE_AATEXTLIB -Iinclude/freetype2lib -Wno-pointer-sign -c -o $@ $<
 
 # AATextManager for MUI 3.8: the same program with gui.c from manager_mui
 MGRMUI_TARGET := $(BUILDDIR)/AATextManager_MUI

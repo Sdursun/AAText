@@ -60,8 +60,8 @@ FT_OBJS := $(addprefix $(BUILDDIR)/ft/,$(notdir $(FT_SRCS:.c=.o)))
 FT_LIB  := $(BUILDDIR)/libft.a
 
 GEN      := src/gen/functable.inc
-GEN_HDRS := include/fd/aatext_lib.fd include/clib/aatext_protos.h \
-            include/inline/aatext.h include/proto/aatext.h
+GEN_HDRS := include/fd/freetype2_lib.fd include/clib/freetype2_protos.h \
+            include/inline/freetype2.h include/proto/freetype2.h
 
 vpath %.c $(sort $(dir $(FT_SRCS)))
 
@@ -74,12 +74,12 @@ $(TARGET): $(LIB_OBJS) $(FT_LIB)
 	$(STRIP) --strip-all -o $@ $@.db
 	@ls -l $@
 
-headers $(GEN) $(GEN_HDRS) &: src/aatext.funcs tools/genfuncs.py
-	$(PYTHON) tools/genfuncs.py src/aatext.funcs src/gen include > build/lvo.txt
+headers $(GEN) $(GEN_HDRS) &: src/freetype2.funcs tools/genfuncs.py
+	$(PYTHON) tools/genfuncs.py src/freetype2.funcs src/gen include > build/lvo.txt
 
 $(BUILDDIR)/libinit.o: $(GEN)
 
-$(BUILDDIR)/%.o: src/%.c src/*.h ../src/gposkern.h include/libraries/aatext.h | $(BUILDDIR)
+$(BUILDDIR)/%.o: src/%.c src/*.h ../src/gposkern.h include/libraries/freetype2.h | $(BUILDDIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/%.o: src/%.s | $(BUILDDIR)
@@ -132,7 +132,7 @@ dist:
 	cp -r include $(DEV)/include
 	cp -r $(FT_DIR)/include/ft2build.h $(FT_DIR)/include/freetype $(DEV)/include/
 	rm -rf $(DEV)/include/freetype/internal
-	cp src/aatext.funcs $(DEV)/freetype2.funcs
+	cp src/freetype2.funcs $(DEV)/freetype2.funcs
 	cp tests/*.c $(DEV)/Examples/
 	cp docs/freetype2_SDK.txt $(DEV)/
 	cp build/68020/tests/* $(DISTDIR)/Tools/

@@ -25,7 +25,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include <proto/aatext.h>
+#include <proto/freetype2.h>
 
 #include "../fontinstall.h"
 #include "../charsets.h"
@@ -35,7 +35,7 @@
 
 #define MAX_FONTS 1024
 
-struct Library *AATextBase;
+struct Library *FreeType2Base;
 struct Library *DiskfontBase;
 extern struct Library *UtilityBase;     /* gui.c */
 
@@ -229,8 +229,8 @@ static void NoLibrary(BOOL wb)
     struct EasyStruct es;
     ULONG args[2];
 
-    args[0] = (ULONG)AATEXTLIBNAME;
-    args[1] = AATEXTLIBVERSION;
+    args[0] = (ULONG)FREETYPE2LIBNAME;
+    args[1] = FREETYPE2LIBVERSION;
     if (!wb)
     {
         VPrintf((CONST_STRPTR)"AATextManager: needs %s %ld or newer "
@@ -311,8 +311,8 @@ static int Main(int argc, char **argv)
         PrintFault(IoErr(), (CONST_STRPTR)"AATextManager");
         return RETURN_FAIL;
     }
-    AATextBase = OpenLibrary((CONST_STRPTR)AATEXTLIBNAME, AATEXTLIBVERSION);
-    if (!AATextBase)
+    FreeType2Base = OpenLibrary((CONST_STRPTR)FREETYPE2LIBNAME, FREETYPE2LIBVERSION);
+    if (!FreeType2Base)
     {
         NoLibrary(!argc);
         if (rda)
@@ -422,7 +422,7 @@ out:
         CloseLibrary((struct Library *)GfxBase);
     UtilityBase = NULL;
     GfxBase = NULL;
-    CloseLibrary(AATextBase);
+    CloseLibrary(FreeType2Base);
     if (rda)
         FreeArgs(rda);
     return rc != RETURN_OK ? rc : warn;

@@ -38,7 +38,7 @@
 
 #include "lib.h"
 #include "../../src/gposkern.h"     /* shared with AAText */
-#include <libraries/aatext.h>
+#include <libraries/freetype2.h>
 
 #define REG(r, decl) register decl __asm(#r)
 

@@ -15,8 +15,8 @@
 #include FT_TRUETYPE_TABLES_H
 
 #ifdef AA_USE_AATEXTLIB
-/* FreeType from freetype2.library 2.x; the program opens AATextBase */
-#include <proto/aatext.h>
+/* FreeType from freetype2.library 2.x; the program opens FreeType2Base */
+#include <proto/freetype2.h>
 #endif
 
 #include "fontinfo.h"

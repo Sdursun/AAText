@@ -28,17 +28,17 @@ A first program
 ---------------
 
   #include <proto/exec.h>
-  #include <proto/aatext.h>
+  #include <proto/freetype2.h>
 
-  struct Library *AATextBase;
+  struct Library *FreeType2Base;
 
   int main(void)
   {
       FT_Library lib;
       FT_Face face;
 
-      AATextBase = OpenLibrary("freetype2.library", 2);
-      if (!AATextBase)
+      FreeType2Base = OpenLibrary("freetype2.library", 2);
+      if (!FreeType2Base)
           return 20;
       if (!FT_Init_FreeType(&lib))
       {
@@ -54,7 +54,7 @@ A first program
           }
           FT_Done_FreeType(lib);
       }
-      CloseLibrary(AATextBase);
+      CloseLibrary(FreeType2Base);
       return 0;
   }
 
@@ -62,7 +62,7 @@ Build it with gcc (bebbo's amiga-gcc), from this drawer:
 
   m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o first first.c
 
-No link library is needed: <proto/aatext.h> includes the inline calls.
+No link library is needed: <proto/freetype2.h> includes the inline calls.
 Every example in Examples/ builds the same way, e.g.
 
   m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o ft2color Examples/ft2color.c
@@ -73,9 +73,12 @@ Rules
 
 - Library name and version: OpenLibrary("freetype2.library", 2). Version
   1.x is the old FreeType 2.1 library of FTManager; it has the first 94
-  functions only. The header names are those of the earlier
-  aatext.library: proto/aatext.h, AATextBase, libraries/aatext.h
-  (AATEXTLIBNAME is "freetype2.library").
+  functions only.
+- Names: those of freetype2.library on AROS (basename FreeType2):
+  <proto/freetype2.h>, the library base FreeType2Base,
+  <clib/freetype2_protos.h>, <inline/freetype2.h>, fd/freetype2_lib.fd;
+  <libraries/freetype2.h> has FREETYPE2LIBNAME ("freetype2.library"),
+  FREETYPE2LIBVERSION (2) and the .otag tags of the font engine.
 - Calling convention: the FreeType functions take their arguments on the
   stack in C order, like a link library; the library base in A6 is not
   used by them. The inline header calls them through the library vector,
@@ -184,7 +187,7 @@ diskfont.library opens fonts whose .otag file says OT_Engine
 (OpenEngine, SetInfoA, ObtainInfoA, ReleaseInfoA, CloseEngine). Programs
 can use it the same way; Examples/ft2bullet.c shows the tags. The .otag
 tags it understands are listed in freetype2.txt and
-include/libraries/aatext.h.
+include/libraries/freetype2.h.
 
 
 License
