@@ -14,6 +14,7 @@ Contents of Developer/
                         and the FreeType 2.15.0 headers (ft2build.h,
                         freetype/)
   freetype2.funcs       all functions in library order, with LVOs
+  Examples/ft2emoji.c   all colour emoji of a font in a GadTools window
   Examples/ft2color.c   colour emoji from a COLR font, in a window
   Examples/ft2info.c    versions, font names, text as ASCII art
   Examples/ft2bullet.c  the font engine as diskfont.library drives it
@@ -140,6 +141,9 @@ FT_LOAD_COLOR:
 Blend premultiplied pixels into the background like this, per channel:
 
   out = src + dst * (255 - alpha) / 255
+
+Fonts/Twemoji.Mozilla.ttf of the archive is such a font (1393 emoji;
+CC-BY 4.0, credit Twitter, Inc. and others, see its license file).
 
 Glyphs without colour layers (letters, digits) come back as ordinary
 8-bit gray maps (FT_PIXEL_MODE_GRAY) to draw in a pen colour.

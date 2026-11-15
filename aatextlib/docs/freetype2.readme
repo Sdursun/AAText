@@ -43,8 +43,9 @@ What the engine does better than freetype2.library 1.3
   32 KB left: no crashes in programs with small stacks.
 - FREETYPE_PROPERTIES environment variable for FreeType driver settings,
   e.g. SetEnv FREETYPE_PROPERTIES "cff:no-stem-darkening=0".
-- Colour emoji for programs: COLR fonts (e.g. Twemoji Mozilla) render
-  in colour with FT_LOAD_COLOR. Tools/ft2color shows them in a window.
+- Colour emoji for programs: COLR fonts render in colour with
+  FT_LOAD_COLOR. Included: the Twemoji Mozilla font (1393 emoji,
+  CC-BY 4.0) and Tools/ft2emoji, a window that shows them all.
 
 Installation
   Copy LIBS:freetype2.library LIBS:freetype2.library.bak
@@ -76,10 +77,14 @@ registers; the inline header does this for you. Each task should use its
 own FT_Library.
 
 Tools
-  ft2color   colour emoji of a COLR font in a window (RTG screen)
+  ft2emoji   every emoji of a COLR font, page by page (RTG screen)
+  ft2color   a few emoji with their render times
   ft2info    library/FreeType version, font names, text as ASCII art
   ft2bullet  the font engine as diskfont.library uses it
   ft2dfont   a font through diskfont.library, drawn in a window
+
+Fonts/Twemoji.Mozilla.ttf: Twemoji art by Twitter, Inc. and others,
+CC-BY 4.0; font by Mozilla, Apache 2.0 (Fonts/Twemoji.Mozilla.LICENSE.txt).
 
 License: FreeType License (FTL.txt) for FreeType, MIT for the library
 around it (LICENSE.txt). Portions of this software are copyright (C) 2026

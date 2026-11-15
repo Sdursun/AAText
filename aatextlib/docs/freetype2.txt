@@ -128,11 +128,19 @@ Colour emoji
 ------------
 
 Programs that use FreeType directly can draw colour emoji from COLR
-fonts, e.g. Twemoji Mozilla (https://github.com/mozilla/twemoji-colr,
-open license) or Segoe UI Emoji. Fonts with PNG emoji (Noto Color Emoji
-CBDT, Apple Color Emoji) are not supported. Tools/ft2color shows them:
+fonts, e.g. Twemoji Mozilla or Segoe UI Emoji. Fonts with PNG emoji
+(Noto Color Emoji CBDT, Apple Color Emoji) are not supported.
 
-  Tools/ft2color FONT Twemoji.Mozilla.ttf SIZE 48
+The archive has Twemoji Mozilla 0.7.0 in Fonts/ (1393 colour emoji;
+https://github.com/mozilla/twemoji-colr). Start Tools/ft2emoji
+from the Shell to see them all, page by page.
+
+The font's emoji art is Twemoji by Twitter, Inc. and other contributors,
+licensed under CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/);
+the font was built by Mozilla (Apache License 2.0). Unchanged; see
+Fonts/Twemoji.Mozilla.LICENSE.txt. To install it for other programs:
+
+  Copy Fonts/Twemoji.Mozilla.ttf FONTS:
 
 AAText and other programs that draw with Text() cannot show emoji:
 Text() takes 8-bit characters.
@@ -148,6 +156,13 @@ examples in Developer/Examples. Developer/include has the headers.
 
 Tools
 -----
+
+  Tools/ft2emoji [FONT <font file>] [SIZE <pixels>]
+      all colour emoji of a COLR font in a window (RTG screen), page by
+      page; click one to see its Unicode value. Buttons or cursor
+      left/right turn the pages, the cycle gadget sets the size, Esc
+      quits. Without FONT it uses Twemoji.Mozilla.ttf from ../Fonts
+      (as in the archive), the program's drawer or FONTS:
 
   Tools/ft2color FONT <font file> [SIZE 48] [CODES 1F600,2764,...] [WAIT 10]
       colour glyphs of a COLR font (emoji) in a window on an RTG screen,

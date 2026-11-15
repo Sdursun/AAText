@@ -101,7 +101,7 @@ clean:
 # ---- test programs (run on the Amiga) ----------------------------------
 
 TESTS := $(BUILDDIR)/tests/ft2info $(BUILDDIR)/tests/ft2bullet $(BUILDDIR)/tests/ft2dfont \
-         $(BUILDDIR)/tests/ft2color
+         $(BUILDDIR)/tests/ft2color $(BUILDDIR)/tests/ft2emoji
 
 test: $(TESTS)
 
@@ -112,12 +112,16 @@ $(BUILDDIR)/tests/%: tests/%.c $(GEN_HDRS) | $(BUILDDIR)/tests
 #
 # dist/freetype2.lha and dist/freetype2.readme:
 #   freetype2/Libs        the library (68020, 68060, debug)
-#   freetype2/Tools       ft2color (colour emoji), ft2info, ft2bullet, ft2dfont
+#   freetype2/Tools       ft2emoji (emoji window), ft2color, ft2info, ft2bullet,
+#                         ft2dfont
+#   freetype2/Fonts       Twemoji Mozilla (COLR emoji font, CC-BY 4.0) and its
+#                         license: sh ../tools/fetch-twemoji.sh
 #   freetype2/Developer   headers, SDK documents, Examples (the tools' source)
 
 PKG     := freetype2
 DISTDIR := dist/$(PKG)
 DEV     := $(DISTDIR)/Developer
+TWEMOJI := ../third_party/twemoji
 
 dist:
 	$(MAKE) CPU=68020 DEBUG=0
@@ -125,7 +129,9 @@ dist:
 	$(MAKE) CPU=68020 DEBUG=1
 	$(MAKE) CPU=68020 DEBUG=0 test
 	rm -rf dist
-	mkdir -p $(DISTDIR)/Libs $(DISTDIR)/Tools $(DEV)/Examples
+	mkdir -p $(DISTDIR)/Libs $(DISTDIR)/Tools $(DISTDIR)/Fonts $(DEV)/Examples
+	cp $(TWEMOJI)/Twemoji.Mozilla.ttf $(DISTDIR)/Fonts/
+	cp $(TWEMOJI)/LICENSE.md $(DISTDIR)/Fonts/Twemoji.Mozilla.LICENSE.txt
 	cp build/68020/freetype2.library $(DISTDIR)/Libs/freetype2.library
 	cp build/68060/freetype2.library $(DISTDIR)/Libs/freetype2.library.060
 	cp build/68020-debug/freetype2.library $(DISTDIR)/Libs/freetype2.library.debug

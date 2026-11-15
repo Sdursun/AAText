@@ -3,7 +3,7 @@
  * of text with a TrueType/OpenType font and prints the glyphs, where
  * they go, and the width of the line.
  *
- *   hbshape FONT/A TEXT/A [SIZE/N] [LANG/K] [FEATURES/K] [LATIN5/S]
+ *   hbshape FONT/A TEXT/A [SIZE/N] [LANG/K] [FEATURES/K] [LATIN5/S] [LIB/K]
  *
  *   hbshape FONTS:_ttf/DejaVuSans.ttf "AVATAR office" SIZE 16
  *   hbshape FONTS:_ttf/DejaVuSans.ttf "AVATAR office" FEATURES "-kern,-liga"
@@ -11,10 +11,11 @@
  *
  * TEXT comes from the Shell in the Amiga character set: ISO-8859-1, or
  * ISO-8859-9 (Turkish) with LATIN5. HarfBuzz itself wants Unicode, so
- * the bytes are turned into code points first.
+ * the bytes are turned into code points first. LIB opens another copy
+ * of the library (e.g. Libs/harfbuzz.library of the archive).
  *
  * Build (gcc, from the Developer directory of the archive):
- *   m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o hbshape examples/hbshape.c
+ *   m68k-amigaos-gcc -m68020 -O2 -noixemul -Iinclude -o hbshape Examples/hbshape.c
  *
  * This file is public domain: use it as the start of your own program.
  */
@@ -33,8 +34,8 @@
 struct Library *HarfBuzzBase;
 
 static const char Template[] =
-    "FONT/A,TEXT/A,SIZE/N,LANG/K,FEATURES/K,LATIN5/S";
-enum { A_FONT, A_TEXT, A_SIZE, A_LANG, A_FEATURES, A_LATIN5, A_COUNT };
+    "FONT/A,TEXT/A,SIZE/N,LANG/K,FEATURES/K,LATIN5/S,LIB/K";
+enum { A_FONT, A_TEXT, A_SIZE, A_LANG, A_FEATURES, A_LATIN5, A_LIB, A_COUNT };
 
 /* The font file in memory; HarfBuzz reads the font from a blob. */
 static UBYTE *ReadFile(const char *name, ULONG *size)
@@ -124,6 +125,7 @@ int main(void)
     hb_glyph_position_t *pos;
     hb_position_t width = 0;
     const UBYTE *text;
+    const char *libname;
     int rc = RETURN_OK;
 
     rda = ReadArgs((CONST_STRPTR)Template, args, NULL);
@@ -134,10 +136,11 @@ int main(void)
     }
     ppem = args[A_SIZE] ? *(LONG *)args[A_SIZE] : 16;
 
-    HarfBuzzBase = OpenLibrary((CONST_STRPTR)"harfbuzz.library", 0);
+    libname = args[A_LIB] ? (const char *)args[A_LIB] : "harfbuzz.library";
+    HarfBuzzBase = OpenLibrary((CONST_STRPTR)libname, 0);
     if (!HarfBuzzBase)
     {
-        printf("hbshape: cannot open harfbuzz.library\n");
+        printf("hbshape: cannot open %s\n", libname);
         FreeArgs(rda);
         return RETURN_FAIL;
     }
