@@ -451,6 +451,18 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                               (yalnızca karşılaştırma için)
                     Yalnızca alt piksel açıkken kullanılır.
 
+  directread auto   JAM1 yazının altındaki piksellerin karıştırmadan
+                    önce nasıl okunacağı (auto, on veya off;
+                    varsayılan auto):
+                    on   - mümkünse doğrudan ekran belleğinden
+                           (PiStorm/Emu68'de daha hızlı)
+                    off  - her zaman ReadPixelArray() ile (0.48'den
+                           önceki gibi; WinUAE'de daha hızlı)
+                    auto - her piksel formatındaki ilk yazı iki
+                           yoldan da okunur, hızlı olan seçilir
+                    Sadece 32 bit ekranlar; diğerleri her zaman
+                    ReadPixelArray() kullanır.
+
   offscreen on      Bazı programlar yazıyı önce gizli bir bitmap'e çizer
                     (MUI gadget'ları, dock'lar, göstergeler). AAText
                     çizen programın penceresinin ekranını, penceresi
@@ -562,6 +574,12 @@ Lütfen debug sürümünün çıktısını ekleyin:
 
 Geçmiş
 ------
+
+0.48  (henüz yayınlanmadı)
+      Yeni ayar "directread auto|on|off": JAM1 yazının altındaki
+      arka plan ReadPixelArray() yerine doğrudan ekran belleğinden
+      okunabilir. "auto" (varsayılan) her piksel formatı için iki
+      yolu bir kez ölçer ve hızlı olanı seçer. Sadece 32 bit ekranlar.
 
 0.47  (14.11.2026)
       Gerçek ölçü modunda alt piksel açıkken harfler piksel üçte

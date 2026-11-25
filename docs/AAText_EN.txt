@@ -436,6 +436,17 @@ It is a plain text file with one setting per line; lines starting with
                               comparing only)
                     Only used with subpixel on.
 
+  directread auto   How the pixels under JAM1 text are read before
+                    blending (auto, on or off; default: auto):
+                    on   - straight from the screen memory where
+                           possible (faster on PiStorm/Emu68)
+                    off  - always with ReadPixelArray() (as before
+                           0.48; faster on WinUAE)
+                    auto - the first string on each pixel format is
+                           read both ways, the faster one is kept
+                    32 bit screens only; other screens always use
+                    ReadPixelArray().
+
   offscreen on      Some programs draw text into a hidden bitmap first
                     (MUI gadgets, docks, gauges). AAText uses the screen
                     of the drawing program's window, or for MUI's helper
@@ -545,6 +556,12 @@ Please include the output of the debug version:
 
 History
 -------
+
+0.48  (not released yet)
+      New setting "directread auto|on|off": the background under JAM1
+      text can be read straight from the screen memory instead of with
+      ReadPixelArray(). "auto" (default) measures both ways once per
+      pixel format and keeps the faster one. 32 bit screens only.
 
 0.47  (14.11.2026)
       Real metrics mode with subpixel on: letters are placed at thirds

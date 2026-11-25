@@ -60,6 +60,15 @@ and MUI programs — everything that draws text through `graphics.library`.
 
 Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 
+## Changes since 0.47 (not released yet)
+
+- **Faster background reading where it helps.** For JAM1 text AAText reads
+  the pixels under the string before blending. It can now read them straight
+  from the screen memory instead of through `ReadPixelArray()`; new setting
+  `directread auto|on|off` (default `auto`: the first string on each pixel
+  format is read both ways and the faster way is kept). On WinUAE
+  `ReadPixelArray()` stays faster and is kept. 32 bit screens only so far.
+
 ## Changes in 0.47
 
 - **Subpixel positioning.** In real metrics mode with subpixel (ClearType)
@@ -232,6 +241,15 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
   ![AATextManager: kurulacak fontlar, bir .ttc'nin her yüzü ayrı satır, seçilen fontun önizlemesiyle](docs/screenshots/aatextmanager.png)
 
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
+
+**0.47'den sonraki değişiklikler (henüz yayınlanmadı):**
+
+- **Gerektiğinde daha hızlı arka plan okuma.** AAText JAM1 yazıyı
+  karıştırmadan önce altındaki pikselleri okur. Artık bunları
+  `ReadPixelArray()` yerine doğrudan ekran belleğinden okuyabilir; yeni ayar
+  `directread auto|on|off` (varsayılan `auto`: her piksel formatındaki ilk
+  yazı iki yoldan da okunur, hızlı olan seçilir). WinUAE'de `ReadPixelArray()`
+  daha hızlı kalır ve o seçilir. Şimdilik sadece 32 bit ekranlar.
 
 **0.46'daki değişiklikler:** FreeType 2.15.0 üzerine kurulu; yeni
 harfbuzz.library (ayrı arşiv) HarfBuzz 15.1.0'a dayanır.
