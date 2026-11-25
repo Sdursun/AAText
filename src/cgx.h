@@ -25,8 +25,14 @@
 #define CYBRMATTR_ISCYBERGFX  0x80000008UL
 
 #define PIXFMT_LUT8           0UL
+#define PIXFMT_RGB15          1UL
+#define PIXFMT_BGR15          2UL
+#define PIXFMT_RGB15PC        3UL
+#define PIXFMT_BGR15PC        4UL
 #define PIXFMT_RGB16          5UL
+#define PIXFMT_BGR16          6UL
 #define PIXFMT_RGB16PC        7UL
+#define PIXFMT_BGR16PC        8UL
 #define PIXFMT_ARGB32         11UL
 #define PIXFMT_BGRA32         12UL
 #define PIXFMT_RGBA32         13UL

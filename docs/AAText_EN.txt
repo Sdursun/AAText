@@ -444,7 +444,7 @@ It is a plain text file with one setting per line; lines starting with
                            0.48; faster on WinUAE)
                     auto - the first string on each pixel format is
                            read both ways, the faster one is kept
-                    32 bit screens only; other screens always use
+                    15, 16 and 32 bit screens; 24 bit ones always use
                     ReadPixelArray().
 
   offscreen on      Some programs draw text into a hidden bitmap first
@@ -561,7 +561,7 @@ History
       New setting "directread auto|on|off": the background under JAM1
       text can be read straight from the screen memory instead of with
       ReadPixelArray(). "auto" (default) measures both ways once per
-      pixel format and keeps the faster one. 32 bit screens only.
+      pixel format and keeps the faster one. 15, 16 and 32 bit screens.
 
 0.47  (14.11.2026)
       Real metrics mode with subpixel on: letters are placed at thirds

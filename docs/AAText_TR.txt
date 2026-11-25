@@ -460,7 +460,7 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                            önceki gibi; WinUAE'de daha hızlı)
                     auto - her piksel formatındaki ilk yazı iki
                            yoldan da okunur, hızlı olan seçilir
-                    Sadece 32 bit ekranlar; diğerleri her zaman
+                    15, 16 ve 32 bit ekranlar; 24 bit ekranlar her zaman
                     ReadPixelArray() kullanır.
 
   offscreen on      Bazı programlar yazıyı önce gizli bir bitmap'e çizer
@@ -579,7 +579,7 @@ Geçmiş
       Yeni ayar "directread auto|on|off": JAM1 yazının altındaki
       arka plan ReadPixelArray() yerine doğrudan ekran belleğinden
       okunabilir. "auto" (varsayılan) her piksel formatı için iki
-      yolu bir kez ölçer ve hızlı olanı seçer. Sadece 32 bit ekranlar.
+      yolu bir kez ölçer ve hızlı olanı seçer. 15, 16 ve 32 bit ekranlar.
 
 0.47  (14.11.2026)
       Gerçek ölçü modunda alt piksel açıkken harfler piksel üçte
