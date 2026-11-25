@@ -51,6 +51,10 @@ enum { AA_SUBPIXEL_OFF = 0, AA_SUBPIXEL_RGB, AA_SUBPIXEL_BGR };
 /* FreeType's LCD filter for subpixel glyphs: light (3 taps, sharper),
    default (5 taps, fewer coloured fringes), none */
 enum { AA_LCDFILTER_LIGHT = 0, AA_LCDFILTER_DEFAULT, AA_LCDFILTER_NONE };
+/* "directread": how the background under JAM1 text is read: measured
+   once per pixel format (faster way), the locked bitmap where possible,
+   or always ReadPixelArray() */
+enum { AA_DIRECT_AUTO = 0, AA_DIRECT_ON, AA_DIRECT_OFF };
 
 struct AAPrefs
 {
@@ -74,8 +78,8 @@ struct AAPrefs
                                        (one colour), default on */
     UBYTE subpixel;                 /* AA_SUBPIXEL_..., default off */
     UBYTE lcdfilter;                /* AA_LCDFILTER_..., default "default" */
-    UBYTE directread;               /* AA_DIRECT_... (directread.h), how the
-                                       background is read, default auto */
+    UBYTE directread;               /* AA_DIRECT_..., how the background
+                                       is read, default auto */
     ULONG cachekb;                  /* glyph cache size in KB */
     ULONG fontmemkb;                /* loaded font files in KB, 0: any */
     char  blacklist[AA_MAX_BLACKLIST][AA_NAME_LEN];

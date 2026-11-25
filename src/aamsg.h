@@ -18,9 +18,10 @@
 
 #define AA_PORTNAME     "AAText"
 #define AAMSG_MAGIC     0x41415458UL        /* 'AATX' */
-#define AAMSG_VERSION   8       /* 2: AAPrefs.kerning (0.12), 3: aga,
+#define AAMSG_VERSION   9       /* 2: AAPrefs.kerning (0.12), 3: aga,
                                    4: antialias, 5: subpixel, 6: fontmem,
-                                   7: lcdfilter, 8: realstyles */
+                                   7: lcdfilter, 8: realstyles,
+                                   9: directread */
 
 enum
 {

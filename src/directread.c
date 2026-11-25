@@ -5,7 +5,8 @@
  * is about twice as fast on PiStorm/Emu68 RTG (330 against 152 us for
  * a 400 x 20 line), but seven times slower on WinUAE uaegfx (14 against
  * 106 us). "directread auto" (the default) therefore measures both once
- * per pixel format, on a real string, and keeps the faster one; it also
+ * per pixel format, on a real string, and reads directly only if that is
+ * at least 10% faster (ReadPixelArray() is the safe way); it also
  * compares the pixels both give and stays with ReadPixelArray() if they
  * differ. "directread on" / "off" force one way.
  *
@@ -424,7 +425,7 @@ static ULONG Sum(const UBYTE *buf, LONG w, LONG h, LONG sx, LONG sy,
 }
 
 /*
- * "directread auto": read the string both ways, keep the faster. FALSE:
+ * "directread auto": read the string both ways; direct if 10% faster. FALSE:
  * nothing decided, buf not (completely) read.
  */
 static BOOL Measure(UBYTE *buf, struct RastPort *rp, ULONG fmt, LONG x,
@@ -433,6 +434,7 @@ static BOOL Measure(UBYTE *buf, struct RastPort *rp, ULONG fmt, LONG x,
     ULONG area = (ULONG)(w - sx) * (ULONG)(h - sy);
     ULONG tdirect = ~0UL, trpa = ~0UL, t, pixels, sumdirect;
     LONG i;
+    BOOL direct;
 
     for (i = 0; i < CALIB_RUNS; i++)
     {
@@ -466,10 +468,12 @@ static BOOL Measure(UBYTE *buf, struct RastPort *rp, ULONG fmt, LONG x,
             dr_State[fmt] = FMT_RPA;
         return TRUE;
     }
-    dr_State[fmt] = tdirect < trpa ? FMT_DIRECT : FMT_RPA;
+    /* direct only when clearly faster: ReadPixelArray() is the safe way */
+    direct = tdirect * 10 <= trpa * 9;
+    dr_State[fmt] = direct ? FMT_DIRECT : FMT_RPA;
     D(("AAText: directread: pixel format %ld, %ld x %ld: direct %ld, "
        "ReadPixelArray %ld E-clock ticks -> %s\n", fmt, w - sx, h - sy,
-       tdirect, trpa, (ULONG)(tdirect < trpa ? "direct" : "ReadPixelArray")));
+       tdirect, trpa, (ULONG)(direct ? "direct" : "ReadPixelArray")));
     return TRUE;
 }
 

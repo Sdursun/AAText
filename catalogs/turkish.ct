@@ -213,3 +213,11 @@ MSG_LF_NONE
 Yok - en keskin, en çok renk
 MSG_REALSTYLES
 Kalın ve eğik yazı fontun kendi dosyalarından
+MSG_DIRECTREAD
+Ekranı okuma
+MSG_DR_AUTO
+Otomatik - hızlı olan yol
+MSG_DR_ON
+Doğrudan - PiStorm'da daha hızlı
+MSG_DR_OFF
+ReadPixelArray - WinUAE'de daha hızlı

@@ -103,7 +103,7 @@ enum
     GID_PICKFILE, GID_KERNING, GID_ANTIALIAS, GID_SUBPIXEL, GID_LCDFILTER,
     GID_MANAGER,
     GID_MAPLIST, GID_MAPADD, GID_MAPCHANGE, GID_MAPREMOVE, GID_MAPPX,
-    GID_MAPPREVIEW, GID_REALSTYLES,
+    GID_MAPPREVIEW, GID_REALSTYLES, GID_DIRECTREAD,
     GID_COUNT
 };
 
@@ -118,7 +118,7 @@ static Object *winobj, *pages;
 static struct Window *win;
 static struct List maplb;
 static struct List tablist, hintlist, blacklb, runlist, charsetlist,
-                   subpixlist, lcdflist;
+                   subpixlist, lcdflist, drlist;
 
 static char statustext[320];
 static char gammatext[8];
@@ -198,7 +198,8 @@ static LONG PageOf(LONG gid)
         return 0;
     if ((gid >= GID_BLACKLIST && gid <= GID_RUNNING) || gid == GID_PICKFILE)
         return 1;
-    if ((gid >= GID_AUTO && gid <= GID_CHARSET) || gid == GID_MANAGER)
+    if ((gid >= GID_AUTO && gid <= GID_CHARSET) || gid == GID_MANAGER ||
+        gid == GID_DIRECTREAD)
         return 2;
     if (gid >= GID_MAPLIST && gid <= GID_MAPPREVIEW)
         return 3;
@@ -403,6 +404,8 @@ static void ReadGadgets(void)
         pc.cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
     if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_LCDFILTER], &v))
         pc.cur.lcdfilter = v <= AA_LCDFILTER_NONE ? v : AA_LCDFILTER_DEFAULT;
+    if (GetAttr(CHOOSER_Selected, (Object *)gads[GID_DIRECTREAD], &v))
+        pc.cur.directread = v <= AA_DIRECT_OFF ? v : AA_DIRECT_AUTO;
     if (GetAttr(INTEGER_Number, (Object *)gads[GID_CACHE], &v))
         pc.cur.cachekb = v;
     /* 0: no limit; otherwise at least 1 MB, as the prefs file allows */
@@ -963,6 +966,8 @@ static void FreeLists(void)
         FreeChooserNode(n);
     while ((n = RemHead(&lcdflist)))
         FreeChooserNode(n);
+    while ((n = RemHead(&drlist)))
+        FreeChooserNode(n);
     while ((n = RemHead(&hintlist)))
         FreeChooserNode(n);
     while ((n = RemHead(&runlist)))
@@ -1069,6 +1074,16 @@ static Object *AdvancedPage(void)
             GA_Selected, pc.cur.aga,
         End,
         CHILD_WeightedHeight, 0,
+
+        LAYOUT_AddChild, gads[GID_DIRECTREAD] = (struct Gadget *)ChooserObject,
+            GA_ID, GID_DIRECTREAD,
+            GA_RelVerify, TRUE,
+            CHOOSER_PopUp, TRUE,
+            CHOOSER_Labels, (ULONG)&drlist,
+            CHOOSER_Selected, pc.cur.directread,
+        End,
+        CHILD_WeightedHeight, 0,
+        Label(GetString(MSG_DIRECTREAD)),
 
         LAYOUT_AddChild, HLayoutObject,
             LAYOUT_AddChild, gads[GID_CACHE] = (struct Gadget *)IntegerObject,
@@ -1365,6 +1380,9 @@ static BOOL OpenWin(struct Screen *scr)
     AddChoice(&lcdflist, MSG_LF_LIGHT);
     AddChoice(&lcdflist, MSG_LF_DEFAULT);
     AddChoice(&lcdflist, MSG_LF_NONE);
+    AddChoice(&drlist, MSG_DR_AUTO);
+    AddChoice(&drlist, MSG_DR_ON);
+    AddChoice(&drlist, MSG_DR_OFF);
     AddChoice(&hintlist, MSG_HINT_NORMAL);
     AddChoice(&hintlist, MSG_HINT_LIGHT);
     AddChoice(&hintlist, MSG_HINT_NONE);
@@ -1473,6 +1491,7 @@ static BOOL Action(ULONG id)
         case GID_REALSTYLES:
         case GID_SUBPIXEL:
         case GID_LCDFILTER:
+        case GID_DIRECTREAD:
         case GID_CACHE:
         case GID_FONTMEM:
         case GID_CHARSET:
@@ -1590,6 +1609,7 @@ static void ShowPrefs(void)
     SetGad(GID_REALSTYLES, GA_Selected, pc.cur.realstyles);
     SetGad(GID_SUBPIXEL, CHOOSER_Selected, pc.cur.subpixel);
     SetGad(GID_LCDFILTER, CHOOSER_Selected, pc.cur.lcdfilter);
+    SetGad(GID_DIRECTREAD, CHOOSER_Selected, pc.cur.directread);
     SetGad(GID_CACHE, INTEGER_Number, pc.cur.cachekb);
     SetGad(GID_FONTMEM, INTEGER_Number, pc.cur.fontmemkb);
     SetGad(GID_CHARSET, CHOOSER_Selected, pc.cur.charset);
@@ -1739,6 +1759,7 @@ int main(int argc, char **argv)
     NewList(&hintlist);
     NewList(&subpixlist);
     NewList(&lcdflist);
+    NewList(&drlist);
     NewList(&blacklb);
     NewList(&runlist);
     NewList(&charsetlist);

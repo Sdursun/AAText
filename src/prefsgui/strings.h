@@ -117,7 +117,11 @@
     S(MSG_LF_LIGHT,        149, "Light - sharper") \
     S(MSG_LF_DEFAULT,      150, "Default - fewer coloured fringes") \
     S(MSG_LF_NONE,         151, "None - sharpest, most colour") \
-    S(MSG_REALSTYLES,      152, "Bold and italic from the font's own files")
+    S(MSG_REALSTYLES,      152, "Bold and italic from the font's own files") \
+    S(MSG_DIRECTREAD,      153, "Read screen") \
+    S(MSG_DR_AUTO,         154, "Automatic - the faster way") \
+    S(MSG_DR_ON,           155, "Directly - faster on PiStorm") \
+    S(MSG_DR_OFF,          156, "ReadPixelArray - faster on WinUAE")
 
 
 #define S(id, n, s) id = n,

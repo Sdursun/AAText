@@ -4,13 +4,8 @@
 #include <exec/types.h>
 #include <graphics/rastport.h>
 
-/* "directread": how the background under a string is read */
-enum
-{
-    AA_DIRECT_AUTO = 0,     /* measure once per pixel format, use faster */
-    AA_DIRECT_ON,           /* read the locked bitmap where possible */
-    AA_DIRECT_OFF           /* always ReadPixelArray() */
-};
+/* AA_DIRECT_... ("directread") are in prefs.h */
+#include "prefs.h"
 
 /* Opens layers.library and timer.device. Never fails. */
 void aa_DirectInit(UBYTE mode);

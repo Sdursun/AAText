@@ -65,7 +65,7 @@ enum
     GID_PICKFILE, GID_AUTO, GID_OFFSCREEN, GID_AGA, GID_CACHE, GID_FONTMEM,
     GID_CHARSET, GID_MANAGER, GID_MAPLIST, GID_MAPADD, GID_MAPCHANGE,
     GID_MAPREMOVE, GID_MAPPX, GID_SAVE, GID_USE, GID_CANCEL,
-    GID_REALSTYLES,
+    GID_REALSTYLES, GID_DIRECTREAD,
     GID_COUNT
 };
 
@@ -454,6 +454,8 @@ static void ReadGadgets(void)
     pc.cur.subpixel = v <= AA_SUBPIXEL_BGR ? v : AA_SUBPIXEL_OFF;
     v = Get(obj[GID_LCDFILTER], MUIA_Cycle_Active);
     pc.cur.lcdfilter = v <= AA_LCDFILTER_NONE ? v : AA_LCDFILTER_DEFAULT;
+    v = Get(obj[GID_DIRECTREAD], MUIA_Cycle_Active);
+    pc.cur.directread = v <= AA_DIRECT_OFF ? v : AA_DIRECT_AUTO;
     /* the same limits as the prefs file */
     v = Get(obj[GID_CACHE], MUIA_String_Integer);
     pc.cur.cachekb = v < 32 ? 32 : v > 16384 ? 16384 : v;
@@ -697,7 +699,7 @@ static LONG PageOf(LONG gid)
         return 0;
     if (gid >= GID_PROGNAME && gid <= GID_PICKFILE)
         return 1;
-    if (gid >= GID_AUTO && gid <= GID_MANAGER)
+    if ((gid >= GID_AUTO && gid <= GID_MANAGER) || gid == GID_DIRECTREAD)
         return 2;
     if (gid >= GID_MAPLIST && gid <= GID_MAPPX)
         return 3;
@@ -961,7 +963,7 @@ static LONG HintIndex(UBYTE hinting)
     return 0;
 }
 
-static const char *tabs[5], *subpix[4], *lcdf[4], *hints[5],
+static const char *tabs[5], *subpix[4], *lcdf[4], *dread[4], *hints[5],
                   *charsets[AA_NUM_CHARSETS + 1];
 
 static Object *AppearancePage(void)
@@ -1071,6 +1073,10 @@ static Object *AdvancedPage(void)
             Child, MkCycle(MSG_CHARSET, GID_CHARSET, charsets,
                          pc.cur.charset),
             Child, HSpace(0),
+            Child, MkLabel(MSG_DIRECTREAD, MUIO_Label_DoubleFrame),
+            Child, MkCycle(MSG_DIRECTREAD, GID_DIRECTREAD, dread,
+                         pc.cur.directread),
+            Child, HSpace(0),
         End,
         Child, InfoText(GetString(MSG_CHARSET_NOTE)),
         Child, VSpace(0),
@@ -1176,6 +1182,9 @@ static BOOL OpenWin(const char *pubname)
     lcdf[0] = GetString(MSG_LF_LIGHT);
     lcdf[1] = GetString(MSG_LF_DEFAULT);
     lcdf[2] = GetString(MSG_LF_NONE);
+    dread[0] = GetString(MSG_DR_AUTO);
+    dread[1] = GetString(MSG_DR_ON);
+    dread[2] = GetString(MSG_DR_OFF);
     hints[0] = GetString(MSG_HINT_NORMAL);
     hints[1] = GetString(MSG_HINT_LIGHT);
     hints[2] = GetString(MSG_HINT_NONE);
@@ -1235,6 +1244,8 @@ static BOOL OpenWin(const char *pubname)
            GID_LCDFILTER);
     Notify(obj[GID_HINTING], MUIA_Cycle_Active, MUIV_EveryTime, GID_HINTING);
     Notify(obj[GID_CHARSET], MUIA_Cycle_Active, MUIV_EveryTime, GID_CHARSET);
+    Notify(obj[GID_DIRECTREAD], MUIA_Cycle_Active, MUIV_EveryTime,
+           GID_DIRECTREAD);
     for (i = GID_REAL; i <= GID_ANTIALIAS; i++)
         Notify(obj[i], MUIA_Selected, MUIV_EveryTime, i);
     Notify(obj[GID_REALSTYLES], MUIA_Selected, MUIV_EveryTime,
@@ -1285,6 +1296,7 @@ static BOOL Action(ULONG id)
         case GID_REALSTYLES:
         case GID_SUBPIXEL:
         case GID_LCDFILTER:
+        case GID_DIRECTREAD:
         case GID_CACHE:
         case GID_FONTMEM:
         case GID_CHARSET:
@@ -1387,6 +1399,7 @@ static void ShowPrefs(void)
     nnset(obj[GID_REALSTYLES], MUIA_Selected, pc.cur.realstyles);
     nnset(obj[GID_SUBPIXEL], MUIA_Cycle_Active, pc.cur.subpixel);
     nnset(obj[GID_LCDFILTER], MUIA_Cycle_Active, pc.cur.lcdfilter);
+    nnset(obj[GID_DIRECTREAD], MUIA_Cycle_Active, pc.cur.directread);
     nnset(obj[GID_CACHE], MUIA_String_Integer, pc.cur.cachekb);
     nnset(obj[GID_FONTMEM], MUIA_String_Integer, pc.cur.fontmemkb);
     nnset(obj[GID_CHARSET], MUIA_Cycle_Active, pc.cur.charset);

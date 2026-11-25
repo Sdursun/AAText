@@ -31,7 +31,6 @@
 
 #include "prefs.h"
 #include "charsets.h"
-#include "directread.h"
 #include "debug.h"
 
 #define MAX_PREFS_SIZE  (64 * 1024)

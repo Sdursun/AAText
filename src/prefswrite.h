@@ -7,7 +7,7 @@
 
 /*
  * Write the settings the preferences program manages (gamma, hinting,
- * real, cache, offscreen, auto, charset, blacklist) to path.
+ * real, cache, offscreen, directread, auto, charset, blacklist) to path.
  *
  * Every other line of the file at template_path (usually the file being
  * replaced) is kept as it is: comments, font mappings, settings this
