@@ -25,6 +25,19 @@
 #define CYBRMATTR_ISCYBERGFX  0x80000008UL
 
 #define PIXFMT_LUT8           0UL
+#define PIXFMT_RGB16          5UL
+#define PIXFMT_RGB16PC        7UL
+#define PIXFMT_ARGB32         11UL
+#define PIXFMT_BGRA32         12UL
+#define PIXFMT_RGBA32         13UL
+
+/* LockBitMapTagList() tags (AROS cybergraphics.h) */
+#define LBMI_WIDTH            0x84001001UL
+#define LBMI_HEIGHT           0x84001002UL
+#define LBMI_PIXFMT           0x84001004UL
+#define LBMI_BYTESPERPIX      0x84001005UL
+#define LBMI_BYTESPERROW      0x84001006UL
+#define LBMI_BASEADDRESS      0x84001007UL
 
 #define RECTFMT_RGB           0UL
 #define RECTFMT_RGBA          1UL
@@ -46,5 +59,16 @@ ULONG cgx_WritePixelArray(struct Library *base, APTR src, ULONG srcx, ULONG srcy
                           ULONG srcmod, struct RastPort *rp, ULONG dstx,
                           ULONG dsty, ULONG width, ULONG height, ULONG srcfmt);
 
+/*
+ * Direct access to a bitmap's pixels (LVOs -168/-174). While a bitmap
+ * is locked, no graphics.library or cybergraphics.library calls.
+ */
+struct TagItem;
+APTR cgx_LockBitMapTagList(struct Library *base, struct BitMap *bm,
+                           struct TagItem *tags);
+void cgx_UnLockBitMap(struct Library *base, APTR handle);
+
+/* Hook entry (cgx.s): calls h_SubEntry(hook, object, message) in C. */
+ULONG aa_HookEntry(void);
 
 #endif

@@ -59,3 +59,37 @@ _cgx_WritePixelArray:
         movem.l (%sp)+,%d2-%d7/%a6
         rts
 
+
+| APTR cgx_LockBitMapTagList(base, bm, tags)        bm:A0 tags:A1
+| LVO -168 (CGraphX-DevKit fd); verified on P96 and Emu68 with tests/pxbench
+        .globl  _cgx_LockBitMapTagList
+_cgx_LockBitMapTagList:
+        move.l  %a6,-(%sp)
+        move.l  8(%sp),%a6
+        move.l  12(%sp),%a0
+        move.l  16(%sp),%a1
+        jsr     -168(%a6)
+        move.l  (%sp)+,%a6
+        rts
+
+| void cgx_UnLockBitMap(base, handle)              handle:A0
+        .globl  _cgx_UnLockBitMap
+_cgx_UnLockBitMap:
+        move.l  %a6,-(%sp)
+        move.l  8(%sp),%a6
+        move.l  12(%sp),%a0
+        jsr     -174(%a6)
+        move.l  (%sp)+,%a6
+        rts
+
+| Hook entry for C hook functions: h_SubEntry(hook:A0, object:A2, msg:A1)
+| is called with the three as stack arguments (C calling convention).
+        .globl  _aa_HookEntry
+_aa_HookEntry:
+        move.l  %a1,-(%sp)
+        move.l  %a2,-(%sp)
+        move.l  %a0,-(%sp)
+        move.l  12(%a0),%a0             | h_SubEntry
+        jsr     (%a0)
+        lea     12(%sp),%sp
+        rts

@@ -9,7 +9,7 @@
  * Opens a window on the Workbench screen (run AAText or not, it does not
  * matter: no text is drawn) and prints microseconds per call.
  *
- * Build: m68k-amigaos-gcc -m68020 -O2 -noixemul -o pxbench tests/pxbench.c src/cgx.s tests/cgxlock.s -lm
+ * Build: m68k-amigaos-gcc -m68020 -O2 -noixemul -o pxbench tests/pxbench.c src/cgx.s -lm
  */
 
 #include <exec/types.h>
@@ -26,15 +26,6 @@
 #include <stdio.h>
 
 #include "../src/cgx.h"
-
-/* tests/cgxlock.s; tag values from the AROS cybergraphics.h */
-#define LBMI_PIXFMT       0x84001004UL
-#define LBMI_BYTESPERPIX  0x84001005UL
-#define LBMI_BYTESPERROW  0x84001006UL
-#define LBMI_BASEADDRESS  0x84001007UL
-APTR cgx_LockBitMapTagList(struct Library *base, struct BitMap *bm,
-                           struct TagItem *tags);
-void cgx_UnLockBitMap(struct Library *base, APTR handle);
 
 struct Library *CyberGfxBase;
 struct Device *TimerBase;
