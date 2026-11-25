@@ -54,7 +54,7 @@ endif
 
 SRCS_C := src/main.c src/patch.c src/render.c src/metrics.c src/prefs.c \
           src/glyphs.c src/otag.c src/aaclient.c src/debug.c src/charsets.c src/fontfile.c \
-          src/startup.c
+          src/startup.c src/directread.c
 SRCS_S := src/stub.s src/cgx.s
 OBJS   := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SRCS_C)) \
           $(patsubst src/%.s,$(BUILDDIR)/%.o,$(SRCS_S))

@@ -34,6 +34,7 @@
 #include "cgx.h"
 #include "metrics.h"
 #include "debug.h"
+#include "directread.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -104,7 +105,6 @@ static ULONG reason_counts[R_COUNT];
 #define COUNT(r) (reason_counts[r]++)
 
 /* Timing of drawn strings, measured with the E-clock. */
-struct Device *TimerBase;
 static struct timerequest aa_TimerReq;
 static BOOL aa_TimerOpen;
 static ULONG aa_EFreq;
@@ -168,6 +168,7 @@ void aa_RenderReconfigure(const struct AAPrefs *prefs)
     aa_Offscreen = prefs->offscreen;
     aa_Aga = prefs->aga;
     Permit();
+    aa_DirectReconfigure(prefs->directread);
 
     for (i = 0; i < aa_NumBlack; i++)
         D(("AAText: blacklisted \"%s\"\n", (ULONG)aa_Blacklist[i]));
@@ -180,6 +181,7 @@ BOOL aa_RenderInit(const struct AAPrefs *prefs)
 {
     LONG i;
 
+    aa_DirectInit(prefs->directread);
     aa_RenderReconfigure(prefs);
     InitLevels();
     InitSemaphore(&aa_RedrawLock);
@@ -232,6 +234,7 @@ void aa_RenderCleanup(void)
         aa_Blend[i] = NULL;
     }
     FreePal();
+    aa_DirectCleanup();
 #ifdef DEBUG
     if (aa_TimerOpen)
         CloseDevice((struct IORequest *)&aa_TimerReq);
@@ -1677,9 +1680,7 @@ static BOOL RenderReal(struct RastPort *rp, CONST_STRPTR string, WORD count,
             }
             else
             {
-                cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * AA_BPP, rp,
-                                   x + sx, y + sy, w - sx, h - sy,
-                                   AA_RECTFMT);
+                aa_ReadBackground(buf, rp, x, y, w, h, sx, sy);
                 /* drawn here already? see RedrawSame() */
                 ObtainSemaphore(&aa_RedrawLock);
                 same = RedrawSame(buf, rp, string, count, x, y, w, h, sx, sy,
@@ -1922,8 +1923,7 @@ static BOOL RenderString(struct RastPort *rp, CONST_STRPTR string, WORD count)
     }
     else
     {
-        cgx_ReadPixelArray(CyberGfxBase, buf, sx, sy, w * AA_BPP, rp, x + sx,
-                           y + sy, w - sx, h - sy, AA_RECTFMT);
+        aa_ReadBackground(buf, rp, x, y, w, h, sx, sy);
         /* drawn here already? see RedrawSame() */
         ObtainSemaphore(&aa_RedrawLock);
         same = RedrawSame(buf, rp, string, count, x, y, w, h, sx, sy, key,
@@ -2064,6 +2064,7 @@ void aa_PrintRenderStats(void)
     if (stat_declined && aa_EFreq)
         kprintf("AAText: declined calls: %ld, %ld us each\n", stat_declined,
                 TicksToMicros(stat_declinedticks) / stat_declined);
+    aa_PrintDirectStats();
     aa_PrintGlyphStats();
 }
 #endif

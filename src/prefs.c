@@ -19,6 +19,8 @@
  *   antialias on | off       (off: TrueType text drawn sharp, default on)
  *   subpixel off | rgb | bgr (LCD antialiasing on RTG screens, default off)
  *   lcdfilter light | default | none (FreeType's LCD filter, default default)
+ *   directread auto | on | off (read the screen memory directly; auto:
+ *                       measure which is faster, default auto)
  */
 
 #include <exec/types.h>
@@ -29,6 +31,7 @@
 
 #include "prefs.h"
 #include "charsets.h"
+#include "directread.h"
 #include "debug.h"
 
 #define MAX_PREFS_SIZE  (64 * 1024)
@@ -269,6 +272,18 @@ static void ParseLine(struct AAPrefs *prefs, char *line, LONG lineno)
             PrefsError(lineno, "lcdfilter must be light, default or none");
         return;
     }
+    if (StrIEq(tok[0], "directread"))
+    {
+        if (n == 2 && StrIEq(tok[1], "auto"))
+            prefs->directread = AA_DIRECT_AUTO;
+        else if (n == 2 && StrIEq(tok[1], "on"))
+            prefs->directread = AA_DIRECT_ON;
+        else if (n == 2 && StrIEq(tok[1], "off"))
+            prefs->directread = AA_DIRECT_OFF;
+        else
+            PrefsError(lineno, "directread must be auto, on or off");
+        return;
+    }
     if (StrIEq(tok[0], "antialias"))
     {
         if (n == 2 && StrIEq(tok[1], "on"))
@@ -395,6 +410,7 @@ void aa_DefaultPrefs(struct AAPrefs *prefs)
     prefs->antialias = TRUE;
     prefs->subpixel = AA_SUBPIXEL_OFF;
     prefs->lcdfilter = AA_LCDFILTER_DEFAULT;
+    prefs->directread = AA_DIRECT_AUTO;
     prefs->cachekb = AA_DEFAULT_CACHE_KB;
     prefs->fontmemkb = AA_DEFAULT_FONTMEM_KB;
     prefs->numblack = 0;
