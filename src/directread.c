@@ -469,7 +469,7 @@ static BOOL Measure(UBYTE *buf, struct RastPort *rp, ULONG fmt, LONG x,
         return TRUE;
     }
     /* direct only when clearly faster: ReadPixelArray() is the safe way */
-    direct = tdirect * 10 <= trpa * 9;
+    direct = tdirect * 10 < trpa * 9;     /* a tie (0 and 0) is no reason */
     dr_State[fmt] = direct ? FMT_DIRECT : FMT_RPA;
     D(("AAText: directread: pixel format %ld, %ld x %ld: direct %ld, "
        "ReadPixelArray %ld E-clock ticks -> %s\n", fmt, w - sx, h - sy,

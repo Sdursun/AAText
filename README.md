@@ -65,10 +65,11 @@ Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 - **Faster background reading where it helps.** For JAM1 text AAText reads
   the pixels under the string before blending. It can now read them straight
   from the screen memory instead of through `ReadPixelArray()`; new setting
-  `directread auto|on|off` (default `auto`: the first string on each pixel
-  format is read both ways and the faster way is kept). On WinUAE
-  `ReadPixelArray()` stays faster and is kept. 15, 16 and 32 bit screens; 24
-  bit ones always use `ReadPixelArray()`.
+  `directread auto|on|off`, also "Read screen" on the Advanced page of
+  AATextPrefs (default `auto`: the first string on each pixel format is read
+  both ways; direct reading is used only if it is at least 10% faster). On
+  WinUAE `ReadPixelArray()` stays faster and is kept. 15, 16 and 32 bit
+  screens; 24 bit ones always use `ReadPixelArray()`.
 
 ## Changes in 0.47
 
@@ -248,9 +249,10 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
 - **Gerektiğinde daha hızlı arka plan okuma.** AAText JAM1 yazıyı
   karıştırmadan önce altındaki pikselleri okur. Artık bunları
   `ReadPixelArray()` yerine doğrudan ekran belleğinden okuyabilir; yeni ayar
-  `directread auto|on|off` (varsayılan `auto`: her piksel formatındaki ilk
-  yazı iki yoldan da okunur, hızlı olan seçilir). WinUAE'de `ReadPixelArray()`
-  daha hızlı kalır ve o seçilir. 15, 16 ve 32 bit ekranlar; 24 bit ekranlar
+  `directread auto|on|off`, AATextPrefs'in Gelişmiş sekmesinde "Ekranı okuma"
+  (varsayılan `auto`: her piksel formatındaki ilk yazı iki yoldan da okunur;
+  doğrudan okuma yalnızca en az %10 hızlıysa kullanılır). WinUAE'de
+  `ReadPixelArray()` daha hızlı kalır ve o seçilir. 15, 16 ve 32 bit ekranlar; 24 bit ekranlar
   her zaman `ReadPixelArray()` kullanır.
 
 **0.46'daki değişiklikler:** FreeType 2.15.0 üzerine kurulu; yeni
