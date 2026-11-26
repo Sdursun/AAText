@@ -60,7 +60,7 @@ and MUI programs — everything that draws text through `graphics.library`.
 
 Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
 
-## Changes since 0.47 (not released yet)
+## Changes in 0.48
 
 - **Faster background reading where it helps.** For JAM1 text AAText reads
   the pixels under the string before blending. It can now read them straight
@@ -244,7 +244,7 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
 
 - Bitmap fontlara ve paletli (AGA) ekranlara dokunmaz.
 
-**0.47'den sonraki değişiklikler (henüz yayınlanmadı):**
+**0.48'deki değişiklikler:**
 
 - **Gerektiğinde daha hızlı arka plan okuma.** AAText JAM1 yazıyı
   karıştırmadan önce altındaki pikselleri okur. Artık bunları

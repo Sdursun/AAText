@@ -576,12 +576,12 @@ Lütfen debug sürümünün çıktısını ekleyin:
 Geçmiş
 ------
 
-0.48  (henüz yayınlanmadı)
+0.48  (26.11.2026)
       Yeni ayar "directread auto|on|off": JAM1 yazının altındaki
       arka plan ReadPixelArray() yerine doğrudan ekran belleğinden
       okunabilir. "auto" (varsayılan) her piksel formatı için iki
       yolu bir kez ölçer; doğrudan okuma yalnızca en az %10 hızlıysa
-      seçilir. 15, 16 ve 32 bit ekranlar. AATextPrefs: Gelişmiş,
+      seçilir. 15, 16, 24 ve 32 bit ekranlar. AATextPrefs: Gelişmiş,
       "Ekranı okuma".
 
 0.47  (14.11.2026)

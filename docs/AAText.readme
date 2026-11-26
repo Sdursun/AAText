@@ -2,7 +2,7 @@ Short:        Antialiased TrueType text, AmigaOS 3.x
 Author:       Serkan Dursun
 Uploader:     Serkan Dursun <blasterreal@gmail.com>
 Type:         util/wb
-Version:      0.47
+Version:      0.48
 Replaces:     util/wb/AAText.lha
 Architecture: m68k-amigaos >= 3.1.0
 Distribution: Aminet
@@ -68,6 +68,11 @@ tested yet; the ReAction GUIs need 3.2, use the MUI ones there.
 Please report your results: https://github.com/Sdursun/AAText/issues
 
 Changes since 0.34
+- 0.48: the background under JAM1 text can be read straight from the
+  screen memory instead of with ReadPixelArray() (directread
+  auto|on|off, AATextPrefs: Advanced, "Read screen"). "auto" measures
+  both ways once per pixel format and keeps the faster one; on PiStorm
+  (Emu68) text lines draw about 7% faster.
 - 0.47: real metrics mode with subpixel on places letters at thirds of
   a pixel (even spacing, lines as wide as the font says); bold and
   italic text from the family's own font files (realstyles, on by

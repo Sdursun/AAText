@@ -558,12 +558,12 @@ Please include the output of the debug version:
 History
 -------
 
-0.48  (not released yet)
+0.48  (26.11.2026)
       New setting "directread auto|on|off": the background under JAM1
       text can be read straight from the screen memory instead of with
       ReadPixelArray(). "auto" (default) measures both ways once per
       pixel format and reads directly only if that is at least 10%
-      faster. 15, 16 and 32 bit screens. AATextPrefs: Advanced,
+      faster. 15, 16, 24 and 32 bit screens. AATextPrefs: Advanced,
       "Read screen".
 
 0.47  (14.11.2026)
