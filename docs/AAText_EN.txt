@@ -446,8 +446,7 @@ It is a plain text file with one setting per line; lines starting with
                            read both ways; direct only if it is
                            at least 10% faster
                     AATextPrefs: Advanced, "Read screen".
-                    15, 16 and 32 bit screens; 24 bit ones always use
-                    ReadPixelArray().
+                    15, 16, 24 and 32 bit screens.
 
   offscreen on      Some programs draw text into a hidden bitmap first
                     (MUI gadgets, docks, gauges). AAText uses the screen

@@ -462,8 +462,7 @@ başlayan satırlar açıklamadır. AAText.prefs.example her ayarı anlatır.
                            yoldan da okunur; doğrudan okuma
                            yalnızca en az %10 hızlıysa
                     AATextPrefs: Gelişmiş, "Ekranı okuma".
-                    15, 16 ve 32 bit ekranlar; 24 bit ekranlar her zaman
-                    ReadPixelArray() kullanır.
+                    15, 16, 24 ve 32 bit ekranlar.
 
   offscreen on      Bazı programlar yazıyı önce gizli bir bitmap'e çizer
                     (MUI gadget'ları, dock'lar, göstergeler). AAText

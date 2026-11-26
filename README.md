@@ -68,8 +68,8 @@ Tested on AmigaOS 3.2.3 with WinUAE (UAEGFX) and PiStorm (Emu68).
   `directread auto|on|off`, also "Read screen" on the Advanced page of
   AATextPrefs (default `auto`: the first string on each pixel format is read
   both ways; direct reading is used only if it is at least 10% faster). On
-  WinUAE `ReadPixelArray()` stays faster and is kept. 15, 16 and 32 bit
-  screens; 24 bit ones always use `ReadPixelArray()`.
+  WinUAE `ReadPixelArray()` stays faster and is kept. 15, 16, 24 and 32 bit
+  screens.
 
 ## Changes in 0.47
 
@@ -252,8 +252,8 @@ başlıkları, Shell pencereleri, GadTools, ReAction ve MUI programları.
   `directread auto|on|off`, AATextPrefs'in Gelişmiş sekmesinde "Ekranı okuma"
   (varsayılan `auto`: her piksel formatındaki ilk yazı iki yoldan da okunur;
   doğrudan okuma yalnızca en az %10 hızlıysa kullanılır). WinUAE'de
-  `ReadPixelArray()` daha hızlı kalır ve o seçilir. 15, 16 ve 32 bit ekranlar; 24 bit ekranlar
-  her zaman `ReadPixelArray()` kullanır.
+  `ReadPixelArray()` daha hızlı kalır ve o seçilir. 15, 16, 24 ve 32 bit
+  ekranlar.
 
 **0.46'daki değişiklikler:** FreeType 2.15.0 üzerine kurulu; yeni
 harfbuzz.library (ayrı arşiv) HarfBuzz 15.1.0'a dayanır.

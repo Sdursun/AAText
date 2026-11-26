@@ -33,6 +33,8 @@
 #define PIXFMT_BGR16          6UL
 #define PIXFMT_RGB16PC        7UL
 #define PIXFMT_BGR16PC        8UL
+#define PIXFMT_RGB24          9UL
+#define PIXFMT_BGR24          10UL
 #define PIXFMT_ARGB32         11UL
 #define PIXFMT_BGRA32         12UL
 #define PIXFMT_RGBA32         13UL

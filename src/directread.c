@@ -20,7 +20,7 @@
  * same as ReadPixelArray() leaves them, and WritePixelArray() does not
  * write there either.
  *
- * 15, 16 and 32 bit pixel formats; 24 bit screens use ReadPixelArray().
+ * 15, 16, 24 and 32 bit pixel formats.
  */
 
 #include <exec/types.h>
@@ -93,6 +93,11 @@ static BOOL Is32(ULONG fmt)
 {
     return fmt == PIXFMT_ARGB32 || fmt == PIXFMT_BGRA32 ||
            fmt == PIXFMT_RGBA32;
+}
+
+static BOOL Is24(ULONG fmt)
+{
+    return fmt == PIXFMT_RGB24 || fmt == PIXFMT_BGR24;
 }
 
 /* the 15 and 16 bit formats, PIXFMT_RGB15 (1) to PIXFMT_BGR16PC (8) */
@@ -191,7 +196,7 @@ static const ULONG *Tables16(ULONG fmt)
 /* Can the format be read directly? Sets up its tables. */
 static BOOL Supported(ULONG fmt)
 {
-    return Is32(fmt) || (Is16(fmt) && Tables16(fmt));
+    return Is32(fmt) || Is24(fmt) || (Is16(fmt) && Tables16(fmt));
 }
 
 /*
@@ -231,7 +236,8 @@ static BOOL ReadRect(struct ReadHook *d, LONG minx, LONG miny, LONG maxx,
     lock = cgx_LockBitMapTagList(CyberGfxBase, d->bm, tags);
     if (!lock)
         return FALSE;
-    if (!base || fmt != d->fmt || bpp != (Is16(fmt) ? 2UL : 4UL))
+    if (!base || fmt != d->fmt ||
+        bpp != (Is16(fmt) ? 2UL : Is24(fmt) ? 3UL : 4UL))
     {
         cgx_UnLockBitMap(CyberGfxBase, lock);
         return FALSE;
@@ -261,6 +267,30 @@ static BOOL ReadRect(struct ReadHook *d, LONG minx, LONG miny, LONG maxx,
         else
             for (i = 0; i < n; i++, s += 2)
                 t[i] = thi[s[0]] | tlo[s[1]];
+        d->pixels += n;
+    }
+    for (y = miny; y <= maxy && n > 0 && Is24(fmt); y++)
+    {
+        const UBYTE *s = (const UBYTE *)(base + (ULONG)y * bpr +
+                                         (ULONG)minx * 3);
+        UBYTE *t = d->buf + (y - d->ly - d->by) * d->mod +
+                   (minx - d->lx - d->bx) * 4;
+        LONG i;
+
+        if (fmt == PIXFMT_RGB24)
+            for (i = 0; i < n; i++, s += 3, t += 4)
+            {
+                t[0] = s[0];
+                t[1] = s[1];
+                t[2] = s[2];
+            }
+        else                    /* BGR24 */
+            for (i = 0; i < n; i++, s += 3, t += 4)
+            {
+                t[0] = s[2];
+                t[1] = s[1];
+                t[2] = s[0];
+            }
         d->pixels += n;
     }
     for (y = miny; y <= maxy && n > 0 && Is32(fmt); y++)
